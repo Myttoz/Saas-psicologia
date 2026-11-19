@@ -583,47 +583,6 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   margin-top: .2rem;
 }
 
-/* ---------- Percentuais editáveis ---------- */
-.percent-row {
-  display: flex;
-  align-items: center;
-  gap: .6rem;
-  padding: .45rem .8rem;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #fff;
-  margin-bottom: .35rem;
-  width: 100%;
-}
-
-.percent-label { font-size: .9rem; font-weight: 700; color: var(--text); flex: 1; }
-
-.percent-value {
-  font-size: .95rem;
-  font-weight: 800;
-  color: var(--primary-dark);
-  background: var(--primary-light);
-  padding: .35rem .7rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  width: 80px;
-  text-align: center;
-}
-
-.percent-edit {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  color: var(--primary);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.percent-edit:hover { background: var(--primary-light); }
-
 /* ---------- Autocomplete ---------- */
 .autocomplete-wrap { position: relative; width: 100%; }
 

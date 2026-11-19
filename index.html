@@ -58,6 +58,8 @@
         </div>
       </div>
       <div class="sidebar-footer">
+        <button class="btn btn-outline" style="width:100%; margin-bottom:.5rem;" onclick="backupModulo.exportar()" title="Baixa um arquivo com todos os dados">⬇ Exportar backup</button>
+        <button class="btn btn-outline" style="width:100%; margin-bottom:.75rem;" onclick="backupModulo.importar()" title="Restaura dados de um arquivo de backup">⬆ Importar backup</button>
         <button class="btn btn-outline" style="width:100%; margin-bottom:.75rem;" onclick="app.sair()">Sair</button>
         <div class="sidebar-credit">SaaS by Myttoz</div>
       </div>
@@ -125,32 +127,6 @@
 
         <div class="card">
           <p style="font-size:.88rem; color:var(--text-muted); margin-bottom:1rem;">Cadastre de onde vêm os pacientes. Defina se o valor é fixo para todos ou variável por paciente.</p>
-
-          <div style="margin-bottom: 1.5rem;">
-            <div style="display:flex; align-items:center; gap:.5rem; margin-bottom: .75rem;">
-              <span style="font-size:.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em;">Percentuais</span>
-            </div>
-            <div class="percent-row">
-              <span class="percent-label">Clínica</span>
-              <input type="text" class="percent-value" id="pctClinica" value="30" readonly>
-              <button class="percent-edit" onclick="app.editarPercentual('pctClinica', this)" title="Editar">✎</button>
-            </div>
-            <div class="percent-row">
-              <span class="percent-label">Particular</span>
-              <input type="text" class="percent-value" id="pctParticular" value="30" readonly>
-              <button class="percent-edit" onclick="app.editarPercentual('pctParticular', this)" title="Editar">✎</button>
-            </div>
-            <div class="percent-row">
-              <span class="percent-label">Cideslestes</span>
-              <input type="text" class="percent-value" id="pctCideslestes" value="40" readonly>
-              <button class="percent-edit" onclick="app.editarPercentual('pctCideslestes', this)" title="Editar">✎</button>
-            </div>
-            <div class="percent-row">
-              <span class="percent-label">Unimed</span>
-              <input type="text" class="percent-value" id="pctUnimed" value="—" readonly>
-              <button class="percent-edit" onclick="app.editarPercentual('pctUnimed', this)" title="Editar">✎</button>
-            </div>
-          </div>
 
           <div class="table-wrap">
             <table>
@@ -275,28 +251,6 @@
   </div>
 </div>
 
-<!-- Modal: Percentual -->
-<div class="modal" id="modalPercentual" onclick="event.stopPropagation()">
-  <div class="modal-header">
-    <div class="modal-title">Editar percentual</div>
-    <button class="modal-close" onclick="app.fecharModal('modalPercentual')">&times;</button>
-  </div>
-  <div class="modal-body">
-    <form id="formPercentual" onsubmit="return app.salvarPercentual();">
-      <div class="form-group">
-        <label class="form-label">Percentual (%)</label>
-        <input type="text" id="pctValor" class="form-control" placeholder="Ex: 30" maxlength="5">
-        <input type="hidden" id="pctCampoId">
-      </div>
-      <div class="form-note">Informe apenas o número.</div>
-    </form>
-  </div>
-  <div class="modal-footer">
-    <button class="btn btn-outline" onclick="app.fecharModal('modalPercentual')">Cancelar</button>
-    <button type="button" class="btn btn-primary" onclick="app.salvarPercentual()">Salvar</button>
-  </div>
-</div>
-
 <!-- Modal: Novo Lançamento -->
 <div class="modal" id="modalLancamento" onclick="event.stopPropagation()">
   <div class="modal-header">
@@ -377,6 +331,9 @@
 <!-- Toast -->
 <div class="toast" id="toast">Operação realizada</div>
 
+<!-- Input oculto para importar backup -->
+<input type="file" id="backupFileInput" accept=".json,application/json" style="display:none;" onchange="backupModulo.processarArquivo(this)">
+
 <script src="js/data.js"></script>
 <script src="js/meses.js"></script>
 <script src="js/app.js"></script>
@@ -385,5 +342,6 @@
 <script src="js/lancamentos.js"></script>
 <script src="js/situacao.js"></script>
 <script src="js/resumos.js"></script>
+<script src="js/backup.js"></script>
 </body>
 </html>

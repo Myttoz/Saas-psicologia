@@ -12,14 +12,6 @@ var fontes = [
 var pacientes = []; // zerado
 var lancamentos = []; // zerado
 
-// Percentuais por fonte (editáveis) — espelho do cadastro de convênios
-var percentuais = {
-  pctClinica: '30',
-  pctParticular: '70',
-  pctCideslestes: '40',
-  pctUnimed: '—'
-};
-
 var hoje = new Date();
 var hojeStr = hoje.getFullYear() + '-' +
   String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
@@ -96,12 +88,10 @@ function calcularSuaParte(fonteNome, valor) {
 
 var Store = {
   salvar: function() {
-    this.sincronizarPercentuais();
     try {
       localStorage.setItem('saas_fontes', JSON.stringify(fontes));
       localStorage.setItem('saas_pacientes', JSON.stringify(pacientes));
       localStorage.setItem('saas_lancamentos', JSON.stringify(lancamentos));
-      localStorage.setItem('saas_percentuais', JSON.stringify(percentuais));
     } catch (e) {
       // armazenamento indisponível — ignora silenciosamente
     }
@@ -111,31 +101,11 @@ var Store = {
       var f = localStorage.getItem('saas_fontes');
       var p = localStorage.getItem('saas_pacientes');
       var l = localStorage.getItem('saas_lancamentos');
-      var pe = localStorage.getItem('saas_percentuais');
       if (f) fontes = JSON.parse(f);
       if (p) pacientes = JSON.parse(p);
       if (l) lancamentos = JSON.parse(l);
-      if (pe) percentuais = JSON.parse(pe);
     } catch (e) {
       // ignora
-    }
-    this.sincronizarPercentuais();
-  },
-  // mantém a faixa de percentuais espelhada no cadastro de convênios
-  sincronizarPercentuais: function() {
-    var mapa = {
-      'Clínica': 'pctClinica',
-      'Particular': 'pctParticular',
-      'Cideslestes': 'pctCideslestes',
-      'Unimed': 'pctUnimed'
-    };
-    for (var i = 0; i < fontes.length; i++) {
-      var chave = mapa[fontes[i].nome];
-      if (chave) {
-        percentuais[chave] = (fontes[i].percentual === null || fontes[i].percentual === '')
-          ? '—'
-          : fontes[i].percentual;
-      }
     }
   }
 };

@@ -269,45 +269,6 @@ var app = {
         });
       })(wraps[i]);
     }
-  },
-
-  // ---------- Percentuais ----------
-
-  editarPercentual: function(campoId, btn) {
-    var input = document.getElementById(campoId);
-    var hidden = document.getElementById('pctCampoId');
-    var valorInput = document.getElementById('pctValor');
-    if (hidden) hidden.value = campoId;
-    if (valorInput && input) valorInput.value = (input.value === '—' ? '' : input.value);
-    this.abrirModal('modalPercentual');
-  },
-
-  salvarPercentual: function() {
-    var valorInput = document.getElementById('pctValor');
-    var hidden = document.getElementById('pctCampoId');
-    if (!valorInput || !hidden) return false;
-
-    var campoId = hidden.value;
-    var valor = valorInput.value.trim();
-    var campoEl = document.getElementById(campoId);
-    if (campoEl) campoEl.value = (valor === '' ? '—' : valor);
-
-    var nomes = {
-      pctClinica: 'Clínica',
-      pctParticular: 'Particular',
-      pctCideslestes: 'Cideslestes',
-      pctUnimed: 'Unimed'
-    };
-    var f = obterFontePorNome(nomes[campoId]);
-    if (f) f.percentual = (valor === '' ? null : valor);
-
-    percentuais[campoId] = (valor === '' ? '—' : valor);
-    Store.salvar();
-
-    if (typeof fontesRender === 'function') fontesRender();
-    this.fecharModal('modalPercentual');
-    this.toast('Percentual atualizado.');
-    return false;
   }
 
 };

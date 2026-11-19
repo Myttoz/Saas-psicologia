@@ -3,20 +3,6 @@
 // ============================================================================
 
 function fontesRender() {
-  // mantém a faixa de percentuais espelhada no cadastro de convênios
-  Store.sincronizarPercentuais();
-  var camposPct = {
-    'Clínica': 'pctClinica',
-    'Particular': 'pctParticular',
-    'Cideslestes': 'pctCideslestes',
-    'Unimed': 'pctUnimed'
-  };
-  for (var k = 0; k < fontes.length; k++) {
-    var campoId = camposPct[fontes[k].nome];
-    var campo = campoId ? document.getElementById(campoId) : null;
-    if (campo) campo.value = percentuais[campoId];
-  }
-
   var tbody = document.getElementById('tbodyFontes');
   if (!tbody) return;
 
