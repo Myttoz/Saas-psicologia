@@ -17,7 +17,7 @@ var app = {
     if (typeof mesesModulo !== 'undefined') mesesModulo.init();
 
     // renderiza página inicial
-    this.trocarPagina('fontes');
+    this.trocarPagina('agenda');
   },
 
   // ---------- Navegação ----------
@@ -37,6 +37,7 @@ var app = {
     var tituloEl = document.getElementById('pageTitle');
     if (tituloEl) {
       var titulos = {
+        agenda: 'Agenda',
         resumos: 'Resumos',
         lancamentos: 'Lançamentos',
         fontes: 'Convênios',
@@ -81,6 +82,9 @@ var app = {
   },
 
   renderizarPagina: function(id) {
+    if (id === 'agenda' && typeof agendaModulo !== 'undefined') {
+      agendaModulo.render();
+    }
     if (id === 'fontes' && typeof fontesRender === 'function') fontesRender();
     if (id === 'pacientes' && typeof pacientesRender === 'function') pacientesRender();
     if (id === 'lancamentos' && typeof lancamentosRender === 'function') {

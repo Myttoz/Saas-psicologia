@@ -531,6 +531,10 @@ tr:hover td { background: #F5F8F5; }
 .badge-avaliacao { background: #F1EDEC; color: var(--accent); }
 .badge-pago { background: #E3F2EA; color: var(--success); }
 .badge-pendente { background: #F9EDE6; color: var(--accent); }
+.badge-agendado { background: #EAF3EC; color: var(--primary-dark); }
+.badge-compareceu { background: #E3F2EA; color: var(--success); }
+.badge-faltou { background: #FBEAEA; color: var(--danger); }
+.badge-cancelou { background: #ECECEC; color: var(--text-muted); }
 
 .money { font-weight: 800; white-space: nowrap; }
 
@@ -927,4 +931,156 @@ svg { display: block; }
   outline-offset: 2px;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(193,106,74,.22);
+}
+
+/* ---------- Agenda semanal ---------- */
+.agenda-toolbar {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  flex-wrap: wrap;
+  margin-bottom: .75rem;
+}
+
+.agenda-semana {
+  flex: 1;
+  min-width: 200px;
+  text-align: center;
+  font-size: .95rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.agenda-legenda {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: .75rem;
+}
+
+.agenda-legenda span { display: inline-flex; align-items: center; gap: .35rem; }
+
+.legenda-cor {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.legenda-normal     { background: var(--primary); }
+.legenda-compareceu { background: var(--success); }
+.legenda-faltou     { background: var(--danger); }
+.legenda-cancelado  { background: #B9C0BC; }
+
+.agenda-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.agenda-grid {
+  display: grid;
+  grid-template-columns: 64px repeat(7, minmax(112px, 1fr));
+  min-width: 760px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.agenda-corner {
+  background: #F5F8F5;
+  border-bottom: 2px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.agenda-dia-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: .5rem .25rem;
+  background: #F5F8F5;
+  border-bottom: 2px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+
+.agenda-dia-head.hoje { background: var(--primary-light); }
+.agenda-dia-head.hoje .agenda-dia-nome,
+.agenda-dia-head.hoje .agenda-dia-num { color: var(--primary-dark); }
+
+.agenda-dia-nome {
+  font-size: .72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+}
+
+.agenda-dia-num { font-size: .85rem; font-weight: 900; color: var(--text); }
+
+.agenda-hora {
+  font-size: .68rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-align: right;
+  padding: .35rem .45rem;
+  background: #FAFBF9;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.agenda-cel {
+  min-height: 44px;
+  padding: 3px;
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.agenda-cel:hover { background: var(--primary-light); }
+.agenda-cel.hoje { background: #FCFDFC; }
+
+.agenda-chip {
+  border-radius: 7px;
+  padding: .25rem .4rem;
+  font-size: .7rem;
+  line-height: 1.25;
+  cursor: pointer;
+  border-left: 3px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  overflow: hidden;
+}
+
+.agenda-chip:hover { filter: brightness(.96); }
+
+.agenda-chip .chip-hora {
+  display: block;
+  font-weight: 900;
+  font-size: .65rem;
+  opacity: .8;
+}
+
+.agenda-chip .chip-nome {
+  display: block;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agenda-chip.h-compareceu { border-left-color: var(--success); background: #E3F2EA; color: #2F6B4F; }
+.agenda-chip.h-faltou     { border-left-color: var(--danger);  background: #FBEAEA; color: #8E4040; }
+.agenda-chip.h-cancelou   { border-left-color: #B9C0BC; background: #ECECEC; color: var(--text-muted); text-decoration: line-through; }
+
+.agenda-cel:focus,
+.agenda-chip:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }

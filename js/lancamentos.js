@@ -29,9 +29,16 @@ function lancamentosRender() {
   });
 
   if (lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Nenhum atendimento neste mês.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Nenhum atendimento neste mês.</td></tr>';
     return;
   }
+
+  var presencaInfo = {
+    agendado:  { rotulo: 'Agendado',  classe: 'badge-agendado' },
+    compareceu:{ rotulo: 'Compareceu', classe: 'badge-compareceu' },
+    faltou:    { rotulo: 'Faltou',    classe: 'badge-faltou' },
+    cancelou:  { rotulo: 'Cancelou',  classe: 'badge-cancelou' }
+  };
 
   for (var i = 0; i < lista.length; i++) {
     var l = lista[i];
@@ -51,6 +58,9 @@ function lancamentosRender() {
     var statusBadge = (l.status === 'pago') ? 'badge-pago' : 'badge-pendente';
     var statusTexto = (l.status === 'pago') ? 'Pago' : 'Pendente';
 
+    // presença (compatível com lançamentos antigos sem o campo)
+    var p = presencaInfo[l.presenca] || presencaInfo.agendado;
+
     var acoes =
       app.botaoAcao('Editar', 'lancamentosModulo.editar(' + l.id + ')', 'editar') +
       app.botaoAcao('Duplicar', 'lancamentosModulo.duplicar(' + l.id + ')', 'duplicar') +
@@ -66,6 +76,7 @@ function lancamentosRender() {
       '<td class="money">' + formatarMoeda(l.valor) + '</td>' +
       '<td class="money">' + formatarMoeda(l.suaParte) + '</td>' +
       '<td><span class="badge ' + statusBadge + '">' + statusTexto + '</span></td>' +
+      '<td><span class="badge ' + p.classe + '">' + p.rotulo + '</span></td>' +
       '<td style="white-space:nowrap;">' + acoes + '</td>';
 
     tbody.appendChild(tr);
@@ -74,15 +85,16 @@ function lancamentosRender() {
 
 var lancamentosModulo = {
 
-  abrirModal: function() {
+  abrirModal: function(opcoes) {
+    opcoes = opcoes || {};
     var form = document.getElementById('formLancamento');
     if (form) form.reset();
 
     lancamentosEditId = null;
 
-    // data automática
+    // data automática (ou a informada pela agenda)
     var dataInput = document.getElementById('lancData');
-    if (dataInput) dataInput.value = hojeStr;
+    if (dataInput) dataInput.value = opcoes.data || hojeStr;
 
     // gerar horários pré-cadastrados (7h às 22h, de 30 em 30 min)
     var container = document.getElementById('timePresets');
@@ -100,6 +112,23 @@ var lancamentosModulo = {
       }
       container.innerHTML = html;
     }
+
+    // horário pré-selecionado (vindo da agenda)
+    if (opcoes.horario) this.selecionarHorario(opcoes.horario);
+
+    // presença: padrão "agendado"; repetição: visível só na criação
+    var presencaInput = document.getElementById('lancPresenca');
+    if (presencaInput) presencaInput.value = 'agendado';
+    var campoRepetir = document.getElementById('campoRepetir');
+    if (campoRepetir) campoRepetir.style.display = 'block';
+    var repetirInput = document.getElementById('lancRepetir');
+    if (repetirInput) repetirInput.value = '0';
+
+    // título do modal para "novo"
+    var tituloNovo = document.querySelector('#modalLancamento .modal-title');
+    if (tituloNovo) tituloNovo.textContent = 'Novo atendimento';
+    var btnSalvar = document.querySelector('#modalLancamento .modal-footer .btn-primary');
+    if (btnSalvar) btnSalvar.textContent = 'Lançar atendimento';
 
     // limpar autocomplete
     var inputPac = document.getElementById('lancPaciente');
@@ -221,9 +250,19 @@ var lancamentosModulo = {
     var obsInput = document.getElementById('lancObs');
     if (obsInput) obsInput.value = l.obs || '';
 
+    // presença: carrega o valor salvo (padrão "agendado")
+    var presencaInput = document.getElementById('lancPresenca');
+    if (presencaInput) presencaInput.value = l.presenca || 'agendado';
+
+    // repetição não se aplica à edição
+    var campoRepetir = document.getElementById('campoRepetir');
+    if (campoRepetir) campoRepetir.style.display = 'none';
+
     // alterar título do modal
     var titulo = document.querySelector('#modalLancamento .modal-title');
     if (titulo) titulo.textContent = 'Editar atendimento';
+    var btnSalvar = document.querySelector('#modalLancamento .modal-footer .btn-primary');
+    if (btnSalvar) btnSalvar.textContent = 'Salvar alterações';
 
     // recalcula a prévia com os dados que estão sendo editados
     this.atualizarSuaParte();
@@ -257,12 +296,14 @@ var lancamentosModulo = {
       pagamento: l.pagamento,
       status: 'pendente', // sempre pendente ao duplicar
       obs: l.obs,
-      suaParte: l.suaParte
+      suaParte: l.suaParte,
+      presenca: 'agendado' // cópia é uma nova sessão a confirmar
     };
 
     lancamentos.push(novo);
     Store.salvar();
     lancamentosRender();
+    if (typeof agendaModulo !== 'undefined') agendaModulo.render();
     app.toast('Lançamento duplicado para ' + formatarData(novaData) + '.');
   },
 
@@ -321,6 +362,12 @@ var lancamentosModulo = {
     var calculo = calcularValores(f, valorNum);
     var suaParte = calculo ? calculo.ganho : null;
 
+    // presença informada no formulário
+    var presencaSelect = document.getElementById('lancPresenca');
+    var presenca = presencaSelect ? presencaSelect.value : 'agendado';
+
+    var avisoToast = lancamentosEditId ? 'Atendimento atualizado.' : 'Atendimento lançado.';
+
     if (lancamentosEditId) {
       // edição
       for (var i = 0; i < lancamentos.length; i++) {
@@ -335,6 +382,7 @@ var lancamentosModulo = {
           lancamentos[i].status = status.value;
           lancamentos[i].obs = obs.value;
           lancamentos[i].suaParte = suaParte;
+          lancamentos[i].presenca = presenca;
           break;
         }
       }
@@ -350,16 +398,76 @@ var lancamentosModulo = {
         pagamento: pagamento.value,
         status: status.value,
         obs: obs.value || '',
-        suaParte: suaParte
+        suaParte: suaParte,
+        presenca: presenca
       });
+
+      // criação de série semanal (retornos fixos)
+      var repetirSelect = document.getElementById('lancRepetir');
+      var totalSessoes = repetirSelect ? (parseInt(repetirSelect.value, 10) || 0) : 0;
+      if (totalSessoes > 1) {
+        var criadas = this.criarSerieSemanal({
+          data: data.value,
+          horario: horario.value,
+          paciente: paciente.value.trim(),
+          tipo: tipo.value,
+          fonteId: fId,
+          valor: valorNum,
+          pagamento: pagamento.value,
+          status: status.value,
+          obs: obs.value || '',
+          suaParte: suaParte
+        }, totalSessoes);
+        avisoToast = 'Atendimento lançado e ' + criadas + ' sessões semanais criadas.';
+      }
     }
 
     Store.salvar();
     lancamentosRender();
+    if (typeof agendaModulo !== 'undefined') agendaModulo.render();
     app.fecharModal('modalLancamento');
-    app.toast(lancamentosEditId ? 'Atendimento atualizado.' : 'Atendimento lançado.');
+    app.toast(avisoToast);
     lancamentosEditId = null;
     return false;
+  },
+
+  // cria as cópias semanais a partir da sessão base (retorna quantas criou)
+  criarSerieSemanal: function(base, totalSessoes) {
+    var partes = base.data.split('-');
+    var ano = parseInt(partes[0], 10);
+    var mes = parseInt(partes[1], 10) - 1;
+    var dia = parseInt(partes[2], 10);
+
+    var criadas = 0;
+    for (var w = 1; w < totalSessoes; w++) {
+      var d = new Date(ano, mes, dia + (w * 7));
+      var novaData = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+
+      // não duplica se já existir sessão do mesmo paciente no mesmo dia/horário
+      var existe = false;
+      for (var i = 0; i < lancamentos.length; i++) {
+        var l = lancamentos[i];
+        if (l.data === novaData &&
+            l.horario === base.horario &&
+            l.paciente.toLowerCase() === base.paciente.toLowerCase()) {
+          existe = true;
+          break;
+        }
+      }
+      if (existe) continue;
+
+      var copia = {};
+      for (var k in base) copia[k] = base[k];
+      copia.id = Date.now() + w;
+      copia.data = novaData;
+      copia.status = 'pendente';
+      copia.presenca = 'agendado';
+      lancamentos.push(copia);
+      criadas++;
+    }
+    return criadas;
   },
 
   excluir: function(id) {
@@ -373,6 +481,7 @@ var lancamentosModulo = {
 
     Store.salvar();
     lancamentosRender();
+    if (typeof agendaModulo !== 'undefined') agendaModulo.render();
     app.toast('Lançamento excluído.');
   }
 

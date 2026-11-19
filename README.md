@@ -5,7 +5,7 @@ Sistema web para gestão de atendimentos de psicologia. Roda direto no navegador
 ## Estrutura do projeto
 
 ```
-Saas Psicologa/
+D:\_App_Saas-Livia\
 ├── index.html           # Página principal (abra este arquivo no navegador)
 ├── css/
 │   └── style.css        # Estilos visuais
@@ -13,13 +13,17 @@ Saas Psicologa/
 │   ├── data.js          # Dados, regra de cálculo e armazenamento local
 │   ├── meses.js         # Navegação mensal clicável
 │   ├── app.js           # Navegação, modais, utilitários
+│   ├── agenda.js        # Grade semanal (página inicial)
 │   ├── pacientes.js     # Cadastro de pacientes
 │   ├── fontes.js        # Cadastro de convênios
-│   ├── lancamentos.js   # Atendimentos
+│   ├── lancamentos.js   # Atendimentos + série semanal
 │   ├── situacao.js      # Situação dos pagamentos
-│   └── resumos.js       # Totais mensais por convênio
+│   ├── resumos.js       # Totais mensais por convênio
+│   └── backup.js        # Exportar/importar backup (JSON)
 ├── assets/              # Identidade visual
+├── Livia/               # Documentos pessoais (NÃO versionar — está no .gitignore)
 ├── README.md            # Este arquivo
+├── COMO_CONTINUAR.md    # Ponto de parada e próximos passos
 └── .gitignore           # Arquivos ignorados pelo git
 ```
 
@@ -53,9 +57,18 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
 
 ## O que já está pronto (esta versão)
 
-- Menu lateral com: Resumos, Lançamentos, Convênios, Pacientes e Situação Paciente.
+- **Agenda semanal** (página inicial): grade seg–dom, 7h–22h, clique no vazio
+  cria agendamento com data/horário pré-preenchidos, clique no chip edita,
+  navegação de semanas e destaque do dia atual.
+- **Presença**: Agendado / Compareceu / Faltou / Cancelou — campo no modal e
+  coluna na tabela de Lançamentos, com cores na agenda.
+- **Repetição semanal**: criar 4/8/12 sessões de uma vez (retornos fixos),
+  sem duplicar o que já existe.
+- **Exportar/Importar backup (JSON)** na sidebar — leva os dados entre máquinas.
+- Menu lateral: Agenda, Resumos, Lançamentos, Convênios, Pacientes e Situação Paciente.
 - Cabeçalho de meses clicável (12 meses do ano atual) em Lançamentos, Situação Paciente e Resumos.
-- Cadastro de convênios com valor fixo ou variável e percentual recebido.
+- Cadastro de convênios com valor fixo ou variável e percentual recebido
+  (percentual editado somente na tabela de convênios — sem bloco duplicado).
 - Cadastro de pacientes com capitalização automática do nome e máscara de moeda.
 - Lançamentos com data automática, horários de 30 em 30 minutos, autocomplete de pacientes e criação automática de paciente quando o nome não existe.
 - Situação Paciente com botão rápido para confirmar ou desfazer pagamentos.
@@ -71,27 +84,34 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
 
 ## Próximos blocos (a desenvolver)
 
-1. Exportação dos resumos (PDF/Excel).
-2. Backup e restauração dos dados.
-3. Lembretes de pagamentos pendentes.
-4. Login e acesso por conta.
-5. Banco de dados online (Supabase).
-6. Gestão Anual (criação de anos limpos e exclusão com confirmação).
-7. Publicação no GitHub Pages.
+1. Painel "Hoje" — atendimentos do dia, pendências e ganho do mês ao abrir.
+2. Exportação dos resumos (CSV/Excel) para o contador + lista "quem deve".
+3. PWA — instalar no celular e usar offline de verdade.
+4. Ficha do paciente — histórico + observações pessoais da psicóloga
+   (sem dado clínico do paciente).
+5. Lembretes de pagamentos pendentes.
+6. Login e acesso por conta.
+7. Banco de dados online (Supabase) + publicação no GitHub Pages.
+8. Gestão Anual (criação de anos limpos e exclusão com confirmação).
+
+## Versionamento (Git já inicializado)
+
+O repositório local está criado. Os comandos úteis:
+
+```bash
+git status                  # o que mudou
+git add -A
+git commit -m "descreva a mudança"
+git log --oneline           # histórico
+```
+
+> A pasta `Livia/` (documentos pessoais) e `backup-*.json` estão no
+> `.gitignore` e **nunca** vão para o GitHub.
 
 ## Subir para o GitHub (quando estiver usável)
 
-1. Instale o Git no computador (se ainda não tiver).
-2. Na pasta `Saas Psicologa`, rode:
-
-```bash
-git init
-git add .
-git commit -m "Versão inicial do sistema de atendimentos"
-```
-
-3. Crie um repositório no GitHub (não coloque dados reais).
-4. Ligue o repositório remoto e faça push:
+1. Crie um repositório no GitHub (não coloque dados reais).
+2. Ligue o repositório remoto e faça push:
 
 ```bash
 git remote add origin https://github.com/SEU_USUARIO/saas-psicologa.git
