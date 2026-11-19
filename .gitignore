@@ -1,0 +1,32 @@
+# Dependências
+node_modules/
+
+# Build
+dist/
+build/
+out/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Documentos pessoais e materiais da Lívia (NUNCA publicar)
+Livia/
+
+# Backups exportados pelo sistema
+backup-*.json

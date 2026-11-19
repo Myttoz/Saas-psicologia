@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Sistema de Atendimentos — Gestão de Pacientes</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <!-- Topbar mobile -->
+  <header class="topbar" id="topbar">
+    <button class="menu-btn" onclick="app.toggleSidebar()" aria-label="Abrir menu">
+      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+    <div class="page-title" id="pageTitle">Convênios</div>
+    <div class="user">
+      <div class="user-avatar">P</div>
+      <div class="user-info">
+        <div class="user-name">Profissional</div>
+        <div class="user-role">Psicologia</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <img class="brand-logo" src="assets/logo.jpeg" alt="Logo">
+        <div class="brand-text">
+          <div class="brand-nome">Lívia Ferreira</div>
+          <div class="brand-sub">Psicóloga</div>
+          <div class="brand-sub">Gestão de pacientes</div>
+        </div>
+      </div>
+      <div class="nav">
+        <div class="nav-section">Menu</div>
+        <div class="nav-item" onclick="app.trocarPagina('resumos')">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Resumos
+        </div>
+        <div class="nav-item" onclick="app.trocarPagina('lancamentos')">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          Lançamentos
+        </div>
+        <div class="nav-item active" onclick="app.trocarPagina('fontes')">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Convênios
+        </div>
+        <div class="nav-item" onclick="app.trocarPagina('pacientes')">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          Pacientes
+        </div>
+        <div class="nav-item" onclick="app.trocarPagina('situacao')">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Situação Paciente
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <button class="btn btn-outline" style="width:100%; margin-bottom:.75rem;" onclick="app.sair()">Sair</button>
+        <div class="sidebar-credit">SaaS by Myttoz</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- Página: Resumos -->
+      <div class="page" id="page-resumos">
+        <div class="page-header"><h1>Resumos</h1></div>
+
+        <div class="month-tabs" id="mesesResumos"></div>
+
+        <div class="stats" id="statsResumos"></div>
+
+        <div class="card">
+          <div class="card-header-inline">
+            <h2 id="resumoTitulo">Resumo mensal</h2>
+            <span class="card-subtitle">Valores separados por convênio</span>
+          </div>
+          <div class="alert-note" id="resumoAviso" style="display:none;">
+            Convênios sem percentual informado não entram nos cálculos de ganho e repasse.
+            Cadastre o percentual na aba Convênios para exibir os valores.
+          </div>
+          <div class="resumo-grid" id="resumosPorFonte"></div>
+        </div>
+
+        <div class="card" id="cardAvaliacoes" style="display:none;">
+          <div class="card-header-inline">
+            <h2>Avaliações avulsas</h2>
+            <span class="card-subtitle" id="avaliacoesQtd">0 avaliações no mês</span>
+          </div>
+          <div class="resumo-grid" id="resumoAvaliacoes"></div>
+        </div>
+      </div>
+
+      <!-- Página: Lançamentos -->
+      <div class="page" id="page-lancamentos">
+        <div class="page-header">
+          <h1>Lançamentos</h1>
+          <button class="btn btn-primary" onclick="lancamentosModulo.abrirModal()">+ Novo atendimento</button>
+        </div>
+        <div class="month-tabs" id="mesesLancamentos"></div>
+        <div class="card">
+          <div class="card-header-inline">
+            <h2 id="tituloLancamentos">Atendimentos</h2>
+            <span class="card-subtitle">Clique em um mês para alternar</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Horário</th><th>Tipo</th><th>Paciente</th><th>Convênio</th><th>Forma pag.</th><th>Valor</th><th>A receber</th><th>Status</th><th>Ação</th></tr>
+              </thead>
+              <tbody id="tbodyHoje"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Página: Convênios -->
+      <div class="page active" id="page-fontes">
+        <div class="page-header">
+          <h1>Convênios</h1>
+          <button class="btn btn-primary" onclick="fontesModulo.abrirModalNovaFonte()">+ Novo convênio</button>
+        </div>
+
+        <div class="card">
+          <p style="font-size:.88rem; color:var(--text-muted); margin-bottom:1rem;">Cadastre de onde vêm os pacientes. Defina se o valor é fixo para todos ou variável por paciente.</p>
+
+          <div style="margin-bottom: 1.5rem;">
+            <div style="display:flex; align-items:center; gap:.5rem; margin-bottom: .75rem;">
+              <span style="font-size:.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em;">Percentuais</span>
+            </div>
+            <div class="percent-row">
+              <span class="percent-label">Clínica</span>
+              <input type="text" class="percent-value" id="pctClinica" value="30" readonly>
+              <button class="percent-edit" onclick="app.editarPercentual('pctClinica', this)" title="Editar">✎</button>
+            </div>
+            <div class="percent-row">
+              <span class="percent-label">Particular</span>
+              <input type="text" class="percent-value" id="pctParticular" value="30" readonly>
+              <button class="percent-edit" onclick="app.editarPercentual('pctParticular', this)" title="Editar">✎</button>
+            </div>
+            <div class="percent-row">
+              <span class="percent-label">Cideslestes</span>
+              <input type="text" class="percent-value" id="pctCideslestes" value="40" readonly>
+              <button class="percent-edit" onclick="app.editarPercentual('pctCideslestes', this)" title="Editar">✎</button>
+            </div>
+            <div class="percent-row">
+              <span class="percent-label">Unimed</span>
+              <input type="text" class="percent-value" id="pctUnimed" value="—" readonly>
+              <button class="percent-edit" onclick="app.editarPercentual('pctUnimed', this)" title="Editar">✎</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Convênio</th><th>Tipo de valor</th><th>Valor fixo</th><th>Percentual</th><th>Status</th><th>Ação</th></tr>
+              </thead>
+              <tbody id="tbodyFontes"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Página: Pacientes -->
+      <div class="page" id="page-pacientes">
+        <div class="page-header">
+          <h1>Pacientes</h1>
+          <button class="btn btn-primary" onclick="pacientesModulo.abrirModal()">+ Novo paciente</button>
+        </div>
+
+        <div class="card">
+          <p style="font-size:.88rem; color:var(--text-muted); margin-bottom:1rem;">Cadastre os pacientes vinculando a um convênio.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Paciente</th><th>Convênio</th><th>Tipo de valor</th><th>Valor do atendimento</th><th>Ação</th></tr>
+              </thead>
+              <tbody id="tbodyPacientes"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Página: Situação Paciente -->
+      <div class="page" id="page-situacao">
+        <div class="page-header"><h1>Situação Paciente</h1></div>
+        <div class="month-tabs" id="mesesSituacao"></div>
+        <div class="card">
+          <div class="card-header-inline">
+            <h2 id="tituloSituacao">Pagamentos</h2>
+            <span class="card-subtitle">Confirme cada pagamento pelo botão da linha</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Horário</th><th>Paciente</th><th>Convênio</th><th>Valor</th><th>A receber</th><th>Status</th><th>Ação</th></tr>
+              </thead>
+              <tbody id="tbodySituacao"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Overlay + Modais -->
+<div class="overlay" id="overlay" onclick="app.fecharModais()">
+
+<!-- Modal: Paciente -->
+<div class="modal" id="modalPaciente" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Novo paciente</div>
+    <button class="modal-close" onclick="app.fecharModal('modalPaciente')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <form id="formPaciente" onsubmit="return pacientesModulo.salvar();">
+      <div class="form-group">
+        <label class="form-label">Nome completo</label>
+        <input type="text" id="pacNome" class="form-control" placeholder="Ex: Pedro Silva" oninput="app.formatarNome(this)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Convênio</label>
+        <select id="pacFonte" class="form-control"></select>
+      </div>
+      <div class="form-group toggle-field" id="campoValorPaciente">
+        <label class="form-label">Valor do atendimento (R$)</label>
+        <input type="text" id="pacValor" class="form-control" placeholder="Ex: 180,00" oninput="app.mascaraValor(this)">
+        <div class="form-note">Preencha quando a fonte for de valor variável.</div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="app.fecharModal('modalPaciente')">Cancelar</button>
+    <button type="button" class="btn btn-primary" onclick="pacientesModulo.salvar()">Salvar</button>
+  </div>
+</div>
+
+<!-- Modal: Novo Convênio / Plano -->
+<div class="modal" id="modalNovaFonte" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Novo convênio</div>
+    <button class="modal-close" onclick="app.fecharModal('modalNovaFonte')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <form id="formNovaFonte" onsubmit="return fontesModulo.salvarNovaFonte();">
+      <div class="form-group">
+        <label class="form-label">Nome do convênio</label>
+        <input type="text" id="fonteNome" class="form-control" placeholder="Ex: Unimed, Particular, Clínica...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo de valor do atendimento</label>
+        <div class="radio-group">
+          <label class="radio-label"><input type="radio" name="fonteTipo" value="fixo" checked> Fixo para todos</label>
+          <label class="radio-label"><input type="radio" name="fonteTipo" value="variavel"> Variável por paciente</label>
+        </div>
+      </div>
+      <div class="form-group toggle-field" id="campoValorFixo">
+        <label class="form-label">Valor fixo (R$)</label>
+        <input type="text" id="fonteValorFixo" class="form-control" placeholder="Ex: 200,00" oninput="app.mascaraValor(this)">
+        <div class="form-note">Será aplicado automaticamente a todos os pacientes deste convênio.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Percentual recebido (%)</label>
+        <input type="text" id="fontePercentual" class="form-control" placeholder="Ex: 70" maxlength="5">
+        <div class="form-note">Coloque o valor a receber. Informe apenas o número (ex.: 70 para 70%).</div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="app.fecharModal('modalNovaFonte')">Cancelar</button>
+    <button type="button" class="btn btn-primary" onclick="fontesModulo.salvarNovaFonte()">Salvar</button>
+  </div>
+</div>
+
+<!-- Modal: Percentual -->
+<div class="modal" id="modalPercentual" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Editar percentual</div>
+    <button class="modal-close" onclick="app.fecharModal('modalPercentual')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <form id="formPercentual" onsubmit="return app.salvarPercentual();">
+      <div class="form-group">
+        <label class="form-label">Percentual (%)</label>
+        <input type="text" id="pctValor" class="form-control" placeholder="Ex: 30" maxlength="5">
+        <input type="hidden" id="pctCampoId">
+      </div>
+      <div class="form-note">Informe apenas o número.</div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="app.fecharModal('modalPercentual')">Cancelar</button>
+    <button type="button" class="btn btn-primary" onclick="app.salvarPercentual()">Salvar</button>
+  </div>
+</div>
+
+<!-- Modal: Novo Lançamento -->
+<div class="modal" id="modalLancamento" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Novo atendimento</div>
+    <button class="modal-close" onclick="app.fecharModal('modalLancamento')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <form id="formLancamento" onsubmit="return lancamentosModulo.salvar();">
+      <div class="form-group">
+        <label class="form-label">Data</label>
+        <input type="date" id="lancData" class="form-control" readonly value="">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Horário</label>
+        <input type="text" id="lancHora" class="form-control" placeholder="Ex: 08:00">
+        <div class="time-presets" id="timePresets"></div>
+        <div class="form-note">Horários de 30 em 30 minutos.</div>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Nome do paciente</label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="lancPaciente" class="form-control" placeholder="Comece a digitar o nome..." autocomplete="off">
+          <ul class="autocomplete-list" id="autocompletePaciente"></ul>
+        </div>
+        <div class="autocomplete-msg" id="autocompleteMsg" style="display:none;"></div>
+        <div class="form-note">Use ↑ ↓ e Tab para selecionar. Se não existir, digite o nome completo para criar.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo de atendimento</label>
+        <select id="lancTipo" class="form-control">
+          <option value="normal">Atendimento normal</option>
+          <option value="avaliacao">Avaliação (avulsa)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Convênio</label>
+        <select id="lancFonte" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valor (R$)</label>
+        <input type="text" id="lancValor" class="form-control" placeholder="Ex: 180,00" oninput="app.mascaraValor(this)">
+      </div>
+      <div class="form-group full" id="campoSuaParte" style="display:none;">
+        <label class="form-label">Valor a receber (R$)</label>
+        <div class="sua-parte-preview" id="suaPartePreview">R$ 0,00</div>
+        <div class="form-note">Calculado automaticamente baseado no convênio e percentual.</div>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Forma de pagamento</label>
+        <select id="lancPagamento" class="form-control">
+          <option value="dinheiro">Dinheiro</option>
+          <option value="pix">Pix</option>
+          <option value="clinica">Clínica</option>
+          <option value="cartao">Cartão</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Status</label>
+        <select id="lancStatus" class="form-control">
+          <option value="pendente">Pendente</option>
+          <option value="pago">Pago</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Observações</label>
+        <textarea id="lancObs" class="form-control" placeholder="Ex: sessão individual, adulto, retorno..."></textarea>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="app.fecharModal('modalLancamento')">Cancelar</button>
+    <button type="button" class="btn btn-primary" onclick="lancamentosModulo.salvar()">Lançar atendimento</button>
+  </div>
+</div>
+
+</div><!-- fim overlay -->
+
+<!-- Toast -->
+<div class="toast" id="toast">Operação realizada</div>
+
+<script src="js/data.js"></script>
+<script src="js/meses.js"></script>
+<script src="js/app.js"></script>
+<script src="js/pacientes.js"></script>
+<script src="js/fontes.js"></script>
+<script src="js/lancamentos.js"></script>
+<script src="js/situacao.js"></script>
+<script src="js/resumos.js"></script>
+</body>
+</html>
