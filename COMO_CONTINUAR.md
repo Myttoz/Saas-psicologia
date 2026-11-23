@@ -14,6 +14,20 @@ Projeto: SaaS de gestão de atendimentos (psicóloga).
 > que o recibo (CRP `04/74163`, linha de assinar, marca d'água) já está pronto e
 > não deve ser refeito.
 
+## Regra de ouro: toda mudança vira versão
+
+Sempre que o código mudar, a sequência é:
+
+1. `git add .` → `git commit -m "mensagem"` → `git push origin main` (publica o site).
+2. Criar/atualizar `RELEASE_NOTES_vX.Y.Z.md` com as novidades.
+3. `git tag -a vX.Y.Z -m "vX.Y.Z"` → `git push origin vX.Y.Z` (publica a release
+   e atualiza o feed `releases.rss`).
+4. Nunca reaproveitar uma tag existente: a próxima é `v1.1.0`, depois `v1.2.0`...
+   A tag `v1.0.0` já foi publicada e não deve ser recriada.
+
+Se a mudança for só de documentação, basta o commit normal em `main`; a tag nova
+só entra quando houver algo que a profissional perceba no sistema.
+
 ## O que já está pronto (histórico)
 
 **Fase 0 — base (notebook Linux):**
