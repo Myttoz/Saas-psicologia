@@ -49,29 +49,36 @@ o Supabase.
 
 Assim ninguém mais cria conta por conta própria, nem entra pelo Google.
 
-### ✅ 2.3 Ativar a verificação em duas etapas (MFA) na sua conta
+### ✅ 2.3 Ativar a verificação em duas etapas (MFA) — uma vez para cada conta
 
-1. Ainda em **Authentication → Users**, clique no seu usuário.
-2. Procure a seção **Multi-factor Authentication (MFA)** e clique em
-   **Enroll / Add factor** escolhendo **TOTP** (aplicativo autenticador).
-3. O Supabase mostra um **QR code**. Abra seu aplicativo autenticador no
-   celular e escaneie.
-4. Digite no painel o **código de 6 números** que o aplicativo mostrou para
-   confirmar a ativação. O status do fator deve ficar como **verified**.
-5. Repita os passos 2 a 4 para criar um **segundo fator TOTP de reserva**, de
-   preferência em outro aplicativo ou outro celular. Guarde o QR code/segredo
-   fora do computador (papel, cofre, gerenciador de senhas). O Supabase não
-   mostra códigos de recuperação para usuários do projeto — os códigos da sua
-   conta do painel não servem para entrar no site. Cada projeto tem seu próprio
-   fator: códigos de outro projeto também não servem aqui.
+A forma mais simples é pelo próprio site: entre com a conta, clique na barra
+lateral em **🔐 Verificação em duas etapas** e siga as telas. Esse botão fica
+sempre disponível, mesmo se você tiver clicado em “Agora não” no aviso
+automático.
+
+1. Clique em **Gerar QR code**.
+2. Escaneie o QR com o aplicativo autenticador do seu celular (Google
+   Authenticator, Authy, Microsoft Authenticator ou similar). Se não der, digite
+   o código secreto que aparece abaixo do QR.
+3. Digite os **6 números** que o aplicativo mostrou e confirme. O status do fator
+   fica como **verified**.
+4. Para cadastrar o **segundo fator de reserva**, clique de novo no mesmo botão.
+   Use outro celular ou outro aplicativo, escaneie o novo QR e guarde o segredo
+   fora do computador (papel, cofre ou gerenciador de senhas).
+5. Saia e entre com a **outra conta**. Repita os passos 1 a 4: cada pessoa
+   cadastra o seu próprio código no seu celular. Códigos de uma conta não servem
+   para a outra, e códigos de outro projeto Supabase também não servem aqui.
+
+> O Supabase não entrega códigos de recuperação para usuários do projeto. O
+> seu “plano B” é o segundo fator TOTP de reserva guardado em local seguro.
+
+Também dá para criar o fator no painel: **Authentication → Users → (usuário) →
+Multi-factor Authentication → Add factor → TOTP**. O resultado é o mesmo.
 
 Depois disso, o site passa a pedir o código de 6 números no login e antes de
 importar um backup. O banco também exige o código para ler e gravar dados
 (regra `aal2` em `supabase/schema.sql`) — então a proteção não depende só do
 site.
-
-> Se quiser, dá para ativar pelo próprio site: menu lateral →
-> **Ativar verificação em duas etapas**. O resultado é o mesmo.
 
 ### ✅ 2.4 Rodar o SQL de segurança (uma vez)
 
@@ -135,9 +142,10 @@ git tag -a v1.1.0 -m "v1.1.0"
 git push origin v1.1.0
 ```
 
-**Atalhos:** no Linux, `subirpsicologa "mensagem" v1.1.0` faz os dois passos
-juntos; `baixarpsicologa` traz a última versão. No Windows 11, use
-`.\scripts\publicar.ps1 "mensagem" v1.1.0` e `.\scripts\baixar.ps1`.
+**Atalhos:** no Linux, `subirpsi "mensagem" vX.Y.Z` faz os dois passos juntos;
+`baixarpsi` traz a última versão. Como os atalhos estão em `~/bin`, basta digitar
+o nome — não precisa escrever o caminho. No Windows 11, use
+`.\scripts\publicar.ps1 "mensagem" vX.Y.Z` e `.\scripts\baixar.ps1`.
 Exemplos de mensagem: `"Corrige filtro da agenda"`, `"Ajusta textos do manual"`.
 O atalho recusa versão repetida e exige o arquivo `RELEASE_NOTES_vX.Y.Z.md`.
 

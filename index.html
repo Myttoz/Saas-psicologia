@@ -84,6 +84,7 @@
         <button class="btn btn-outline" style="width:100%; margin-bottom:.5rem;" onclick="backupModulo.restaurarAuto()" title="Volta ao último retrato salvo automaticamente neste navegador">🕘 Restaurar automático</button>
         <div class="backup-auto-info" id="backupAutoInfo">Ainda não há backup automático neste navegador.</div>
         <button class="btn btn-outline" style="width:100%; margin-bottom:.75rem;" onclick="recibosModulo.abrirConfig()" title="Nome, CRP e CPF que aparecem no recibo">🧾 Dados do recibo</button>
+        <button class="btn btn-outline" style="width:100%; margin-bottom:.75rem;" onclick="Backend.abrirAtivacaoMfa()" title="Cada conta cadastra o seu próprio código no celular">🔐 Verificação em duas etapas</button>
         <button class="btn btn-outline" style="width:100%; margin-bottom:.75rem;" onclick="app.sair()">Sair</button>
         <div class="sidebar-credit">SaaS by Myttoz</div>
       </div>
@@ -734,13 +735,13 @@
     <div class="mfa-segredo" id="mfaSegredo" style="display:none;"></div>
     <div class="form-group" id="grupoMfaCodigo" style="display:none;">
       <label class="form-label" for="mfaCodigo">Código de 6 números</label>
-      <input type="text" id="mfaCodigo" class="form-control" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+      <input type="text" id="mfaCodigo" class="form-control" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter'){event.preventDefault(); Backend.clicarMfa();}">
     </div>
     <div class="senha-erro erro" id="mfaErro" style="display:none;"></div>
   </div>
   <div class="modal-footer">
-    <button class="btn btn-outline" id="mfaSecundario" onclick="Backend.recusarMfa()">Agora não</button>
-    <button type="button" class="btn btn-primary" id="mfaBotao" onclick="Backend.ativarMfa()">Ativar agora</button>
+    <button class="btn btn-outline" id="mfaSecundario" onclick="Backend.mfaSecundario()">Agora não</button>
+    <button type="button" class="btn btn-primary" id="mfaBotao" onclick="Backend.clicarMfa()">Ativar agora</button>
   </div>
 </div>
 

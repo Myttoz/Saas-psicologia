@@ -12,7 +12,8 @@ mais segurança. O uso diário do site continua exatamente o mesmo.
 - Pasta **Removidos** para guardar rascunhos e arquivos pessoais que não devem
   subir para o GitHub. O material da Lívia continua fora do Git.
 - Atalhos novos:
-  - Linux: `subirpsicologa` e `baixarpsicologa` (em `~/bin`).
+  - Linux: `subirpsicologa` e `baixarpsicologa` (em `~/bin`) — renomeados para
+    `subirpsi` e `baixarpsi` na v1.2.0.
   - Windows 11: `scripts/publicar.ps1` e `scripts/baixar.ps1`.
 
 ## 🔧 Melhorias
