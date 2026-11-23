@@ -6,7 +6,25 @@
     <description>Versões e novidades do Gestão de Pacientes (SaaS by Myttoz).</description>
     <language>pt-BR</language>
     <atom:link href="https://myttoz.github.io/Saas-psicologia/releases.rss" rel="self" type="application/rss+xml" />
-    <lastBuildDate>Mon, 23 Nov 2026 18:07:19 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 23 Nov 2026 19:51:39 GMT</lastBuildDate>
+<item>
+  <title>v1.3.0</title>
+  <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.3.0</link>
+  <guid isPermaLink="true">https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.3.0</guid>
+  <pubDate>Mon, 23 Nov 2026 19:33:38 GMT</pubDate>
+  <description><![CDATA[<h2>v1.3.0 — Gestão Anual e fechamento da montagem</h2>
+<p>Com esta versão a montagem do site fecha: anos separados, publicação confiável e um padrão único de versões.</p>
+<p><strong>Data:</strong> 23/11/2026</p>
+<h2>✨ Novidades</h2>
+<ul><li><strong>Gestão Anual</strong> no menu <strong>Anos</strong>: crie anos vazios, escolha o ano em uso e veja quantos atendimentos e evoluções existem em cada ano.</li><li>A troca de ano atualiza na hora os botões de meses de Atendimentos, Resumos e Situação — os meses continuam sendo Jan…Dez, agora do ano escolhido.</li><li><strong>Excluir ano</strong> apaga somente os dados daquele ano. Pedimos para você digitar o ano e depois pedimos a senha da conta e o código do celular. Pacientes e convênios ficam.</li></ul>
+<h2>🔧 Melhorias</h2>
+<ul><li>O botão <strong>🔐 Verificação em duas etapas</strong> continua sempre disponível na barra lateral. Cada conta cadastra o próprio QR code e um segundo fator de reserva.</li><li>A tela de login já chega aberta junto com o HTML. Dar F5 ou Ctrl+F5 não mostra mais o fundo do programa por alguns instantes.</li><li>O feed <code>releases.rss</code> passou a ser gerado pelas tags do repositório, com todas as versões. O GitHub Pages republica o feed logo após cada release.</li><li>Padrão único de commits e tags: <code>feat:</code> é nova função, <code>fix:</code>/<code>docs:</code>/<code>style:</code>/<code>chore:</code> são ajustes e <code>feat!:</code> fica para mudanças grandes. Os atalhos <code>subirpsi</code> e <code>publicar.ps1</code> sugerem mensagem e versão sozinhos.</li><li>Backup e nuvem passam para a versão 5 e guardam os anos. Backups antigos continuam sendo aceitos e têm os anos recuperados dos próprios dados.</li></ul>
+<h2>🔒 Segurança</h2>
+<ul><li>A criação, a troca e a exclusão de ano entram na trilha <code>auditoria</code>. A exclusão exige reautenticação com senha e código do aplicativo.</li><li>A trilha não guarda texto clínico. As evoluções continuam cifradas com AES-GCM antes de ir para a nuvem.</li></ul>
+<h2>🚀 Como atualizar</h2>
+<p>1. Abra o site e recarregue com <strong>Ctrl+F5</strong> (ou Command+R). 2. Se estiver no celular, feche e abra o aplicativo novamente. 3. No menu <strong>Anos</strong>, confira o ano em uso antes de lançar os atendimentos.</p>
+<p>SaaS by Myttoz</p>]]></description>
+</item>
 <item>
   <title>v1.2.0</title>
   <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.2.0</link>
