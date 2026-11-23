@@ -80,6 +80,11 @@ button { cursor: pointer; }
   z-index: 1;
 }
 
+/* O HTML já chega com a tela de login aberta e o sistema escondido. Só o
+   JavaScript remove esta classe depois de validar a sessão — assim F5/Ctrl+F5
+   nunca mostram o fundo do programa por alguns milissegundos. */
+html.app-bloqueado .app { visibility: hidden; }
+
 .app-body {
   display: flex;
   flex: 1;

@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   release:
@@ -38,7 +39,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python3 scripts/gerar_feed.py
+        run: |
+          git fetch --tags --force
+          python3 scripts/gerar_feed.py
 
       - name: Publicar o feed atualizado
         run: |
@@ -52,3 +55,11 @@ jobs:
             git commit -m "Atualiza feed RSS com a nova release"
             git push origin main
           fi
+
+      # Commits feitos com o GITHUB_TOKEN não disparam outros workflows. Sem
+      # este aviso, o Pages continuaria servindo o feed antigo até alguém dar
+      # outro push "de verdade" no main.
+      - name: Mandar publicar o site com o feed novo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --ref main

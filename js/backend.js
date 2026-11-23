@@ -415,7 +415,12 @@ var Backend = {
   // ---------- login ----------
 
   iniciar: function() {
-    if (!this.configurado()) return;
+    if (!this.configurado()) {
+      // Modo local não pede login: libera o sistema que já veio protegido
+      // no HTML para evitar qualquer lampejo da tela antes do JavaScript.
+      app.fecharModal('modalLogin');
+      return;
+    }
     if (typeof fetch !== 'function') {
       app.toast('Este navegador não suporta sincronização online.');
       this.mostrarLogin();
@@ -654,7 +659,8 @@ var Backend = {
               'Sua conta usa verificação em duas etapas. Digite o código de 6 números.');
             return;
           }
-          self.sincronizarNoInicio().then(function() {
+          return self.sincronizarNoInicio().then(function() {
+            app.fecharModal('modalLogin');
             self.mostrarConviteMfaSeNecessario(usuario);
           });
         });

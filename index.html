@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="app-bloqueado">
 <head>
 <meta charset="UTF-8">
 <!-- CSP: só scripts e estilos vindos do próprio site. Nada de objetos, plugins
@@ -388,7 +388,7 @@
 </div>
 
 <!-- Overlay + Modais -->
-<div class="overlay" id="overlay" onclick="app.fecharModais()">
+<div class="overlay login-fundo open" id="overlay" onclick="app.fecharModais()">
 
 <!-- Modal: Paciente -->
 <div class="modal" id="modalPaciente" onclick="event.stopPropagation()">
@@ -692,7 +692,7 @@
 </div>
 
 <!-- Modal: login na nuvem (aparece somente se a nuvem estiver configurada) -->
-<div class="modal modal-login" id="modalLogin" onclick="event.stopPropagation()">
+<div class="modal modal-login show-modal" id="modalLogin" onclick="event.stopPropagation()">
   <div class="login-cabecalho">
     <img src="assets/logo.jpeg" alt="Logo" class="login-logo">
     <div class="login-titulo">Bem-vinda</div>

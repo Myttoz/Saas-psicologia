@@ -23,14 +23,21 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Baixar o código
+      - name: Baixar o código (com todas as tags)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Preparar o site
         uses: actions/configure-pages@v5
         with:
           # Cria/habilita o Pages automaticamente se ainda não estiver ligado.
           enablement: true
+
+      - name: Gerar o feed com todas as versões
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/gerar_feed.py
 
       - name: Montar o pacote (só os arquivos do site)
         run: |
