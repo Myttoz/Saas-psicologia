@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Gestão de Pacientes — novidades</title>
+    <link>https://github.com/Myttoz/Saas-psicologia/releases</link>
+    <description>Versões e novidades do Gestão de Pacientes (SaaS by Myttoz).</description>
+    <language>pt-BR</language>
+    <lastBuildDate>Mon, 23 Nov 2026 16:53:08 GMT</lastBuildDate>
+<item>
+  <title>v1.0.0</title>
+  <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.0.0</link>
+  <guid isPermaLink="false">v1.0.0</guid>
+  <pubDate>Mon, 23 Nov 2026 16:39:12 GMT</pubDate>
+  <description><![CDATA[<h2>v1.0.0 — Lançamento oficial 🎉</h2>
+<p>Primeira versão pública do <strong>Gestão de Pacientes</strong>: um lugar simples para</p>
+<p>organizar a agenda, os atendimentos e os recebimentos de uma clínica de</p>
+<p>psicologia. Feito para abrir no computador e no celular, com os dados na nuvem.</p>
+<p><strong>Data:</strong> 23/11/2026 · <strong>Marca:</strong> SaaS by Myttoz</p>
+<h2>✨ O que já vem pronto</h2>
+<ul><li><strong>Painel Hoje</strong> — quem falta confirmar, quem deve, valor a receber e botão</li></ul>
+<p>para iniciar/finalizar sessão com cronômetro.</p>
+<ul><li><strong>Agenda semanal</strong> — grade de segunda a domingo, das 7h às 20h, com</li></ul>
+<p>agendamentos rápidos, repetição de sessões e busca por paciente ou data.</p>
+<ul><li><strong>Pacientes e convênios</strong> — cadastro com busca, máscara de moeda e</li></ul>
+<p>percentual de repasse por convênio.</p>
+<ul><li><strong>Lançamentos</strong> — presença, status de pagamento, seleção em massa e busca</li></ul>
+<p>por qualquer coluna.</p>
+<ul><li><strong>Resumos</strong> — total produzido, ganho e repasse separados por convênio, com</li></ul>
+<p>exportação pronta para o contador em CSV.</p>
+<ul><li><strong>Recibo em PDF</strong> — nome, CRP <code>04/74163</code>, linha para assinar, assinatura</li></ul>
+<p>opcional e logo da profissional como marca d&#x27;água.</p>
+<ul><li><strong>WhatsApp</strong> — confirmação com mensagem pronta, sem API e sem custo.</li><li><strong>Prontuário</strong> — evoluções cifradas, modelos rápidos, busca, senha de acesso</li></ul>
+<p>e trilha de uso no navegador e no banco.</p>
+<ul><li><strong>Verificação em duas etapas (MFA)</strong> — código de 6 números no login e nas</li></ul>
+<p>ações críticas, quando ativada na conta.</p>
+<ul><li><strong>Backup</strong> — exportação/importação em JSON, retrato automático e restauração.</li><li><strong>Instalação no celular (PWA)</strong> — abre como aplicativo e funciona offline.</li></ul>
+<h2>🔒 Segurança e acesso</h2>
+<ul><li>Login obrigatório com e-mail e senha criados pela profissional no Supabase.</li></ul>
+<p><strong>Google removido</strong>: não há mais botão de login com Google no site.</p>
+<ul><li>Cada conta vê somente os próprios dados (RLS no banco). Contas com MFA ativo</li></ul>
+<p>só leem/gravam depois de passar pelo código de 6 números.</p>
+<ul><li><strong>A nuvem é a fonte da verdade.</strong> Ao entrar, os dados dela substituem os do</li></ul>
+<p>navegador. Não existe mais subida automática de dados locais: importar um</p>
+<p>backup exige senha da conta e código do aplicativo.</p>
+<ul><li>As evoluções são cifradas com <strong>AES-GCM</strong>; a chave vem da senha do prontuário</li></ul>
+<p>por <strong>PBKDF2-HMAC-SHA256 com 600.000 iterações</strong>. A chave fica só na memória.</p>
+<p>A senha em texto nunca é salva e não tem recuperação.</p>
+<ul><li>Trocar a senha do prontuário é atômica: se a recifração falhar, nada é gravado</li></ul>
+<p>e as evoluções continuam legíveis com a senha antiga.</p>
+<ul><li>Trilha de acesso registrada no banco (<code>auditoria</code>), sem texto clínico.</li><li>Textos de pacientes, convênios e evoluções são exibidos como texto, nunca</li></ul>
+<p>como código — inclusive em nomes com aspas ou <code>&lt;...&gt;</code>.</p>
+<ul><li>Backups e dados da nuvem passam por validação antes de entrar no sistema.</li><li>CSP rígida e cabeçalhos de segurança impedem frames, objetos e scripts de</li></ul>
+<p>terceiros. A chave pública <code>anon</code> é a única que aparece no site; a chave</p>
+<p><code>service_role</code> nunca é usada no navegador.</p>
+<h2>🚀 Primeiro acesso</h2>
+<p>1. Abra <strong>https://myttoz.github.io/Saas-psicologia/</strong></p>
+<p>2. Entre com o e-mail e a senha criados no Supabase.</p>
+<p>3. Se a conta tiver verificação em duas etapas, digite o código do aplicativo.</p>
+<p>4. Os dados da nuvem carregam automaticamente. No celular, use **Adicionar à</p>
+<p>tela inicial** para instalar como aplicativo.</p>
+<h2>📖 Documentação</h2>
+<p>O passo a passo completo está no [MANUAL.md](MANUAL.md) do repositório, e o</p>
+<p>guia pessoal de contas e senhas em</p>
+<p>[supabase/COMO_CONFIGURAR.md](supabase/COMO_CONFIGURAR.md).</p>
+<p><strong>Gestão de Pacientes</strong> · v1.0.0 · SaaS by Myttoz</p>]]></description>
+</item>
+  </channel>
+</rss>

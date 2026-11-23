@@ -1,7 +1,8 @@
 name: Publicar release automática
 
-# Quando uma tag v1.0.0, v1.1.0... chegar ao GitHub, este workflow cria a
-# release sozinho. O feed Atom do repositório é atualizado na hora.
+# Quando uma tag v1.0.0, v1.1.0... chega ao GitHub, este workflow cria a
+# release e atualiza o feed RSS publicado no site (lido por widgets como o
+# start.me). O feed do GitHub em releases.atom continua disponível.
 on:
   push:
     tags:
@@ -16,6 +17,9 @@ jobs:
     steps:
       - name: Baixar o código
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Criar release com as notas da versão
         env:
@@ -28,4 +32,23 @@ jobs:
             gh release create "$TAG" --title "$TAG" --notes-file "$NOTAS" --verify-tag
           else
             gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          fi
+
+      - name: Atualizar o feed RSS do site
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/gerar_feed.py
+
+      - name: Publicar o feed atualizado
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add releases.xml
+          if git diff --cached --quiet; then
+            echo "O feed já estava atualizado."
+          else
+            git commit -m "Atualiza feed RSS com a nova release"
+            git push origin main
           fi

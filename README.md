@@ -47,7 +47,9 @@ feito por você: o sistema só prepara o texto.
 
 - Passo a passo completo: [MANUAL.md](MANUAL.md)
 - Configuração da nuvem e das senhas: [supabase/COMO_CONFIGURAR.md](supabase/COMO_CONFIGURAR.md)
-- Novidades de cada versão:
+- Novidades de cada versão (feed para widgets como start.me):
+  https://myttoz.github.io/Saas-psicologia/releases.xml
+- Feed do GitHub (alternativa):
   https://github.com/Myttoz/Saas-psicologia/releases.atom
 
 ---

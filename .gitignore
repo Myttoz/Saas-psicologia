@@ -30,3 +30,7 @@ Livia/
 
 # Backups exportados pelo sistema
 backup-*.json
+
+# Arquivos temporários do Python
+__pycache__/
+*.pyc

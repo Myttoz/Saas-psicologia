@@ -132,8 +132,11 @@ git tag -a v1.0.0 -m "v1.0.0"
 git push origin v1.0.0
 ```
 
-3. O GitHub cria a release sozinho e atualiza o feed:
-   https://github.com/Myttoz/Saas-psicologia/releases.atom
+3. O GitHub cria a release sozinho e atualiza o feed do site:
+   **https://myttoz.github.io/Saas-psicologia/releases.xml**
+   (cole esse endereço no widget de notícias/RSS do start.me). O feed do GitHub
+   `https://github.com/Myttoz/Saas-psicologia/releases.atom` também existe, mas
+   alguns widgets não conseguem lê-lo.
 
 Para a **próxima** versão, use `v1.1.0`, `v1.2.0`... e crie um arquivo
 `RELEASE_NOTES_v1.1.0.md` com as novidades. Se não houver arquivo de notas, o
