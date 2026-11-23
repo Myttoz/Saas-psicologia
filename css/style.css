@@ -1600,10 +1600,31 @@ svg { display: block; }
   text-align: center;
 }
 
+/* Fundo próprio do login: cobre o sistema por completo, sem blur nem transparência. */
+#overlay.login-fundo {
+  background:
+    radial-gradient(circle at 14% 18%, rgb(247 246 242 / 0.16) 0, transparent 42%),
+    radial-gradient(circle at 86% 82%, rgb(193 106 74 / 0.32) 0, transparent 48%),
+    linear-gradient(155deg, #7A9E8F 0%, #5C7A6B 55%, #2E3A33 100%);
+  backdrop-filter: none;
+}
+
+/* Marca discreta ao fundo, sem competir com o cartão. */
+#overlay.login-fundo::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url('../assets/logo.jpeg') center / 300px no-repeat;
+  opacity: .08;
+  filter: grayscale(100%);
+  pointer-events: none;
+}
+
 /* Mantém o modal escondido até app.abrirModal() adicionar .show-modal. */
 .modal-login.show-modal {
   display: flex;
   flex-direction: column;
+  z-index: 1;
 }
 
 .login-cabecalho {
@@ -1728,6 +1749,58 @@ svg { display: block; }
 }
 
 .login-link:hover { color: var(--accent); }
+
+.login-separador {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 1.15rem 0 .9rem;
+  color: var(--text-muted);
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.login-separador::before,
+.login-separador::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.btn-login-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65rem;
+  width: 100%;
+  padding: .72rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font-size: .92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+
+.btn-login-google:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 6px 16px -10px rgb(46 58 51 / 0.45);
+}
+
+.google-icone { width: 20px; height: 20px; flex-shrink: 0; }
+
+.btn-login-google:focus,
+.btn-login-google:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgb(193 106 74 / 0.22);
+}
 
 .login-rodape {
   padding: .85rem;

@@ -99,7 +99,10 @@ var app = {
       modais[i].classList.remove('show-modal');
     }
     var overlay = document.getElementById('overlay');
-    if (overlay) overlay.classList.remove('open');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.classList.remove('login-fundo');
+    }
     var sb = document.getElementById('sidebar');
     if (sb) sb.classList.remove('mobile-open');
   },
@@ -166,6 +169,8 @@ var app = {
   abrirModal: function(id) {
     var m = document.getElementById(id);
     var overlay = document.getElementById('overlay');
+    // O login tem fundo próprio: a tela do sistema fica totalmente encoberta.
+    if (overlay && id === 'modalLogin') overlay.classList.add('login-fundo');
     if (m) m.classList.add('show-modal');
     if (overlay) overlay.classList.add('open');
   },
@@ -174,7 +179,10 @@ var app = {
     var m = document.getElementById(id);
     var overlay = document.getElementById('overlay');
     if (m) m.classList.remove('show-modal');
-    if (overlay) overlay.classList.remove('open');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.classList.remove('login-fundo');
+    }
   },
 
   sair: function() {

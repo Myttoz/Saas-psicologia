@@ -58,6 +58,7 @@ var Backend = {
   // Chamado pelo app.init()
   iniciar: function() {
     if (!this.configurado()) return;
+    if (this.processarRetorno()) return;
     if (typeof fetch !== 'function') {
       app.toast('Este navegador não suporta sincronização online.');
       return;
@@ -114,6 +115,66 @@ var Backend = {
       self.mensagem(erro.message || 'Não foi possível conectar. Tente novamente.', true);
     });
     return false;
+  },
+
+  // Login com Google: abremos a página do Google no Supabase, que devolve o
+  // usuário para o endereço deste site. As credenciais do Google ficam só no
+  // Supabase — nunca entram no código do site.
+  entrarComGoogle: function() {
+    if (!this.configurado()) return;
+    var loc = (typeof window !== 'undefined' && window.location) ? window.location : null;
+    if (!loc || typeof loc.href !== 'string') return;
+    var retorno = loc.href.split('#')[0];
+    var url = this.base() + '/auth/v1/authorize?provider=google' +
+      '&apikey=' + encodeURIComponent(CONFIG.supabaseAnonKey) +
+      '&redirect_to=' + encodeURIComponent(retorno);
+    window.location.href = url;
+  },
+
+  // Depois do login com Google, o token vem no final da URL (#access_token=...).
+  // Guardamos o token, limpamos a URL e recarregamos para seguir o fluxo normal.
+  processarRetorno: function() {
+    var loc = (typeof window !== 'undefined' && window.location) ? window.location : null;
+    if (!loc || typeof loc.hash !== 'string') return false;
+    var hash = loc.hash.replace(/^#/, '');
+    if (!hash || hash.indexOf('access_token=') === -1) return false;
+
+    var partes = {};
+    hash.split('&').forEach(function(item) {
+      var i = item.indexOf('=');
+      if (i < 0) return;
+      try {
+        partes[decodeURIComponent(item.slice(0, i))] =
+          decodeURIComponent(item.slice(i + 1).replace(/\+/g, ' '));
+      } catch (e) {}
+    });
+    if (!partes.access_token) return false;
+
+    var usuario = null;
+    try {
+      var payload = partes.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      while (payload.length % 4) payload += '=';
+      var dados = JSON.parse(atob(payload));
+      usuario = {
+        id: dados.sub || '',
+        email: dados.email || '',
+        nome: (dados.user_metadata && dados.user_metadata.full_name) || ''
+      };
+    } catch (e) {}
+
+    try {
+      sessionStorage.setItem(this.CHAVE_TOKEN, partes.access_token);
+      if (usuario && usuario.id) sessionStorage.setItem(this.CHAVE_USUARIO, JSON.stringify(usuario));
+    } catch (e) {}
+
+    var limpa = (loc.pathname || '') + (loc.search || '');
+    try {
+      if (window.history && window.history.replaceState) window.history.replaceState(null, '', limpa);
+      else loc.hash = '';
+    } catch (e) {}
+
+    try { window.location.reload(); } catch (e) {}
+    return true;
   },
 
   sair: function() {
