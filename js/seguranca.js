@@ -211,6 +211,7 @@ var segurancaModulo = {
 
   CHAVE_SENHA: 'saas_seguranca_senha',
   CHAVE_TRILHA: 'saas_seguranca_trilha',
+  CHAVE_BLOQUEIO: 'saas_seguranca_bloqueio',
   INATIVIDADE: 15 * 60 * 1000, // 15 minutos
 
   desbloqueado: false,
@@ -222,6 +223,12 @@ var segurancaModulo = {
   relogio: null,
 
   init: function() {
+    // O bloqueio por tentativas dura mesmo se a pessoa recarregar a página.
+    try {
+      var ate = Number(sessionStorage.getItem(this.CHAVE_BLOQUEIO) || 0);
+      if (ate > Date.now()) this.bloqueioAte = ate;
+      else sessionStorage.removeItem(this.CHAVE_BLOQUEIO);
+    } catch (e) {}
     this.iniciarRelogio();
     this.renderTrilha();
   },
@@ -293,9 +300,10 @@ var segurancaModulo = {
     return h1.toString(16) + '-' + h2.toString(16);
   },
 
-  // Usado por quem quiser trocar a senha depois (fora da tela principal)
-  trocarSenha: function(nova) {
+  // Só troca a senha quem está desbloqueado e sabe a senha atual.
+  trocarSenha: function(nova, atual) {
     if (!nova || String(nova).length < 4) return false;
+    if (!this.estaDesbloqueado() || !this.verificarSenha(atual)) return false;
     this.salvarRegistro(nova);
     this.registrar('Senha de acesso alterada');
     this.renderTrilha();
@@ -380,6 +388,7 @@ var segurancaModulo = {
     this.desbloqueado = true;
     this.tentativas = 0;
     this.bloqueioAte = 0;
+    try { sessionStorage.removeItem(this.CHAVE_BLOQUEIO); } catch (e) {}
     this.registrarAtividade();
     this.registrar('Senha de acesso criada');
     app.fecharModal('modalSenha');
@@ -404,6 +413,7 @@ var segurancaModulo = {
       if (this.tentativas >= 3) {
         this.bloqueioAte = Date.now() + 30000;
         this.tentativas = 0;
+        try { sessionStorage.setItem(this.CHAVE_BLOQUEIO, String(this.bloqueioAte)); } catch (e) {}
         this.mensagem('Três tentativas erradas. Aguarde 30 segundos.', true);
       } else {
         this.mensagem('Senha incorreta. Tente novamente.', true);
@@ -416,6 +426,7 @@ var segurancaModulo = {
     this.desbloqueado = true;
     this.tentativas = 0;
     this.bloqueioAte = 0;
+    try { sessionStorage.removeItem(this.CHAVE_BLOQUEIO); } catch (e) {}
     this.registrarAtividade();
     this.migrarSeNecessario(digitada);
     this.registrar('Desbloqueio do prontuário');
@@ -492,9 +503,9 @@ var segurancaModulo = {
       var quando = '';
       try { quando = new Date(item.ts).toLocaleString('pt-BR'); } catch (e) { quando = item.ts; }
       html += '<div class="trilha-item">' +
-        '<span class="trilha-data">' + quando + '</span>' +
-        '<span class="trilha-acao">' + item.acao + '</span>' +
-        (item.detalhe ? '<span class="trilha-detalhe">' + item.detalhe + '</span>' : '') +
+        '<span class="trilha-data">' + escapeHtml(quando) + '</span>' +
+        '<span class="trilha-acao">' + escapeHtml(item.acao) + '</span>' +
+        (item.detalhe ? '<span class="trilha-detalhe">' + escapeHtml(item.detalhe) + '</span>' : '') +
         '</div>';
     }
     el.innerHTML = html;

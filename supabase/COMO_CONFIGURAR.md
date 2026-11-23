@@ -63,6 +63,24 @@ var CONFIG = {
   entrar — inclusive pelo Google. Usuários que já existem continuam entrando
   normalmente. Se precisar de outra conta, crie você mesma em **Add user**.
 
+### Url de retorno do Google (importante)
+
+Ao configurar o provedor **Google**, você vai encontrar o campo
+**Redirect URLs** no Supabase (também aparece em *Authentication → URL
+Configuration*). Cadastre **exatamente** esta url, sem `*` e sem outras urls:
+
+```
+https://myttoz.github.io/Saas-psicologia/index.html
+```
+
+Use também `https://myttoz.github.io/Saas-psicologia/` se o painel pedir a url
+sem o nome do arquivo. Não use `*` nem `localhost` no projeto publicado: uma
+lista ampla demais permite que o retorno do login caia em outro endereço.
+
+O site gera um número secreto temporário (`state`) a cada tentativa de login
+com Google e confere esse número quando a pessoa volta. Um link falsificado
+para trocar a conta é recusado.
+
 ## Como funciona depois de configurado
 
 - Ao abrir o sistema, aparece a tela **Bem-vinda**. O acesso é obrigatório:

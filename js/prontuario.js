@@ -106,8 +106,8 @@ var prontuarioModulo = {
 
   card: function(ev) {
     var acoes =
-      app.botaoAcao('Editar', 'prontuarioModulo.editar(' + ev.id + ')', 'editar') +
-      app.botaoAcao('Excluir', 'prontuarioModulo.excluir(' + ev.id + ')', 'excluir', true);
+      app.botaoAcao('Editar', 'prontuarioModulo.editar(' + Number(ev.id) + ')', 'editar') +
+      app.botaoAcao('Excluir', 'prontuarioModulo.excluir(' + Number(ev.id) + ')', 'excluir', true);
 
     var div = document.createElement('div');
     div.className = 'evolucao-card';
@@ -179,6 +179,12 @@ var prontuarioModulo = {
   },
 
   mostrarModal: function(opcoes) {
+    if (!segurancaModulo.estaDesbloqueado()) {
+      segurancaModulo.exigirAcesso(function() { prontuarioModulo.mostrarModal(opcoes); });
+      return;
+    }
+    segurancaModulo.registrarAtividade();
+
     var form = document.getElementById('formEvolucao');
     if (form) form.reset();
 
@@ -211,6 +217,7 @@ var prontuarioModulo = {
   aplicarModelo: function(chave) {
     var modelo = this.MODELO[chave];
     if (!modelo) return;
+    segurancaModulo.registrarAtividade();
 
     var campos = [
       { id: 'evoQueixa', chave: 'queixa' },
@@ -254,6 +261,13 @@ var prontuarioModulo = {
   },
 
   salvar: function() {
+    var self = this;
+    if (!segurancaModulo.estaDesbloqueado()) {
+      segurancaModulo.exigirAcesso(function() { self.salvar(); });
+      return false;
+    }
+    segurancaModulo.registrarAtividade();
+
     var pac = document.getElementById('evoPaciente');
     var data = document.getElementById('evoData');
     var lancId = document.getElementById('evoLancamentoId');
@@ -308,13 +322,22 @@ var prontuarioModulo = {
     var self = this;
     var ev = this.buscarPorId(id);
     if (!ev) return;
-    segurancaModulo.registrar('Consulta de evolução', segurancaModulo.mascararNome(ev.paciente));
-    segurancaModulo.exigirAcesso(function() { self.mostrarModal({ id: id }); });
+    // O registro da consulta só entra na trilha depois da senha conferida.
+    segurancaModulo.exigirAcesso(function() {
+      segurancaModulo.registrar('Consulta de evolução', segurancaModulo.mascararNome(ev.paciente));
+      self.mostrarModal({ id: id });
+    });
   },
 
   excluir: function(id) {
+    var self = this;
     var ev = this.buscarPorId(id);
     if (!ev) return;
+    if (!segurancaModulo.estaDesbloqueado()) {
+      segurancaModulo.exigirAcesso(function() { self.excluir(id); });
+      return;
+    }
+    segurancaModulo.registrarAtividade();
     if (!confirm('Excluir esta evolução? Esta ação não pode ser desfeita.')) return;
 
     var novo = [];

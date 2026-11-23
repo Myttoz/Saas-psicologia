@@ -10,7 +10,29 @@ var Backend = {
   CHAVE_TOKEN: 'saas_auth_token',
   CHAVE_USUARIO: 'saas_auth_usuario',
   CHAVE_SYNC: 'saas_sync_at',
+  CHAVE_STATE: 'saas_oauth_state',
   _timer: null,
+
+  // Número aleatório que liga o retorno do Google à solicitação feita aqui.
+  _novoState: function() {
+    var bytes = new Uint8Array(24);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(bytes);
+    } else {
+      for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    }
+    var s = '';
+    for (var j = 0; j < bytes.length; j++) s += ('0' + bytes[j].toString(16)).slice(-2);
+    return s;
+  },
+
+  _limparHash: function(loc) {
+    var limpa = (loc.pathname || '') + (loc.search || '');
+    try {
+      if (window.history && window.history.replaceState) window.history.replaceState(null, '', limpa);
+      else loc.hash = '';
+    } catch (e) {}
+  },
 
   configurado: function() {
     return !!(typeof CONFIG !== 'undefined' && CONFIG.usarBackend &&
@@ -125,19 +147,23 @@ var Backend = {
     var loc = (typeof window !== 'undefined' && window.location) ? window.location : null;
     if (!loc || typeof loc.href !== 'string') return;
     var retorno = loc.href.split('#')[0];
+    var state = this._novoState();
+    try { sessionStorage.setItem(this.CHAVE_STATE, state); } catch (e) {}
     var url = this.base() + '/auth/v1/authorize?provider=google' +
       '&apikey=' + encodeURIComponent(CONFIG.supabaseAnonKey) +
-      '&redirect_to=' + encodeURIComponent(retorno);
+      '&redirect_to=' + encodeURIComponent(retorno) +
+      '&state=' + encodeURIComponent(state);
     window.location.href = url;
   },
 
   // Depois do login com Google, o token vem no final da URL (#access_token=...).
-  // Guardamos o token, limpamos a URL e recarregamos para seguir o fluxo normal.
+  // Só aceitamos se o "state" conferir com o número gerado quando o botão foi
+  // clicado. Isso bloqueia links falsos que tentam trocar a conta da pessoa.
   processarRetorno: function() {
     var loc = (typeof window !== 'undefined' && window.location) ? window.location : null;
     if (!loc || typeof loc.hash !== 'string') return false;
     var hash = loc.hash.replace(/^#/, '');
-    if (!hash || hash.indexOf('access_token=') === -1) return false;
+    if (!hash) return false;
 
     var partes = {};
     hash.split('&').forEach(function(item) {
@@ -148,7 +174,27 @@ var Backend = {
           decodeURIComponent(item.slice(i + 1).replace(/\+/g, ' '));
       } catch (e) {}
     });
-    if (!partes.access_token) return false;
+
+    if (partes.error || !partes.access_token) {
+      this._limparHash(loc);
+      this.mostrarLogin();
+      this.mensagem('O login com Google não foi concluído. Tente novamente.', true);
+      return true;
+    }
+
+    var esperado = null;
+    try {
+      esperado = sessionStorage.getItem(this.CHAVE_STATE);
+      sessionStorage.removeItem(this.CHAVE_STATE);
+    } catch (e) {}
+
+    // Se já havia uma sessão válida, um retorno sem state não pode substituí-la.
+    if (!esperado || partes.state !== esperado) {
+      this._limparHash(loc);
+      this.mostrarLogin();
+      this.mensagem('Login recusado por segurança. Use o botão Entrar com Google novamente.', true);
+      return true;
+    }
 
     var usuario = null;
     try {
@@ -167,11 +213,7 @@ var Backend = {
       if (usuario && usuario.id) sessionStorage.setItem(this.CHAVE_USUARIO, JSON.stringify(usuario));
     } catch (e) {}
 
-    var limpa = (loc.pathname || '') + (loc.search || '');
-    try {
-      if (window.history && window.history.replaceState) window.history.replaceState(null, '', limpa);
-      else loc.hash = '';
-    } catch (e) {}
+    this._limparHash(loc);
 
     try { window.location.reload(); } catch (e) {}
     return true;
@@ -181,6 +223,7 @@ var Backend = {
     try {
       sessionStorage.removeItem(this.CHAVE_TOKEN);
       sessionStorage.removeItem(this.CHAVE_USUARIO);
+      sessionStorage.removeItem(this.CHAVE_STATE);
     } catch (e) {}
     if (this._timer) { clearTimeout(this._timer); this._timer = null; }
   },
@@ -275,8 +318,19 @@ var Backend = {
       try { localEm = sessionStorage.getItem(self.CHAVE_SYNC) || ''; } catch (e) {}
       var remotoEm = remoto && remoto.atualizadoEm ? remoto.atualizadoEm : '';
 
+      // Conta nova: nunca enviamos os dados locais sem a pessoa pedir.
+      // Isso evita que um login indevido copie o prontuário para outra conta.
       if (!remoto) {
-        self.salvar(self.coletarDados());
+        var enviarNovo = confirm(
+          'Esta conta ainda não tem dados na nuvem.\n\n' +
+          'Deseja enviar os dados deste navegador para a nuvem?\n' +
+          'Clique em Cancelar para começar do zero nesta conta.'
+        );
+        if (enviarNovo) {
+          self.salvar(self.coletarDados()).then(function(ok) {
+            if (ok) app.toast('Dados deste navegador enviados para a nuvem.');
+          });
+        }
         return;
       }
 
@@ -285,13 +339,23 @@ var Backend = {
           'Foram encontrados dados salvos na nuvem (' +
           remotoEm.slice(0, 10) + ').\n\n' +
           'Clique em OK para usar os dados da nuvem neste navegador.\n' +
-          'Clique em Cancelar para enviar os dados deste navegador e substituir os da nuvem.'
+          'Clique em Cancelar para manter os dados deste navegador.'
         );
         if (usarNuvem) {
           backupModulo._aplicarDados(remoto);
           app.toast('Dados da nuvem carregados.');
           return;
         }
+      }
+
+      var substituir = confirm(
+        'Enviar os dados deste navegador para a nuvem?\n\n' +
+        'Os dados que estavam salvos nesta conta serão substituídos.'
+      );
+      if (!substituir) {
+        backupModulo._aplicarDados(remoto);
+        app.toast('Dados da nuvem carregados.');
+        return;
       }
 
       self.salvar(self.coletarDados()).then(function(ok) {

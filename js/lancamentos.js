@@ -91,30 +91,30 @@ function lancamentosRender() {
     var p = lancPresencaInfo[l.presenca] || lancPresencaInfo.agendado;
 
     var acoes =
-      app.botaoAcao('Editar', 'lancamentosModulo.editar(' + l.id + ')', 'editar') +
-      app.botaoAcao('Duplicar', 'lancamentosModulo.duplicar(' + l.id + ')', 'duplicar');
+      app.botaoAcao('Editar', 'lancamentosModulo.editar(' + Number(l.id) + ')', 'editar') +
+      app.botaoAcao('Duplicar', 'lancamentosModulo.duplicar(' + Number(l.id) + ')', 'duplicar');
 
     if (l.status === 'pago') {
-      acoes += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + l.id + ')', 'editar');
+      acoes += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + Number(l.id) + ')', 'editar');
     }
 
-    acoes += app.botaoAcao('Excluir', 'lancamentosModulo.excluir(' + l.id + ')', 'excluir', true);
+    acoes += app.botaoAcao('Excluir', 'lancamentosModulo.excluir(' + Number(l.id) + ')', 'excluir', true);
 
     var chkStatus = lancamentosModulo.selecionados.status[l.id] ? ' checked' : '';
     var chkPresenca = lancamentosModulo.selecionados.presenca[l.id] ? ' checked' : '';
 
     var tr = document.createElement('tr');
     tr.innerHTML =
-      '<td>' + formatarData(l.data) + '<br><span class="cell-sub">' + l.horario + '</span></td>' +
+      '<td>' + formatarData(l.data) + '<br><span class="cell-sub">' + escapeHtml(l.horario) + '</span></td>' +
       '<td><span class="badge ' + tipoBadge + '">' + tipoTexto + '</span></td>' +
-      '<td><strong>' + l.paciente + '</strong></td>' +
-      '<td>' + (f ? f.nome : '-') + '</td>' +
+      '<td><strong>' + escapeHtml(l.paciente) + '</strong></td>' +
+      '<td>' + (f ? escapeHtml(f.nome) : '-') + '</td>' +
       '<td><span class="badge badge-var">' + pagamentoTexto + '</span></td>' +
       '<td class="money">' + formatarMoeda(l.valor) + '</td>' +
       '<td class="money">' + formatarMoeda(l.suaParte) + '</td>' +
-      '<td><span class="celula-check"><input type="checkbox" class="chk-lanc" title="Selecionar status" onchange="lancamentosModulo.marcar(' + l.id + ',\'status\',this.checked)"' + chkStatus + '> ' +
+      '<td><span class="celula-check"><input type="checkbox" class="chk-lanc" title="Selecionar status" onchange="lancamentosModulo.marcar(' + Number(l.id) + ',\'status\',this.checked)"' + chkStatus + '> ' +
         '<span class="badge ' + statusBadge + '">' + statusTexto + '</span></span></td>' +
-      '<td><span class="celula-check"><input type="checkbox" class="chk-lanc" title="Selecionar presença" onchange="lancamentosModulo.marcar(' + l.id + ',\'presenca\',this.checked)"' + chkPresenca + '> ' +
+      '<td><span class="celula-check"><input type="checkbox" class="chk-lanc" title="Selecionar presença" onchange="lancamentosModulo.marcar(' + Number(l.id) + ',\'presenca\',this.checked)"' + chkPresenca + '> ' +
         '<span class="badge ' + p.classe + '">' + p.rotulo + '</span></span></td>' +
       '<td style="white-space:nowrap;">' + acoes + '</td>';
 
@@ -704,8 +704,9 @@ var lancamentosModulo = {
 
 // formatar data para exibição (dd/mm/aaaa)
 function formatarData(dataStr) {
-  if (!dataStr) return '';
-  var partes = dataStr.split('-');
+  var s = String(dataStr || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+  var partes = s.split('-');
   return partes[2] + '/' + partes[1] + '/' + partes[0];
 }
 

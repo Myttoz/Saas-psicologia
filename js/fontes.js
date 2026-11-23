@@ -16,12 +16,12 @@ function fontesRender() {
     var percentualTexto = (f.percentual && f.percentual !== '—') ? f.percentual + '%' : '—';
 
     var acoes =
-      app.botaoAcao('Editar', 'fontesModulo.editar(' + f.id + ')', 'editar') +
-      app.botaoAcao('Excluir', 'fontesModulo.excluir(' + f.id + ')', 'excluir', true);
+      app.botaoAcao('Editar', 'fontesModulo.editar(' + Number(f.id) + ')', 'editar') +
+      app.botaoAcao('Excluir', 'fontesModulo.excluir(' + Number(f.id) + ')', 'excluir', true);
 
     var tr = document.createElement('tr');
     tr.innerHTML =
-      '<td><strong>' + f.nome + '</strong></td>' +
+      '<td><strong>' + escapeHtml(f.nome) + '</strong></td>' +
       '<td><span class="badge ' + tipoBadge + '">' + tipoTexto + '</span></td>' +
       '<td>' + valorFixoTexto + '</td>' +
       '<td>' + percentualTexto + '</td>' +
@@ -36,7 +36,7 @@ function fontesRender() {
 function preencherFontesSelects() {
   var opts = '';
   for (var i = 0; i < fontes.length; i++) {
-    opts = opts + '<option value="' + fontes[i].id + '">' + fontes[i].nome + '</option>';
+    opts = opts + '<option value="' + Number(fontes[i].id) + '">' + escapeHtml(fontes[i].nome) + '</option>';
   }
 
   var pacFonte = document.getElementById('pacFonte');

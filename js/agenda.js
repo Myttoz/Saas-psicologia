@@ -233,11 +233,16 @@ var agendaModulo = {
     var presenca = l.presenca || 'agendado';
     var f = obterFontePorId(l.fonteId);
 
-    return '<div class="agenda-chip h-' + presenca + '" ' +
-      'title="' + l.horario + ' — ' + l.paciente + (f ? ' (' + f.nome + ')' : '') + '" ' +
-      'onclick="event.stopPropagation(); lancamentosModulo.editar(' + l.id + ')">' +
-      '<span class="chip-hora">' + l.horario + '</span>' +
-      '<span class="chip-nome">' + l.paciente + '</span>' +
+    // presenca vem de uma lista fechada; qualquer outro valor cai no padrão
+    var classe = ({ agendado: 1, compareceu: 1, faltou: 1, cancelou: 1 })[presenca] ? presenca : 'agendado';
+    var titulo = escapeHtml(l.horario) + ' — ' + escapeHtml(l.paciente) +
+      (f ? ' (' + escapeHtml(f.nome) + ')' : '');
+
+    return '<div class="agenda-chip h-' + classe + '" ' +
+      'title="' + titulo + '" ' +
+      'onclick="event.stopPropagation(); lancamentosModulo.editar(' + Number(l.id) + ')">' +
+      '<span class="chip-hora">' + escapeHtml(l.horario) + '</span>' +
+      '<span class="chip-nome">' + escapeHtml(l.paciente) + '</span>' +
     '</div>';
   },
 

@@ -39,18 +39,18 @@ var situacaoModulo = {
       var statusTexto = (l.status === 'pago') ? 'Pago' : 'Pendente';
 
       var acao = (l.status === 'pago')
-        ? app.botaoAcao('Voltar para pendente', 'situacaoModulo.marcarPendente(' + l.id + ')', 'pendente')
-        : app.botaoAcao('Marcar como pago', 'situacaoModulo.marcarPago(' + l.id + ')', 'pago');
+        ? app.botaoAcao('Voltar para pendente', 'situacaoModulo.marcarPendente(' + Number(l.id) + ')', 'pendente')
+        : app.botaoAcao('Marcar como pago', 'situacaoModulo.marcarPago(' + Number(l.id) + ')', 'pago');
 
       if (l.status === 'pago') {
-        acao += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + l.id + ')', 'editar');
+        acao += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + Number(l.id) + ')', 'editar');
       }
 
       var tr = document.createElement('tr');
       tr.innerHTML =
-        '<td>' + formatarData(l.data) + '<br><span class="cell-sub">' + l.horario + '</span></td>' +
-        '<td><strong>' + l.paciente + '</strong></td>' +
-        '<td>' + (f ? f.nome : '-') + '</td>' +
+        '<td>' + formatarData(l.data) + '<br><span class="cell-sub">' + escapeHtml(l.horario) + '</span></td>' +
+        '<td><strong>' + escapeHtml(l.paciente) + '</strong></td>' +
+        '<td>' + (f ? escapeHtml(f.nome) : '-') + '</td>' +
         '<td class="money">' + formatarMoeda(l.valor) + '</td>' +
         '<td class="money">' + formatarMoeda(l.suaParte) + '</td>' +
         '<td><span class="badge ' + statusBadge + '">' + statusTexto + '</span></td>' +

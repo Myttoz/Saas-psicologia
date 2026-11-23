@@ -155,9 +155,9 @@ var hojeModulo = {
           div.className = 'proximo-item';
           div.innerHTML =
             '<div class="proximo-data">' + formatarData(p.data) +
-              ' <span>' + p.horario + '</span></div>' +
-            '<div class="proximo-nome">' + p.paciente + '</div>' +
-            '<div class="proximo-fonte">' + (f ? f.nome : 'Sem convênio') + '</div>';
+              ' <span>' + escapeHtml(p.horario) + '</span></div>' +
+            '<div class="proximo-nome">' + escapeHtml(p.paciente) + '</div>' +
+            '<div class="proximo-fonte">' + (f ? escapeHtml(f.nome) : 'Sem convênio') + '</div>';
           proximosEl.appendChild(div);
         }
       }
@@ -187,15 +187,15 @@ var hojeModulo = {
           divConf.className = 'confirmar-item';
           divConf.innerHTML =
             '<div class="confirmar-info">' +
-              '<div class="confirmar-nome">' + c.paciente + '</div>' +
-              '<div class="confirmar-data">' + formatarData(c.data) + ' às ' + c.horario + '</div>' +
+              '<div class="confirmar-nome">' + escapeHtml(c.paciente) + '</div>' +
+              '<div class="confirmar-data">' + formatarData(c.data) + ' às ' + escapeHtml(c.horario) + '</div>' +
             '</div>' +
             '<div class="confirmar-acoes">' +
               '<button type="button" class="btn btn-outline btn-sm btn-whatsapp" ' +
-                'onclick="whatsappModulo.enviarConfirmacao(' + c.id + ')" ' +
+                'onclick="whatsappModulo.enviarConfirmacao(' + Number(c.id) + ')" ' +
                 'title="Abre o WhatsApp com a mensagem pronta">Enviar</button>' +
               '<button type="button" class="btn btn-outline btn-sm" ' +
-                'onclick="whatsappModulo.copiar(' + c.id + ')" ' +
+                'onclick="whatsappModulo.copiar(' + Number(c.id) + ')" ' +
                 'title="Copia a mensagem para colar no WhatsApp">Copiar mensagem</button>' +
             '</div>';
           confirEl.appendChild(divConf);
@@ -221,12 +221,12 @@ var hojeModulo = {
           divDeve.className = 'quem-deve-item';
           divDeve.innerHTML =
             '<div class="quem-deve-info">' +
-              '<div class="quem-deve-nome">' + d.paciente + '</div>' +
+              '<div class="quem-deve-nome">' + escapeHtml(d.paciente) + '</div>' +
               '<div class="quem-deve-valor">' + formatarMoeda(d.suaParte || d.valor) +
                 ' · ' + formatarData(d.data) + '</div>' +
             '</div>' +
             '<button type="button" class="btn btn-outline btn-sm" ' +
-              'onclick="hojeModulo.marcarPago(' + d.id + ')" ' +
+              'onclick="hojeModulo.marcarPago(' + Number(d.id) + ')" ' +
               'title="Confirma o pagamento">Marcar pago</button>';
           deveEl.appendChild(divDeve);
         }
@@ -249,39 +249,41 @@ var hojeModulo = {
     var ativa = !!(this.sessao && this.sessao.id === l.id);
     var acoes = '';
 
+    var idSeguro = Number(l.id);
+
     if (ativa) {
       acoes =
         '<button type="button" class="btn btn-primary btn-sm" onclick="hojeModulo.finalizarSessao()">Finalizar sessão</button>' +
         '<button type="button" class="btn btn-outline btn-sm" onclick="hojeModulo.cancelarSessao()">Cancelar</button>';
     } else if (presenca === 'agendado') {
-      acoes = '<button type="button" class="btn btn-primary btn-sm" onclick="hojeModulo.iniciarSessao(' + l.id + ')">Iniciar sessão</button>' +
-        '<button type="button" class="btn btn-outline btn-sm btn-whatsapp" onclick="whatsappModulo.enviarConfirmacao(' + l.id + ')">Enviar confirmação</button>' +
-        '<button type="button" class="btn btn-outline btn-sm" onclick="whatsappModulo.copiar(' + l.id + ')">Copiar mensagem</button>';
+      acoes = '<button type="button" class="btn btn-primary btn-sm" onclick="hojeModulo.iniciarSessao(' + idSeguro + ')">Iniciar sessão</button>' +
+        '<button type="button" class="btn btn-outline btn-sm btn-whatsapp" onclick="whatsappModulo.enviarConfirmacao(' + idSeguro + ')">Enviar confirmação</button>' +
+        '<button type="button" class="btn btn-outline btn-sm" onclick="whatsappModulo.copiar(' + idSeguro + ')">Copiar mensagem</button>';
     }
 
-    acoes += app.botaoAcao('Editar', 'lancamentosModulo.editar(' + l.id + ')', 'editar');
+    acoes += app.botaoAcao('Editar', 'lancamentosModulo.editar(' + idSeguro + ')', 'editar');
 
     if (l.status === 'pago') {
-      acoes += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + l.id + ')', 'editar');
+      acoes += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + idSeguro + ')', 'editar');
     }
 
     // atendimento realizado: atalho para escrever a evolução já com paciente e data
     if (presenca === 'compareceu' || l.sessaoFinalizada) {
       acoes += app.botaoAcao('Escrever evolução',
-        'prontuarioModulo.abrirDaSessao(' + l.id + ')', 'editar');
+        'prontuarioModulo.abrirDaSessao(' + idSeguro + ')', 'editar');
     }
 
     if (l.status === 'pendente') {
-      acoes += app.botaoAcao('Marcar como pago', 'hojeModulo.marcarPago(' + l.id + ')', 'pago');
+      acoes += app.botaoAcao('Marcar como pago', 'hojeModulo.marcarPago(' + idSeguro + ')', 'pago');
     }
 
     var cronometroHtml = '';
     if (ativa) {
       cronometroHtml =
-        '<div class="cronometro" id="cronometro-' + l.id + '">' +
+        '<div class="cronometro" id="cronometro-' + idSeguro + '">' +
           '<span class="cronometro-tempo">00:00</span>' +
           '<span class="cronometro-alvo"> / 50:00</span>' +
-          '<div class="progresso"><div class="progresso-barra" id="progresso-' + l.id + '"></div></div>' +
+          '<div class="progresso"><div class="progresso-barra" id="progresso-' + idSeguro + '"></div></div>' +
         '</div>';
     } else if (l.sessaoFinalizada && l.duracao) {
       cronometroHtml = '<div class="cronometro finalizado">Sessão concluída em ' +
@@ -291,17 +293,17 @@ var hojeModulo = {
     var div = document.createElement('div');
     div.className = 'hoje-item' + (ativa ? ' ativo' : '');
     div.innerHTML =
-      '<div class="hoje-hora">' + l.horario + '</div>' +
+      '<div class="hoje-hora">' + escapeHtml(l.horario) + '</div>' +
       '<div class="hoje-corpo">' +
         '<div class="hoje-linha-top">' +
-          '<span class="hoje-nome">' + l.paciente + '</span>' +
+          '<span class="hoje-nome">' + escapeHtml(l.paciente) + '</span>' +
           (l.tipo === 'avaliacao' ? '<span class="badge badge-avaliacao">Avaliação</span>' : '') +
           '<span class="badge ' + info.classe + '">' + info.rotulo + '</span>' +
           '<span class="badge ' + (l.status === 'pago' ? 'badge-pago' : 'badge-pendente') + '">' +
             (l.status === 'pago' ? 'Pago' : 'Pendente') + '</span>' +
         '</div>' +
         '<div class="hoje-meta">' +
-          (f ? f.nome : 'Sem convênio') + ' · ' + formatarMoeda(l.valor) +
+          (f ? escapeHtml(f.nome) : 'Sem convênio') + ' · ' + formatarMoeda(l.valor) +
           ' · a receber ' + formatarMoeda(l.suaParte) +
         '</div>' +
         cronometroHtml +
@@ -424,10 +426,10 @@ var hojeModulo = {
 
   statCard: function(label, valor, classe) {
     return '<div class="stat-card">' +
-      '<div class="stat-icon ' + classe + '">•</div>' +
+      '<div class="stat-icon ' + escapeHtml(classe) + '">•</div>' +
       '<div class="stat-info">' +
-        '<div class="stat-label">' + label + '</div>' +
-        '<div class="stat-value">' + valor + '</div>' +
+        '<div class="stat-label">' + escapeHtml(label) + '</div>' +
+        '<div class="stat-value">' + escapeHtml(valor) + '</div>' +
       '</div>' +
     '</div>';
   }

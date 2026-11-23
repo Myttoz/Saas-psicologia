@@ -34,13 +34,13 @@ function pacientesRender() {
       : '—';
 
     var acoes =
-      app.botaoAcao('Editar', 'pacientesModulo.editar(' + p.id + ')', 'editar') +
-      app.botaoAcao('Excluir', 'pacientesModulo.excluir(' + p.id + ')', 'excluir', true);
+      app.botaoAcao('Editar', 'pacientesModulo.editar(' + Number(p.id) + ')', 'editar') +
+      app.botaoAcao('Excluir', 'pacientesModulo.excluir(' + Number(p.id) + ')', 'excluir', true);
 
     var tr = document.createElement('tr');
     tr.innerHTML =
-      '<td><strong>' + p.nome + '</strong></td>' +
-      '<td>' + (f ? f.nome : '-') + '</td>' +
+      '<td><strong>' + escapeHtml(p.nome) + '</strong></td>' +
+      '<td>' + (f ? escapeHtml(f.nome) : '-') + '</td>' +
       '<td><span class="badge ' + tipoBadge + '">' + tipoTexto + '</span></td>' +
       '<td class="money">' + valorFormatado + '</td>' +
       '<td style="white-space:nowrap;">' + acoes + '</td>';

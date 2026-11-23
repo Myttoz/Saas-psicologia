@@ -24,11 +24,122 @@ var backupModulo = {
     };
   },
 
+  // ---------- Validação de segurança (backup e nuvem) ----------
+  // Nada que vem de arquivo ou da nuvem entra no sistema sem passar por aqui.
+
+  LIMITE_ITENS: 10000,
+  LIMITE_ARQUIVO: 5 * 1024 * 1024,
+  LIMITE_TEXTO: 20000,
+  LIMITE_CURTO: 300,
+  LIMITE_ASSINATURA: 400000,
+
+  _inteiro: function(valor) {
+    if (typeof valor !== 'number' && !(typeof valor === 'string' && /^\d+$/.test(valor))) return null;
+    var n = Number(valor);
+    if (!isFinite(n) || n <= 0 || Math.floor(n) !== n || n > 9007199254740991) return null;
+    return n;
+  },
+
+  _texto: function(valor, limite) {
+    if (valor === null || valor === undefined) return '';
+    if (typeof valor === 'string') return valor.slice(0, limite);
+    if (typeof valor === 'number' && isFinite(valor)) return String(valor);
+    if (typeof valor === 'boolean') return String(valor);
+    return ''; // objetos/arrays aninhados são descartados
+  },
+
+  _dataIso: function(valor) {
+    var s = this._texto(valor, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+    var p = s.split('-');
+    var a = parseInt(p[0], 10), m = parseInt(p[1], 10), d = parseInt(p[2], 10);
+    var teste = new Date(a, m - 1, d);
+    if (teste.getFullYear() !== a || teste.getMonth() !== m - 1 || teste.getDate() !== d) return '';
+    return s;
+  },
+
+  _assinaturaValida: function(valor) {
+    var s = this._texto(valor, this.LIMITE_ASSINATURA);
+    // Somente PNG/JPG em base64, como o sistema gera. Nada de SVG, javascript: ou HTML.
+    return /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(s) ? s : '';
+  },
+
+  // Devolve uma cópia limpa. Lança erro com mensagem clara se o backup for inválido.
+  normalizar: function(dados) {
+    var self = this;
+    if (!dados || typeof dados !== 'object' || Array.isArray(dados) || dados.app !== 'saas-livia') {
+      throw new Error('Este arquivo não é um backup do sistema.');
+    }
+    if (JSON.stringify(dados).length > this.LIMITE_ARQUIVO) {
+      throw new Error('Backup muito grande (máximo 5 MB).');
+    }
+
+    function lista(valor, nome) {
+      if (!Array.isArray(valor)) throw new Error('Backup inválido: ' + nome + '.');
+      if (valor.length > self.LIMITE_ITENS) throw new Error('Backup com muitos registros: ' + nome + '.');
+
+      var saida = [];
+      for (var i = 0; i < valor.length; i++) {
+        var item = valor[i];
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+          throw new Error('Registro inválido em ' + nome + '.');
+        }
+        var limpo = {};
+        for (var chave in item) {
+          if (!Object.prototype.hasOwnProperty.call(item, chave)) continue;
+          if (chave === 'assinatura') {
+            limpo[chave] = self._assinaturaValida(item[chave]);
+          } else if (chave === 'data') {
+            var data = self._dataIso(item[chave]);
+            if (!data) throw new Error('Data inválida em ' + nome + '.');
+            limpo[chave] = data;
+          } else if (chave === 'id' || chave === 'fonteId' || chave === 'lancamentoId') {
+            limpo[chave] = self._inteiro(item[chave]);
+            if (limpo[chave] === null && chave === 'id') {
+              throw new Error('Identificador inválido em ' + nome + '.');
+            }
+          } else if (item[chave] === null) {
+            limpo[chave] = null;
+          } else if (typeof item[chave] === 'number' || typeof item[chave] === 'boolean') {
+            limpo[chave] = item[chave];
+          } else {
+            var longo = (chave === 'evolucao' || chave === 'queixa' || chave === 'intervencao' ||
+              chave === 'plano' || chave === 'obs' || chave === 'conteudo');
+            limpo[chave] = self._texto(item[chave], longo ? self.LIMITE_TEXTO : self.LIMITE_CURTO);
+          }
+        }
+        saida.push(limpo);
+      }
+      return saida;
+    }
+
+    var dp = (dados.dadosProfissional && typeof dados.dadosProfissional === 'object') ? dados.dadosProfissional : {};
+    return {
+      app: 'saas-livia',
+      versao: 3,
+      exportadoEm: this._texto(dados.exportadoEm, 40),
+      salvoEm: this._texto(dados.salvoEm, 40),
+      atualizadoEm: this._texto(dados.atualizadoEm, 40),
+      fontes: lista(dados.fontes, 'convênios'),
+      pacientes: lista(dados.pacientes, 'pacientes'),
+      lancamentos: lista(dados.lancamentos, 'lançamentos'),
+      evolucoes: Array.isArray(dados.evolucoes) ? lista(dados.evolucoes, 'evoluções') : [],
+      dadosProfissional: {
+        nome: this._texto(dp.nome, this.LIMITE_CURTO),
+        crp: this._texto(dp.crp, this.LIMITE_CURTO) || CRP_PADRAO,
+        cpf: this._texto(dp.cpf, this.LIMITE_CURTO),
+        assinatura: this._assinaturaValida(dp.assinatura)
+      }
+    };
+  },
+
   valido: function(dados) {
-    return !!(dados && dados.app === 'saas-livia' &&
-      Array.isArray(dados.fontes) &&
-      Array.isArray(dados.pacientes) &&
-      Array.isArray(dados.lancamentos));
+    try {
+      this.normalizar(dados);
+      return true;
+    } catch (e) {
+      return false;
+    }
   },
 
   init: function() {
@@ -99,20 +210,16 @@ var backupModulo = {
 
   // Aplica dados vindos do arquivo ou do retrato automático
   _aplicarDados: function(dados) {
+    // Revalida mesmo aqui: a nuvem também chama esta função diretamente.
+    var limpos = this.normalizar(dados);
+
     this._importando = true;
     try {
-      fontes = dados.fontes;
-      pacientes = dados.pacientes;
-      lancamentos = dados.lancamentos;
-      // backups antigos não tinham evoluções nem dados do recibo
-      evolucoes = Array.isArray(dados.evolucoes) ? dados.evolucoes : [];
-      var dp = dados.dadosProfissional || {};
-      dadosProfissional = {
-        nome: dp.nome || '',
-        crp: dp.crp || CRP_PADRAO,
-        cpf: dp.cpf || '',
-        assinatura: dp.assinatura || ''
-      };
+      fontes = limpos.fontes;
+      pacientes = limpos.pacientes;
+      lancamentos = limpos.lancamentos;
+      evolucoes = limpos.evolucoes;
+      dadosProfissional = limpos.dadosProfissional;
 
       Store.salvar();
     } finally {
@@ -166,6 +273,11 @@ var backupModulo = {
     var arquivo = input.files && input.files[0];
     if (!arquivo) return;
 
+    if (arquivo.size > backupModulo.LIMITE_ARQUIVO) {
+      app.toast('Arquivo muito grande. O limite é 5 MB.');
+      return;
+    }
+
     var leitor = new FileReader();
     leitor.onload = function(e) {
       var dados;
@@ -176,8 +288,10 @@ var backupModulo = {
         return;
       }
 
-      if (!backupModulo.valido(dados)) {
-        app.toast('Este arquivo não é um backup do sistema.');
+      try {
+        backupModulo.normalizar(dados);
+      } catch (erro) {
+        app.toast(erro.message || 'Este arquivo não é um backup válido.');
         return;
       }
 

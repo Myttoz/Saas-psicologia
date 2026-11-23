@@ -32,7 +32,7 @@ var whatsappModulo = {
     var url = 'https://wa.me/?text=' + encodeURIComponent(texto);
 
     var janela = null;
-    try { janela = window.open(url, '_blank'); } catch (e) { janela = null; }
+    try { janela = window.open(url, '_blank', 'noopener,noreferrer'); } catch (e) { janela = null; }
 
     if (janela) {
       app.toast('Mensagem pronta no WhatsApp. Escolha o contato e envie.');

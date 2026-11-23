@@ -603,7 +603,7 @@
         <div class="form-group">
           <label class="form-label">Paciente</label>
           <div class="autocomplete-wrap">
-            <input type="text" id="evoPaciente" class="form-control" list="pacientesEvoList" placeholder="Nome do paciente" autocomplete="off" oninput="app.formatarNome(this)">
+            <input type="text" id="evoPaciente" class="form-control" list="pacientesEvoList" placeholder="Nome do paciente" autocomplete="off" oninput="app.formatarNome(this); segurancaModulo.registrarAtividade()">
             <datalist id="pacientesEvoList"></datalist>
           </div>
         </div>
@@ -611,19 +611,19 @@
       <input type="hidden" id="evoLancamentoId" value="">
       <div class="form-group">
         <label class="form-label">Queixa do dia</label>
-        <textarea id="evoQueixa" class="form-control" rows="2" placeholder="O que o paciente trouxe nesta sessão?"></textarea>
+        <textarea id="evoQueixa" class="form-control" rows="2" placeholder="O que o paciente trouxe nesta sessão?" oninput="segurancaModulo.registrarAtividade()"></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">Intervenção</label>
-        <textarea id="evoIntervencao" class="form-control" rows="2" placeholder="O que foi trabalhado na sessão?"></textarea>
+        <textarea id="evoIntervencao" class="form-control" rows="2" placeholder="O que foi trabalhado na sessão?" oninput="segurancaModulo.registrarAtividade()"></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">Evolução</label>
-        <textarea id="evoEvolucao" class="form-control" rows="2" placeholder="Como o paciente respondeu, o que melhorou ou permaneceu?"></textarea>
+        <textarea id="evoEvolucao" class="form-control" rows="2" placeholder="Como o paciente respondeu, o que melhorou ou permaneceu?" oninput="segurancaModulo.registrarAtividade()"></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">Plano para a próxima sessão</label>
-        <textarea id="evoPlano" class="form-control" rows="2" placeholder="O que combinamos para a próxima?"></textarea>
+        <textarea id="evoPlano" class="form-control" rows="2" placeholder="O que combinamos para a próxima?" oninput="segurancaModulo.registrarAtividade()"></textarea>
       </div>
     </form>
   </div>

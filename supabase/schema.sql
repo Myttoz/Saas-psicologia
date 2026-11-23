@@ -44,5 +44,15 @@ create policy "Exclusão pelo dono"
 
 grant select, insert, update, delete on public.dados to authenticated;
 
+-- Defesa em profundidade: nem anon nem o público em geral acessam a tabela,
+-- mesmo que alguma permissão padrão do Supabase apareça no futuro.
+revoke all on public.dados from anon, public;
+alter default privileges in schema public revoke all on tables from anon;
+
+-- Evita que uma conta envie um JSON gigante e estoure o armazenamento.
+alter table public.dados drop constraint if exists dados_conteudo_tamanho;
+alter table public.dados add constraint dados_conteudo_tamanho
+  check (pg_column_size(conteudo) < 5 * 1024 * 1024);
+
 -- Fim. Para criar a pessoa que vai entrar no sistema:
 -- Authentication -> Users -> Add user -> informe e-mail e senha.

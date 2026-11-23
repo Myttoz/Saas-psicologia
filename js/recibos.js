@@ -16,13 +16,14 @@ var recibosModulo = {
     return null;
   },
 
-  escapeHtml: function(texto) {
-    return String(texto === null || texto === undefined ? '' : texto)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+  escapeHtml: escapeHtml,
+
+  // Aceita somente imagens PNG/JPG em base64. Um backup ou a nuvem pode trazer
+  // texto com código escondido; isso nunca deve chegar ao atributo src.
+  assinaturaValida: function(valor) {
+    var s = String(valor || '');
+    if (s.length > 400000) return '';
+    return /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(s) ? s : '';
   },
 
   formaPagamento: function(valor) {
@@ -119,9 +120,9 @@ var recibosModulo = {
     var preview = document.getElementById('reciboAssinaturaPreview');
     if (!preview) return;
 
-    var atual = this._assinaturaAlterada
+    var atual = this.assinaturaValida(this._assinaturaAlterada
       ? this._novaAssinatura
-      : (dadosProfissional.assinatura || '');
+      : (dadosProfissional.assinatura || ''));
 
     if (atual) {
       preview.innerHTML = '<img src="' + atual + '" alt="Prévia da assinatura">';
@@ -148,7 +149,7 @@ var recibosModulo = {
     dadosProfissional.cpf = cpf ? cpf.value.trim() : '';
 
     if (this._assinaturaAlterada) {
-      dadosProfissional.assinatura = this._novaAssinatura || '';
+      dadosProfissional.assinatura = this.assinaturaValida(this._novaAssinatura);
     }
     this._novaAssinatura = null;
     this._assinaturaAlterada = false;
@@ -172,9 +173,10 @@ var recibosModulo = {
 
     // A linha para assinar aparece sempre. Se houver imagem cadastrada,
     // ela vem junto, logo acima da linha.
+    var assinaturaImagem = this.assinaturaValida(dp.assinatura);
     var assinatura =
-      (dp.assinatura
-        ? '<img class="recibo-assinatura-img" src="' + dp.assinatura + '" alt="Assinatura">'
+      (assinaturaImagem
+        ? '<img class="recibo-assinatura-img" src="' + assinaturaImagem + '" alt="Assinatura">'
         : '') +
       '<div class="recibo-linha-assinatura"></div>';
 
@@ -186,7 +188,7 @@ var recibosModulo = {
       '<div class="recibo">' +
         '<div class="recibo-topo">' +
           '<div class="recibo-titulo">RECIBO</div>' +
-          '<div class="recibo-numero">Nº ' + l.id + '</div>' +
+          '<div class="recibo-numero">Nº ' + this.escapeHtml(l.id) + '</div>' +
         '</div>' +
         '<div class="recibo-linha"><span>Recebi de</span><strong>' + this.escapeHtml(l.paciente) + '</strong></div>' +
         '<div class="recibo-linha"><span>Valor</span><strong>' + formatarMoeda(l.valor) + '</strong></div>' +

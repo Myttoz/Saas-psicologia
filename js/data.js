@@ -24,6 +24,17 @@ var hojeStr = hoje.getFullYear() + '-' +
 // Utilitários de formato
 // ============================================================================
 
+// Use SEMPRE antes de colocar qualquer texto do usuário dentro de innerHTML.
+// Transforma < > & " ' em entidades, impedindo que o texto vire código HTML/JS.
+function escapeHtml(valor) {
+  return String(valor === null || valor === undefined ? '' : valor)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function formatarMoeda(valor) {
   if (valor === null || valor === undefined) return '—';
   var v = parseFloat(valor).toFixed(2).replace('.', ',');

@@ -116,9 +116,11 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
   volta para esse último retrato, com confirmação. A sidebar mostra quando ele
   foi salvo. Ele serve para voltar atrás **no mesmo navegador** — para trocar de
   máquina, use Exportar/Importar.
-- **Senha com PBKDF2**: a senha do prontuário usa sal aleatória e 12.000
-  iterações (SHA-256), em vez de um hash simples. Senhas criadas antes continuam
-  funcionando e são atualizadas automaticamente no primeiro desbloqueio.
+- **Senha do prontuário com PBKDF2**: guardada como
+  `pbkdf2$12000$<sal>$<hash>` — sal aleatória de 16 bytes e hash SHA-256 de
+  32 bytes, com 12.000 iterações. A senha em texto nunca é salva. Senhas antigas
+  continuam funcionando e são atualizadas no primeiro desbloqueio. Veja os
+  limites reais em "Como usar o prontuário", abaixo.
 - **PWA**: manifesto, service worker e ícones já incluídos. Depois de publicar em
   HTTPS, use o menu do navegador **Adicionar à tela inicial** / **Instalar app**
   para abrir como aplicativo e usar offline.
@@ -163,10 +165,40 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
    acesso. A **trilha de acesso** mostra entradas, saídas, consultas, criações,
    edições e exclusões (com as iniciais do paciente, sem o texto clínico).
 
-> Atenção: a senha usa PBKDF2 (sal única + 12.000 iterações), mas continua sendo
-> um bloqueio **local** do navegador. Ela não substitui login, RLS, LGPD ou as
-> normas do CFP. O backup JSON e o retrato automático contêm o texto das
-> evoluções: guarde-os em local protegido.
+### O que a senha do prontuário protege — e o que não protege
+
+**Como ela fica salva:** no navegador, na chave `saas_seguranca_senha`, no
+formato `pbkdf2$12000$<sal em hex>$<hash em hex>`. A sal é sorteada pelo
+navegador (`crypto.getRandomValues`) e o código recebe a senha 12.000 vezes com
+SHA-256 antes de gerar o hash. A comparação com a senha digitada é feita em
+tempo constante. A senha em texto puro **não** fica salva em nenhum lugar.
+
+**O que isso resolve:** impede que alguém que abra o site no mesmo navegador
+veja o prontuário sem digitar a senha. Depois de 3 erros, há bloqueio de 30
+segundos (que continua mesmo recarregando a página); após 15 minutos parada, o
+prontuário tranca sozinho. Trocar a senha exige a senha atual.
+
+**O que isso NÃO resolve (seja honesta com isso):**
+
+- A senha é um **bloqueio da interface**, não criptografia do conteúdo. Quem
+  tiver acesso ao computador, ao navegador ou ao arquivo de backup consegue ler
+  `saas_evolucoes`, o CPF e a assinatura direto no armazenamento, sem senha.
+- As evoluções, o CPF e a assinatura viajam para a nuvem e para o backup em
+  texto legível dentro do JSON. O Supabase protege o acesso com login e RLS
+  (cada conta vê só os próprios dados), mas não criptografa o conteúdo do JSON
+  para a própria profissional.
+- 12.000 iterações de PBKDF2 em JavaScript puro estão abaixo da recomendação
+  atual (a OWASP sugere ~600.000). Mais iterações deixariam o login lento neste
+  projeto, que roda sem servidor e sem bibliotecas. Isso é aceitável como
+  tranca local, não como cofre de dados clínicos.
+- Se a senha for esquecida, não há recuperação: é preciso apagar a chave
+  `saas_seguranca_senha` no navegador e criar outra. As evoluções continuam no
+  backup.
+
+Na prática: use uma senha que você não usa em mais nada, mantenha o computador
+protegido, guarde os backups em local seguro e nunca compartilhe o arquivo JSON.
+Este sistema não substitui prontuário eletrônico certificado, assinatura digital
+nem as obrigações do CFP/LGPD.
 
 ## Como usar WhatsApp e recibos
 

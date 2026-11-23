@@ -110,7 +110,7 @@ var resumosModulo = {
       card.className = 'resumo-card' + (semCalculo ? ' sem-calculo' : '');
       card.innerHTML =
         '<div class="resumo-card-header">' +
-          '<h3>' + f.nome + '</h3>' +
+          '<h3>' + escapeHtml(f.nome) + '</h3>' +
           '<span class="badge ' + (semCalculo ? 'badge-pendente' : 'badge-fixed') + '">' + pctTexto + '</span>' +
         '</div>' +
         '<div class="resumo-card-body">' +
@@ -244,10 +244,10 @@ var resumosModulo = {
 
   statCard: function(label, valor, classe) {
     return '<div class="stat-card">' +
-      '<div class="stat-icon ' + classe + '">R$</div>' +
+      '<div class="stat-icon ' + escapeHtml(classe) + '">R$</div>' +
       '<div class="stat-info">' +
-        '<div class="stat-label">' + label + '</div>' +
-        '<div class="stat-value">' + valor + '</div>' +
+        '<div class="stat-label">' + escapeHtml(label) + '</div>' +
+        '<div class="stat-value">' + escapeHtml(valor) + '</div>' +
       '</div>' +
     '</div>';
   }
