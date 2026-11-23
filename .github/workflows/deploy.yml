@@ -28,6 +28,9 @@ jobs:
 
       - name: Preparar o site
         uses: actions/configure-pages@v5
+        with:
+          # Cria/habilita o Pages automaticamente se ainda não estiver ligado.
+          enablement: true
 
       - name: Montar o pacote (só os arquivos do site)
         run: |
