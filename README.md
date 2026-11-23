@@ -25,7 +25,9 @@ Acesse **https://myttoz.github.io/Saas-psicologia/**
 
 A tela pede e-mail e senha. Use a conta que você mesma criou no Supabase. Se
 ativou a verificação em duas etapas, digite também o código de 6 números do
-aplicativo. Não há botão de Google: só entram as contas criadas por você.
+aplicativo. Se ainda não ativou, use **🔐 Verificação em duas etapas** na barra
+lateral: cada conta cadastra o seu próprio QR no celular. Não há botão de
+Google: só entram as contas criadas por você.
 
 A **nuvem é a fonte da verdade**: ao entrar, os dados dela substituem os do
 navegador. Nada sobe automaticamente do computador para a nuvem. Para trazer

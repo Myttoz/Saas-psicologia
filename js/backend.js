@@ -17,6 +17,8 @@ var Backend = {
   _pendente: null,      // login/reautenticação esperando código de 2 etapas
   _modoMfa: '',         // 'convite' | 'enroll'
   _mfaEnroll: null,
+  _mfaNome: '',
+  _mfaOrigemPermanent: false,
   _reautenticarCallback: null,
   _aplicandoRemoto: false,
 
@@ -240,6 +242,8 @@ var Backend = {
 
     this._modoMfa = 'convite';
     this._mfaEnroll = null;
+    this._mfaNome = '';
+    this._mfaOrigemPermanent = false;
     var intro = document.getElementById('mfaIntro');
     if (intro) intro.textContent =
       'Proteja sua conta com um código que muda a cada 30 segundos. ' +
@@ -253,7 +257,10 @@ var Backend = {
     var botao = document.getElementById('mfaBotao');
     if (botao) botao.textContent = 'Ativar agora';
     var secundario = document.getElementById('mfaSecundario');
-    if (secundario) secundario.style.display = '';
+    if (secundario) {
+      secundario.textContent = 'Agora não';
+      secundario.style.display = '';
+    }
     this.mensagemMfa('');
     app.abrirModal('modalMfa');
   },
@@ -261,10 +268,11 @@ var Backend = {
   ativarMfa: function() {
     var self = this;
     if (this._modoMfa !== 'convite') return;
+    var nomeFator = this._mfaNome || 'App de autenticação';
     var headers = this.headersComToken(this.token());
     this._post('/auth/v1/factors', headers, {
       factor_type: 'totp',
-      friendly_name: 'App de autenticação'
+      friendly_name: nomeFator
     }).then(function(dados) {
       if (!dados || !dados.id || !dados.totp) throw new Error('Não foi possível iniciar a ativação.');
       self._modoMfa = 'enroll';
@@ -296,7 +304,7 @@ var Backend = {
       var botao = document.getElementById('mfaBotao');
       if (botao) botao.textContent = 'Confirmar ativação';
       var secundario = document.getElementById('mfaSecundario');
-      if (secundario) secundario.style.display = 'none';
+      if (secundario) secundario.textContent = 'Cancelar';
       var campo = document.getElementById('mfaCodigo');
       if (campo) { campo.value = ''; try { campo.focus(); } catch (e) {} }
       self.mensagemMfa('');
@@ -324,6 +332,8 @@ var Backend = {
       self._pendente = null;
       self._modoMfa = '';
       self._mfaEnroll = null;
+      self._mfaNome = '';
+      self._mfaOrigemPermanent = false;
       try { localStorage.removeItem(self.CHAVE_MFA_RECUSADO); } catch (e) {}
       app.fecharModal('modalMfa');
       app.toast('Verificação em duas etapas ativada.');
@@ -332,9 +342,62 @@ var Backend = {
     });
   },
 
+  // Botão permanente da sidebar. Cada conta entra com o seu login e cadastra o
+  // seu próprio QR code. Se já houver um fator ativo, o botão serve para
+  // adicionar um segundo aplicativo de reserva.
+  abrirAtivacaoMfa: function() {
+    if (!this.configurado() || !this.conectado()) {
+      app.toast('Entre na sua conta para ativar a verificação em duas etapas.');
+      return;
+    }
+    try { localStorage.removeItem(this.CHAVE_MFA_RECUSADO); } catch (e) {}
+
+    var jaTem = this._fatoresVerificados(this.usuario()).length > 0;
+    this._modoMfa = 'convite';
+    this._mfaEnroll = null;
+    this._mfaNome = jaTem ? 'App de autenticação (reserva)' : 'App de autenticação';
+    this._mfaOrigemPermanent = true;
+
+    var intro = document.getElementById('mfaIntro');
+    if (intro) intro.textContent = jaTem
+      ? 'Você já tem um código ativo. Para cadastrar um aplicativo de reserva, use outro celular ou outro app, escaneie o QR code e guarde o segredo em local seguro.'
+      : 'Vamos proteger esta conta com um código que muda a cada 30 segundos. Use um aplicativo autenticador no celular (Google Authenticator, Authy, Microsoft Authenticator ou similar).';
+    var qr = document.getElementById('mfaQr');
+    if (qr) qr.style.display = 'none';
+    var segredo = document.getElementById('mfaSegredo');
+    if (segredo) segredo.style.display = 'none';
+    var grupo = document.getElementById('grupoMfaCodigo');
+    if (grupo) grupo.style.display = 'none';
+    var botao = document.getElementById('mfaBotao');
+    if (botao) botao.textContent = jaTem ? 'Gerar código de reserva' : 'Gerar QR code';
+    var secundario = document.getElementById('mfaSecundario');
+    if (secundario) {
+      secundario.textContent = 'Fechar';
+      secundario.style.display = '';
+    }
+    this.mensagemMfa('');
+    app.abrirModal('modalMfa');
+  },
+
+  // Um botão só: gera o QR no modo convite e confirma o código no modo enroll.
+  clicarMfa: function() {
+    if (this._modoMfa === 'enroll') return this.confirmarMfa();
+    if (this._modoMfa === 'convite') return this.ativarMfa();
+  },
+
+  // "Agora não" vale só para o convite automático. Pelo botão permanente,
+  // fechar não grava a recusa.
+  mfaSecundario: function() {
+    if (this._mfaOrigemPermanent) this.fecharMfa();
+    else this.recusarMfa();
+  },
+
   recusarMfa: function() {
     try { localStorage.setItem(this.CHAVE_MFA_RECUSADO, '1'); } catch (e) {}
     this._modoMfa = '';
+    this._mfaEnroll = null;
+    this._mfaNome = '';
+    this._mfaOrigemPermanent = false;
     app.fecharModal('modalMfa');
     app.toast('Você pode ativar a verificação em duas etapas depois.');
   },
@@ -342,6 +405,10 @@ var Backend = {
   fecharMfa: function() {
     this._modoMfa = '';
     this._mfaEnroll = null;
+    this._mfaNome = '';
+    this._mfaOrigemPermanent = false;
+    var campo = document.getElementById('mfaCodigo');
+    if (campo) campo.value = '';
     app.fecharModal('modalMfa');
   },
 

@@ -52,7 +52,7 @@ Saas Psicologa/
 ├── Removidos/           # Histórico/rascunhos pessoais (NÃO versionado)
 ├── README.md            # Apresentação curta do site
 ├── MANUAL.md            # Este arquivo
-├── RELEASE_NOTES_v1.0.0.md # Notas da versão publicada
+├── RELEASE_NOTES_v*.md   # Notas de cada versão publicada
 └── .gitignore           # Arquivos ignorados pelo git
 ```
 
@@ -146,6 +146,10 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
   com ESC. **Google removido**: só entram contas criadas por você. A nuvem é a
   fonte da verdade; nada sobe automático do navegador. Guia em
   `supabase/COMO_CONFIGURAR.md`.
+- **Verificação em duas etapas sempre disponível**: botão **🔐 Verificação em
+  duas etapas** na barra lateral. Cada pessoa entra com a sua conta e cadastra o
+  QR no próprio celular; clicando de novo, cadastra um segundo aplicativo de
+  reserva. Ter clicado em “Agora não” no aviso automático não esconde o botão.
 - Menu lateral: Hoje, Agenda, Resumos, Lançamentos, Convênios, Pacientes,
   Prontuário e Situação Paciente.
 - Cabeçalho de meses clicável (12 meses do ano atual) em Lançamentos, Situação Paciente e Resumos.
