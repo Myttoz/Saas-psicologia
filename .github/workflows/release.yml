@@ -45,7 +45,7 @@ jobs:
           set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add releases.xml
+          git add releases.xml releases.rss
           if git diff --cached --quiet; then
             echo "O feed já estava atualizado."
           else

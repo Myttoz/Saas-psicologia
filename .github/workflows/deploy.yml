@@ -35,7 +35,7 @@ jobs:
       - name: Montar o pacote (só os arquivos do site)
         run: |
           mkdir -p _site
-          cp index.html manifest.webmanifest sw.js _headers releases.xml _site/
+          cp index.html manifest.webmanifest sw.js _headers releases.xml releases.rss _site/
           cp -r css js assets _site/
 
       - name: Publicar pacote

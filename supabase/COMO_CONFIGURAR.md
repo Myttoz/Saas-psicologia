@@ -136,10 +136,12 @@ git push origin v1.0.0
 ```
 
 3. O GitHub cria a release sozinho e atualiza o feed do site:
-   **https://myttoz.github.io/Saas-psicologia/releases.xml**
-   (cole esse endereço no widget de notícias/RSS do start.me). O feed do GitHub
-   `https://github.com/Myttoz/Saas-psicologia/releases.atom` também existe, mas
-   alguns widgets não conseguem lê-lo.
+   **https://myttoz.github.io/Saas-psicologia/releases.rss**
+   (cole esse endereço no widget de notícias/RSS do start.me). Se o widget
+   estiver com "nenhum artigo disponível", apague o feed antigo dentro do widget
+   e adicione este como novo. O mesmo feed também está em `releases.xml`, e o
+   feed do GitHub `https://github.com/Myttoz/Saas-psicologia/releases.atom`
+   continua disponível como alternativa.
 
 Para a **próxima** versão, use `v1.1.0`, `v1.2.0`... e crie um arquivo
 `RELEASE_NOTES_v1.1.0.md` com as novidades. Se não houver arquivo de notas, o

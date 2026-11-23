@@ -15,6 +15,11 @@ from email.utils import format_datetime
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "Myttoz/Saas-psicologia")
 SAIDA = os.environ.get("FEED_SAIDA", "releases.xml")
+# O GitHub Pages serve .rss como application/rss+xml (o tipo esperado por
+# leitores de feed) e .xml como application/xml. Publicamos os dois para
+# garantir compatibilidade com widgets como o do start.me.
+SAIDA_RSS = os.environ.get("FEED_SAIDA_RSS", "releases.rss")
+URL_RSS = "https://myttoz.github.io/Saas-psicologia/releases.rss"
 
 
 def buscar_releases():
@@ -80,13 +85,12 @@ def gerar(releases):
         ).replace(tzinfo=timezone.utc)
         titulo = html.escape(release.get("name") or release["tag_name"])
         link = html.escape(release["html_url"])
-        guid = html.escape(release["tag_name"])
         descricao = markdown_simples(release.get("body") or "")
         itens.append(
             "<item>\n"
             f"  <title>{titulo}</title>\n"
             f"  <link>{link}</link>\n"
-            f"  <guid isPermaLink=\"false\">{guid}</guid>\n"
+            f"  <guid isPermaLink=\"true\">{link}</guid>\n"
             f"  <pubDate>{format_datetime(data, usegmt=True)}</pubDate>\n"
             f"  <description><![CDATA[{descricao}]]></description>\n"
             "</item>"
@@ -95,12 +99,13 @@ def gerar(releases):
     agora = format_datetime(datetime.now(timezone.utc), usegmt=True)
     return (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
-        '<rss version="2.0">\n'
+        '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n'
         "  <channel>\n"
         "    <title>Gestão de Pacientes — novidades</title>\n"
         "    <link>https://github.com/Myttoz/Saas-psicologia/releases</link>\n"
         "    <description>Versões e novidades do Gestão de Pacientes (SaaS by Myttoz).</description>\n"
         "    <language>pt-BR</language>\n"
+        f'    <atom:link href="{URL_RSS}" rel="self" type="application/rss+xml" />\n'
         f"    <lastBuildDate>{agora}</lastBuildDate>\n"
         + "\n".join(itens)
         + "\n  </channel>\n</rss>\n"
@@ -109,9 +114,10 @@ def gerar(releases):
 
 def main():
     feed = gerar(buscar_releases())
-    with open(SAIDA, "w", encoding="utf-8") as arquivo:
-        arquivo.write(feed)
-    print("Feed gerado em", SAIDA)
+    for caminho in (SAIDA, SAIDA_RSS):
+        with open(caminho, "w", encoding="utf-8") as arquivo:
+            arquivo.write(feed)
+        print("Feed gerado em", caminho)
 
 
 if __name__ == "__main__":

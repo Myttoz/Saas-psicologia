@@ -42,8 +42,9 @@ Saas Psicologa/
 │   ├── deploy.yml       # Publicação automática no GitHub Pages
 │   └── release.yml      # Release automática ao empurrar uma tag v*
 ├── scripts/
-│   └── gerar_feed.py    # Gera releases.xml a partir das releases do GitHub
-├── releases.xml         # Feed RSS 2.0 publicado no site (para o start.me)
+│   └── gerar_feed.py    # Gera os feeds a partir das releases do GitHub
+├── releases.rss         # Feed RSS 2.0 recomendado (para o start.me)
+├── releases.xml         # Mesmo feed, com extensão .xml
 ├── Livia/               # Documentos pessoais (NÃO versionar — está no .gitignore)
 ├── README.md            # Apresentação curta do site
 ├── MANUAL.md            # Este arquivo
@@ -341,11 +342,15 @@ internet. As alterações são sincronizadas com a nuvem quando há conexão.
 Ao empurrar uma tag `v*`, o GitHub cria a release e atualiza o feed publicado
 no próprio site (o que o widget do start.me lê):
 
-**https://myttoz.github.io/Saas-psicologia/releases.xml**
+**https://myttoz.github.io/Saas-psicologia/releases.rss**
+
+O mesmo conteúdo também está em `releases.xml`. O endereço `.rss` é o
+recomendado porque o GitHub Pages o entrega como `application/rss+xml`, o tipo
+que os leitores de feed esperam. Se o widget continuar "sem artigos", apague o
+feed antigo dentro do widget e adicione o endereço acima como novo.
 
 O feed do GitHub (`https://github.com/Myttoz/Saas-psicologia/releases.atom`)
-também existe, mas alguns leitores de feed não conseguem acessá-lo. Se o widget
-está "sem artigos", use o endereço do site acima.
+também existe, mas alguns leitores não conseguem acessá-lo.
 
 1. Faça as alterações e rode `git add .`, `git commit -m "mensagem"` e
    `git push origin main` (isso publica o site).
