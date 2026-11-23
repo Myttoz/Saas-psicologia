@@ -682,31 +682,31 @@
 </div>
 
 <!-- Modal: login na nuvem (aparece somente se a nuvem estiver configurada) -->
-<div class="modal" id="modalLogin" onclick="event.stopPropagation()">
-  <div class="modal-header">
-    <div class="modal-title">Entrar na sua conta</div>
+<div class="modal modal-login" id="modalLogin" onclick="event.stopPropagation()">
+  <div class="login-cabecalho">
+    <img src="assets/logo.jpeg" alt="Logo" class="login-logo">
+    <div class="login-titulo">Bem-vinda de volta</div>
+    <div class="login-subtitulo">Gestão de Pacientes</div>
   </div>
-  <div class="modal-body">
-    <div class="alert-note">
-      Informe o e-mail e a senha criados no sistema de nuvem para sincronizar
-      seus dados entre o computador e o celular.
-    </div>
+  <div class="login-corpo">
+    <p class="login-intro">
+      Entre com sua conta para manter tudo sincronizado entre o computador e o celular.
+    </p>
     <form id="formLogin" onsubmit="return Backend.entrar();">
       <div class="form-group">
-        <label class="form-label">E-mail</label>
+        <label class="form-label" for="loginEmail">E-mail</label>
         <input type="email" id="loginEmail" class="form-control" placeholder="seu@email.com" autocomplete="username">
       </div>
       <div class="form-group">
-        <label class="form-label">Senha</label>
+        <label class="form-label" for="loginSenha">Senha</label>
         <input type="password" id="loginSenha" class="form-control" placeholder="Sua senha" autocomplete="current-password">
       </div>
       <div class="senha-erro erro" id="loginErro" style="display:none;"></div>
+      <button type="submit" class="btn-login-entrar">Entrar</button>
     </form>
+    <button type="button" class="login-link" onclick="app.fecharModal('modalLogin')">Continuar sem conectar</button>
   </div>
-  <div class="modal-footer">
-    <button class="btn btn-outline" onclick="app.fecharModal('modalLogin')">Continuar sem conectar</button>
-    <button class="btn btn-primary" onclick="Backend.entrar()">Entrar</button>
-  </div>
+  <div class="login-rodape">SaaS by Myttoz</div>
 </div>
 
 </div><!-- fim overlay -->

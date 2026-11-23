@@ -1588,6 +1588,175 @@ svg { display: block; }
 .assinatura-preview img { max-height: 70px; max-width: 100%; object-fit: contain; }
 .assinatura-preview .preview-vazio { font-size: .8rem; color: var(--text-muted); }
 
+/* ==========================================================================
+   Tela de login — identidade visual da marca
+   ========================================================================== */
+
+.modal-login {
+  max-width: 430px;
+  overflow: hidden;
+  border: 0;
+  box-shadow: 0 24px 60px -20px rgb(46 58 51 / 0.38);
+  text-align: center;
+}
+
+/* Mantém o modal escondido até app.abrirModal() adicionar .show-modal. */
+.modal-login.show-modal {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-cabecalho {
+  position: relative;
+  padding: 2rem 1.5rem 1.6rem;
+  background: linear-gradient(155deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: #fff;
+  overflow: hidden;
+}
+
+/* Detalhes discretos no fundo do cabeçalho. */
+.login-cabecalho::before,
+.login-cabecalho::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.login-cabecalho::before {
+  width: 190px;
+  height: 190px;
+  top: -110px;
+  left: -70px;
+  background: rgb(255 255 255 / 0.10);
+}
+
+.login-cabecalho::after {
+  width: 140px;
+  height: 140px;
+  right: -65px;
+  bottom: -85px;
+  background: rgb(193 106 74 / 0.32);
+}
+
+.login-logo {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+  border: 3px solid rgb(255 255 255 / 0.92);
+  box-shadow: 0 10px 22px rgb(0 0 0 / 0.18);
+}
+
+.login-titulo {
+  position: relative;
+  z-index: 1;
+  font-size: 1.45rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.login-subtitulo {
+  position: relative;
+  z-index: 1;
+  margin-top: .3rem;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.82);
+}
+
+.login-corpo {
+  padding: 1.6rem 1.75rem 1.4rem;
+  text-align: left;
+}
+
+.login-intro {
+  margin-bottom: 1.35rem;
+  color: var(--text-muted);
+  font-size: .9rem;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.login-corpo .form-group { margin-bottom: 1rem; }
+.login-corpo .form-label { display: block; margin-bottom: .4rem; }
+.login-corpo .form-control { padding: .78rem .9rem; background: var(--bg); }
+
+.btn-login-entrar {
+  width: 100%;
+  margin-top: .4rem;
+  padding: .85rem 1rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: .98rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 18px -8px rgb(193 106 74 / 0.75);
+  transition: background .2s, box-shadow .2s, transform .2s;
+}
+
+.btn-login-entrar:hover {
+  background: #A9563A;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px -8px rgb(193 106 74 / 0.8);
+}
+
+.btn-login-entrar:active { transform: none; }
+
+.login-link {
+  display: block;
+  width: 100%;
+  margin: .95rem 0 0;
+  padding: .4rem;
+  border: 0;
+  background: transparent;
+  color: var(--primary-dark);
+  font-size: .86rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-link:hover { color: var(--accent); }
+
+.login-rodape {
+  padding: .85rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-align: center;
+}
+
+/* Foco visível para navegação por teclado. */
+.btn-login-entrar:focus,
+.btn-login-entrar:focus-visible,
+.login-link:focus,
+.login-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgb(193 106 74 / 0.22);
+}
+
+@media (max-width: 480px) {
+  .modal-login { max-width: 100%; }
+  .login-cabecalho { padding: 1.6rem 1.2rem 1.3rem; }
+  .login-logo { width: 72px; height: 72px; }
+  .login-corpo { padding: 1.3rem 1.2rem 1.1rem; }
+}
+
 #areaImpressao { display: none; }
 
 @media print {
