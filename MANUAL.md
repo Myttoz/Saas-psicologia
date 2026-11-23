@@ -233,8 +233,12 @@ pela senha.
 - Onde ativar: painel do Supabase → **Authentication → Users** → seu usuário →
   **MFA** → fator **TOTP**. Ou pelo site, em **Ativar verificação em duas
   etapas** na sidebar.
-- Guarde os **códigos de recuperação** que o Supabase mostrar. Sem eles e sem o
-  celular, só redefinindo a conta no painel.
+- Cadastre também um **segundo fator TOTP de reserva**, em outro aplicativo ou
+  outro celular, e guarde o QR/segredo em local seguro. O Supabase **não** dá
+  códigos de recuperação para usuários do projeto; os códigos que aparecem no
+  painel são da conta Supabase da administradora, não da conta do site. Cada
+  projeto tem seu próprio fator: códigos de outro projeto não servem aqui. Se
+  perder todos os fatores, só removendo o fator no painel do Supabase.
 - O passo a passo completo está em `supabase/COMO_CONFIGURAR.md`.
 
 ## Como funciona a nuvem

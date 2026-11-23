@@ -13,7 +13,7 @@ alguns cliques e três senhas/códigos diferentes.
 | O que é | Onde você cria | Onde usa | Se esquecer |
 |---|---|---|---|
 | **Senha da conta** (e-mail + senha) | No Supabase: **Authentication → Users → Add user** | Na tela **Bem-vinda** do site | Você mesma redefine em **Authentication → Users**, clicando no usuário e em "Reset password" |
-| **Código de 6 números** (verificação em duas etapas / MFA) | No aplicativo autenticador (Google Authenticator, Microsoft Authenticator, 1Password etc.) | Aparece depois da senha, no login e antes de importar backup | Use um dos **códigos de recuperação** que o Supabase mostrou quando você ativou. Guarde-os impressos ou em local seguro |
+| **Código de 6 números** (verificação em duas etapas / MFA) | No aplicativo autenticador (Google Authenticator, Microsoft Authenticator, 1Password etc.) | Aparece depois da senha, no login e antes de importar backup | Use o **segundo fator TOTP de reserva** (outro app/celular). O Supabase não oferece códigos de recuperação para usuários do projeto |
 | **Senha do prontuário** | Dentro do site, na aba **Prontuário**, na primeira vez que abrir uma evolução | Toda vez que o prontuário estiver trancado, e para trocar a senha | **Não há recuperação.** Ela gera a chave que cifra as evoluções; sem ela ninguém lê o conteúdo. Anote em local seguro |
 
 Resumo prático: a **senha da conta** abre o site; o **código de 6 números**
@@ -58,9 +58,12 @@ Assim ninguém mais cria conta por conta própria, nem entra pelo Google.
    celular e escaneie.
 4. Digite no painel o **código de 6 números** que o aplicativo mostrou para
    confirmar a ativação. O status do fator deve ficar como **verified**.
-5. O Supabase mostra **códigos de recuperação**: copie e guarde fora do
-   computador (papel, cofre, gerenciador de senhas). São a única saída se você
-   perder o celular.
+5. Repita os passos 2 a 4 para criar um **segundo fator TOTP de reserva**, de
+   preferência em outro aplicativo ou outro celular. Guarde o QR code/segredo
+   fora do computador (papel, cofre, gerenciador de senhas). O Supabase não
+   mostra códigos de recuperação para usuários do projeto — os códigos da sua
+   conta do painel não servem para entrar no site. Cada projeto tem seu próprio
+   fator: códigos de outro projeto também não servem aqui.
 
 Depois disso, o site passa a pedir o código de 6 números no login e antes de
 importar um backup. O banco também exige o código para ler e gravar dados
