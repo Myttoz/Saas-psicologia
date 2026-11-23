@@ -1,0 +1,26 @@
+{
+  "name": "Gestão de Pacientes — Psicologia",
+  "short_name": "Atendimentos",
+  "description": "Agenda, pacientes, convênios e resumos de atendimentos.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F6F2",
+  "theme_color": "#7A9E8F",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

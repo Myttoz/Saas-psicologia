@@ -10,10 +10,20 @@ function pacientesRender() {
 
   tbody.innerHTML = '';
 
+  var termo = normalizarTexto(pacientesModulo.termo).trim();
+  var encontrados = 0;
+
   for (var i = 0; i < pacientes.length; i++) {
     var p = pacientes[i];
 
     var f = obterFontePorId(p.fonteId);
+
+    // busca por nome do paciente ou nome do convênio
+    if (termo) {
+      var texto = String(p.nome || '') + ' ' + (f ? f.nome : '');
+      if (normalizarTexto(texto).indexOf(termo) === -1) continue;
+    }
+    encontrados++;
 
     var tipoTexto = (f && f.tipo === 'fixo') ? 'Fixo (do convênio)' : 'Variável';
     var tipoBadge = (f && f.tipo === 'fixo') ? 'badge-fixed' : 'badge-var';
@@ -37,6 +47,21 @@ function pacientesRender() {
 
     tbody.appendChild(tr);
   }
+
+  if (encontrados === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:1.5rem;">' +
+      (termo ? 'Nenhum paciente encontrado para essa busca.' : 'Nenhum paciente cadastrado.') +
+      '</td></tr>';
+  }
+
+  var resumo = document.getElementById('pacBuscaResumo');
+  if (resumo) {
+    if (termo) {
+      resumo.textContent = encontrados + (encontrados === 1 ? ' paciente encontrado' : ' pacientes encontrados');
+    } else {
+      resumo.textContent = pacientes.length + (pacientes.length === 1 ? ' cadastrado' : ' cadastrados');
+    }
+  }
 }
 
 // mostra ou esconde o campo de valor conforme o convênio selecionado
@@ -53,6 +78,20 @@ function atualizarCampoValorPaciente() {
 }
 
 var pacientesModulo = {
+
+  termo: '',
+
+  buscar: function(valor) {
+    this.termo = String(valor || '').toLowerCase().trim();
+    pacientesRender();
+  },
+
+  limparBusca: function() {
+    this.termo = '';
+    var input = document.getElementById('pacBusca');
+    if (input) input.value = '';
+    pacientesRender();
+  },
 
   abrirModal: function() {
     var form = document.getElementById('formPaciente');

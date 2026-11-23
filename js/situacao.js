@@ -42,6 +42,10 @@ var situacaoModulo = {
         ? app.botaoAcao('Voltar para pendente', 'situacaoModulo.marcarPendente(' + l.id + ')', 'pendente')
         : app.botaoAcao('Marcar como pago', 'situacaoModulo.marcarPago(' + l.id + ')', 'pago');
 
+      if (l.status === 'pago') {
+        acao += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + l.id + ')', 'editar');
+      }
+
       var tr = document.createElement('tr');
       tr.innerHTML =
         '<td>' + formatarData(l.data) + '<br><span class="cell-sub">' + l.horario + '</span></td>' +

@@ -16,8 +16,29 @@ var app = {
     // inicializa os cabeçalhos de meses
     if (typeof mesesModulo !== 'undefined') mesesModulo.init();
 
+    // mostra a data do último backup automático
+    if (typeof backupModulo !== 'undefined') backupModulo.init();
+
+    // se a nuvem estiver configurada, pede login e sincroniza
+    if (typeof Backend !== 'undefined') Backend.iniciar();
+
+    // permite instalar no celular (somente depois de publicado em HTTPS)
+    this.registrarServiceWorker();
+
     // renderiza página inicial
-    this.trocarPagina('agenda');
+    this.trocarPagina('hoje');
+  },
+
+  // O service worker só funciona em HTTPS (ou localhost); em file:// é ignorado.
+  registrarServiceWorker: function() {
+    if (typeof navigator === 'undefined' || !navigator.serviceWorker) return;
+    if (location.protocol === 'file:') return;
+
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('sw.js').catch(function() {
+        // sem registro não atrapalha o uso normal do sistema
+      });
+    });
   },
 
   // ---------- Navegação ----------
@@ -37,11 +58,13 @@ var app = {
     var tituloEl = document.getElementById('pageTitle');
     if (tituloEl) {
       var titulos = {
+        hoje: 'Hoje',
         agenda: 'Agenda',
         resumos: 'Resumos',
         lancamentos: 'Lançamentos',
         fontes: 'Convênios',
         pacientes: 'Pacientes',
+        prontuario: 'Prontuário',
         situacao: 'Situação Paciente'
       };
       tituloEl.textContent = titulos[id] || id;
@@ -82,6 +105,9 @@ var app = {
   },
 
   renderizarPagina: function(id) {
+    if (id === 'hoje' && typeof hojeModulo !== 'undefined') {
+      hojeModulo.render();
+    }
     if (id === 'agenda' && typeof agendaModulo !== 'undefined') {
       agendaModulo.render();
     }
@@ -93,6 +119,9 @@ var app = {
     }
     if (id === 'situacao' && typeof situacaoModulo !== 'undefined') {
       situacaoModulo.render();
+    }
+    if (id === 'prontuario' && typeof prontuarioModulo !== 'undefined') {
+      prontuarioModulo.render();
     }
     if (id === 'resumos' && typeof resumosModulo !== 'undefined') {
       resumosModulo.render();
@@ -150,6 +179,14 @@ var app = {
 
   sair: function() {
     if (confirm('Sair do sistema?')) {
+      // bloqueia o prontuário ao sair (se estiver desbloqueado)
+      if (typeof segurancaModulo !== 'undefined') segurancaModulo.bloquear();
+      if (typeof Backend !== 'undefined' && Backend.configurado()) {
+        Backend.sair();
+        this.trocarPagina('resumos');
+        Backend.mostrarLogin();
+        return;
+      }
       this.trocarPagina('resumos');
     }
   },
@@ -221,6 +258,8 @@ var app = {
           fontesModulo.abrirModalNovaFonte();
         } else if (id === 'pacientes' && typeof pacientesModulo !== 'undefined') {
           pacientesModulo.abrirModal();
+        } else if (id === 'prontuario' && typeof prontuarioModulo !== 'undefined') {
+          prontuarioModulo.abrirModal();
         } else if (id === 'situacao' && typeof situacaoModulo !== 'undefined') {
           // nada a abrir aqui
         } else {

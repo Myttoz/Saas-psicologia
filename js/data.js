@@ -11,6 +11,9 @@ var fontes = [
 
 var pacientes = []; // zerado
 var lancamentos = []; // zerado
+var evolucoes = []; // prontuário: evoluções por sessão (dado sensível)
+var CRP_PADRAO = '04/74163'; // CRP informado pela profissional — aparece no recibo
+var dadosProfissional = { nome: '', crp: CRP_PADRAO, cpf: '', assinatura: '' }; // usado no recibo
 
 var hoje = new Date();
 var hojeStr = hoje.getFullYear() + '-' +
@@ -32,6 +35,18 @@ function formatarMoeda(valor) {
 function parseMoeda(texto) {
   if (!texto) return 0;
   return parseFloat(texto.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+// busca amigável: "clinica" também encontra "Clínica", "avaliacao" encontra "Avaliação"
+function normalizarTexto(texto) {
+  return String(texto === null || texto === undefined ? '' : texto)
+    .toLowerCase()
+    .replace(/[àáâãä]/g, 'a')
+    .replace(/[èéêë]/g, 'e')
+    .replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôõö]/g, 'o')
+    .replace(/[ùúûü]/g, 'u')
+    .replace(/ç/g, 'c');
 }
 
 // ============================================================================
@@ -92,8 +107,21 @@ var Store = {
       localStorage.setItem('saas_fontes', JSON.stringify(fontes));
       localStorage.setItem('saas_pacientes', JSON.stringify(pacientes));
       localStorage.setItem('saas_lancamentos', JSON.stringify(lancamentos));
+      localStorage.setItem('saas_evolucoes', JSON.stringify(evolucoes));
+      localStorage.setItem('saas_dados_profissional', JSON.stringify(dadosProfissional));
     } catch (e) {
       // armazenamento indisponível — ignora silenciosamente
+    }
+
+    // mantém um retrato automático sempre que algo é salvo
+    if (typeof backupModulo !== 'undefined' && backupModulo.registrarAlteracao) {
+      backupModulo.registrarAlteracao();
+    }
+
+    // registra a versão local e avisa a nuvem (somente se estiver configurada)
+    try { sessionStorage.setItem('saas_sync_at', new Date().toISOString()); } catch (e) {}
+    if (typeof Backend !== 'undefined' && Backend.salvarSeConectado) {
+      Backend.salvarSeConectado();
     }
   },
   carregar: function() {
@@ -104,6 +132,18 @@ var Store = {
       if (f) fontes = JSON.parse(f);
       if (p) pacientes = JSON.parse(p);
       if (l) lancamentos = JSON.parse(l);
+      var e = localStorage.getItem('saas_evolucoes');
+      if (e) evolucoes = JSON.parse(e);
+      var dp = localStorage.getItem('saas_dados_profissional');
+      if (dp) {
+        var carregado = JSON.parse(dp);
+        dadosProfissional = {
+          nome: carregado.nome || '',
+          crp: carregado.crp || CRP_PADRAO,
+          cpf: carregado.cpf || '',
+          assinatura: carregado.assinatura || ''
+        };
+      }
     } catch (e) {
       // ignora
     }

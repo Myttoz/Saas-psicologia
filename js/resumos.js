@@ -1,6 +1,6 @@
 // ============================================================================
 // Resumos — totais do mês separados por convênio
-// Atendimentos normais e avaliações avulsas aparecem em seções separadas
+// Atendimentos normais e avaliações aparecem em seções separadas
 // Produzido = valor dos atendimentos | Ganho = percentual informado
 // Repasse = diferença até o total produzido
 // ============================================================================
@@ -19,7 +19,7 @@ var resumosModulo = {
       }
     }
 
-    // separa atendimentos normais de avaliações avulsas
+    // separa atendimentos normais de avaliações
     var normais = [];
     var avaliacoes = [];
     for (var i = 0; i < doMes.length; i++) {
@@ -59,7 +59,7 @@ var resumosModulo = {
     // cards por convênio — atendimentos normais
     this.renderizarCards('resumosPorFonte', normais);
 
-    // seção separada de avaliações avulsas
+    // seção separada de avaliações
     var cardAvaliacoes = document.getElementById('cardAvaliacoes');
     if (cardAvaliacoes) {
       cardAvaliacoes.style.display = avaliacoes.length > 0 ? 'block' : 'none';
@@ -129,6 +129,117 @@ var resumosModulo = {
     if (container.children.length === 0) {
       container.innerHTML = '<div class="empty"><p>Nenhum lançamento neste mês.</p></div>';
     }
+  },
+
+  // ---------- Exportação CSV para o contador ----------
+
+  // Atendimentos do mês selecionado na aba Resumos
+  lancamentosDoMes: function() {
+    var mes = mesesModulo.mesAtual('resumos');
+    var lista = [];
+    for (var i = 0; i < lancamentos.length; i++) {
+      if (lancamentos[i].data && lancamentos[i].data.indexOf(mes) === 0) {
+        lista.push(lancamentos[i]);
+      }
+    }
+    lista.sort(function(a, b) {
+      var d = String(a.data).localeCompare(String(b.data));
+      return d !== 0 ? d : String(a.horario).localeCompare(String(b.horario));
+    });
+    return lista;
+  },
+
+  // Texto seguro para CSV: protege contra fórmulas e cita ; " quebras de linha
+  csvTexto: function(valor) {
+    var s = String(valor === null || valor === undefined ? '' : valor);
+    if (/^[=+\-@]/.test(s)) s = "'" + s;
+    if (/[";\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  },
+
+  // Número no padrão brasileiro: 1234.5 -> "1234,50" (o Excel entende)
+  csvNumero: function(valor) {
+    if (valor === null || valor === undefined || valor === '') return '';
+    var n = parseFloat(valor);
+    if (isNaN(n)) return '';
+    return (Math.round(n * 100) / 100).toFixed(2).replace('.', ',');
+  },
+
+  baixarCsv: function(nome, linhas) {
+    // BOM para o Excel reconhecer acentos; CRLF para quebrar linhas corretamente
+    var conteudo = '\uFEFF' + linhas.join('\r\n') + '\r\n';
+    var blob = new Blob([conteudo], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    app.toast('Arquivo baixado: ' + nome);
+  },
+
+  formaPagamento: function(valor) {
+    return { dinheiro: 'Dinheiro', pix: 'Pix', clinica: 'Clínica', cartao: 'Cartão' }[valor] || valor || '-';
+  },
+
+  // Arquivo enxuto para o contador: só as colunas que ele realmente usa
+  exportarContador: function() {
+    var lista = this.lancamentosDoMes();
+    if (lista.length === 0) {
+      app.toast('Não há atendimentos neste mês para exportar.');
+      return;
+    }
+
+    var mes = mesesModulo.mesAtual('resumos');
+    var linhas = [[
+      'Data', 'Convênio', 'Forma de pagamento', 'Valor', 'Ganho', 'Repasse', 'Observações'
+    ].join(';')];
+
+    var totalValor = 0;
+    var totalGanho = 0;
+    var totalRepasse = 0;
+    var semPercentual = false;
+
+    for (var i = 0; i < lista.length; i++) {
+      var l = lista[i];
+      var f = obterFontePorId(l.fonteId);
+      var r = calcularValores(f, l.valor);
+
+      totalValor += (parseFloat(l.valor) || 0);
+      if (r) {
+        totalGanho += r.ganho;
+        totalRepasse += r.repasse;
+      } else {
+        semPercentual = true;
+      }
+
+      linhas.push([
+        this.csvTexto(formatarData(l.data)),
+        this.csvTexto(f ? f.nome : ''),
+        this.csvTexto(this.formaPagamento(l.pagamento)),
+        this.csvNumero(l.valor),
+        (r ? this.csvNumero(r.ganho) : ''),
+        (r ? this.csvNumero(r.repasse) : ''),
+        this.csvTexto(l.obs || '')
+      ].join(';'));
+    }
+
+    // linha final: soma das colunas numéricas (as de texto ficam vazias)
+    linhas.push([
+      this.csvTexto('TOTAL'),
+      '',
+      '',
+      this.csvNumero(totalValor),
+      this.csvNumero(totalGanho),
+      this.csvNumero(totalRepasse),
+      this.csvTexto(semPercentual ? 'Parcial: convênio sem percentual' : '')
+    ].join(';'));
+
+    this.baixarCsv('contador-' + mes + '.csv', linhas);
   },
 
   statCard: function(label, valor, classe) {

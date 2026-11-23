@@ -1,0 +1,45 @@
+name: Publicar no GitHub Pages
+
+# Publica automaticamente o conteúdo da raiz do repositório.
+# Para funcionar: GitHub -> Settings -> Pages -> Source = GitHub Actions.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Preparar o site
+        uses: actions/configure-pages@v5
+
+      - name: Montar o pacote (só os arquivos do site)
+        run: |
+          mkdir -p _site
+          cp index.html manifest.webmanifest sw.js _site/
+          cp -r css js assets _site/
+
+      - name: Publicar pacote
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Publicar
+        id: deploy
+        uses: actions/deploy-pages@v4

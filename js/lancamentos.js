@@ -4,6 +4,14 @@
 
 var lancamentosEditId = null;
 
+// rótulos/classes da presença (compatível com lançamentos antigos sem o campo)
+var lancPresencaInfo = {
+  agendado:   { rotulo: 'Agendado',   classe: 'badge-agendado' },
+  compareceu: { rotulo: 'Compareceu', classe: 'badge-compareceu' },
+  faltou:     { rotulo: 'Faltou',     classe: 'badge-faltou' },
+  cancelou:   { rotulo: 'Cancelou',   classe: 'badge-cancelou' }
+};
+
 function lancamentosRender() {
   var tbody = document.getElementById('tbodyHoje');
   if (!tbody) return;
@@ -13,6 +21,12 @@ function lancamentosRender() {
   var mes = mesesModulo.mesAtual('lancamentos');
   var titulo = document.getElementById('tituloLancamentos');
   if (titulo) titulo.textContent = 'Atendimentos de ' + mesesModulo.rotulo(mes);
+
+  // ao trocar de mês, a seleção anterior não faz mais sentido
+  if (lancamentosModulo.mesAtual !== mes) {
+    lancamentosModulo.mesAtual = mes;
+    lancamentosModulo.selecionados = { status: {}, presenca: {} };
+  }
 
   // filtrar lançamentos do mês selecionado
   var lista = [];
@@ -28,20 +42,39 @@ function lancamentosRender() {
     return d !== 0 ? d : a.horario.localeCompare(b.horario);
   });
 
-  if (lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Nenhum atendimento neste mês.</td></tr>';
+  // aplicar a busca por todas as colunas mostradas (exceto Ação)
+  var termo = lancamentosModulo.termo;
+  var visiveis = [];
+  for (var i = 0; i < lista.length; i++) {
+    if (!termo || lancamentosModulo.correspondeBusca(lista[i], termo)) {
+      visiveis.push(lista[i]);
+    }
+  }
+  lancamentosModulo.visiveis = visiveis;
+
+  var resumo = document.getElementById('lancBuscaResumo');
+  if (resumo) {
+    if (termo) {
+      resumo.textContent = visiveis.length === 0
+        ? 'Nenhum atendimento encontrado neste mês'
+        : visiveis.length + (visiveis.length === 1 ? ' atendimento encontrado' : ' atendimentos encontrados');
+    } else {
+      resumo.textContent = '';
+    }
+  }
+
+  lancamentosModulo.atualizarCabecalhos();
+  lancamentosModulo.atualizarMassa();
+
+  if (visiveis.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:var(--text-muted); padding:1.5rem;">' +
+      (termo ? 'Nenhum atendimento encontrado para essa busca.' : 'Nenhum atendimento neste mês.') +
+      '</td></tr>';
     return;
   }
 
-  var presencaInfo = {
-    agendado:  { rotulo: 'Agendado',  classe: 'badge-agendado' },
-    compareceu:{ rotulo: 'Compareceu', classe: 'badge-compareceu' },
-    faltou:    { rotulo: 'Faltou',    classe: 'badge-faltou' },
-    cancelou:  { rotulo: 'Cancelou',  classe: 'badge-cancelou' }
-  };
-
-  for (var i = 0; i < lista.length; i++) {
-    var l = lista[i];
+  for (var i = 0; i < visiveis.length; i++) {
+    var l = visiveis[i];
 
     // buscar fonte
     var f = obterFontePorId(l.fonteId);
@@ -49,22 +82,26 @@ function lancamentosRender() {
     var tipoBadge = (l.tipo === 'avaliacao') ? 'badge-avaliacao' : 'badge-fixed';
     var tipoTexto = (l.tipo === 'avaliacao') ? 'Avaliação' : 'Normal';
 
-    var pagamentoTexto = l.pagamento;
-    if (l.pagamento === 'dinheiro') pagamentoTexto = 'Dinheiro';
-    else if (l.pagamento === 'pix') pagamentoTexto = 'Pix';
-    else if (l.pagamento === 'clinica') pagamentoTexto = 'Clínica';
-    else if (l.pagamento === 'cartao') pagamentoTexto = 'Cartão';
+    var pagamentoTexto = lancamentosModulo.formaPagamentoTexto(l.pagamento);
 
     var statusBadge = (l.status === 'pago') ? 'badge-pago' : 'badge-pendente';
     var statusTexto = (l.status === 'pago') ? 'Pago' : 'Pendente';
 
     // presença (compatível com lançamentos antigos sem o campo)
-    var p = presencaInfo[l.presenca] || presencaInfo.agendado;
+    var p = lancPresencaInfo[l.presenca] || lancPresencaInfo.agendado;
 
     var acoes =
       app.botaoAcao('Editar', 'lancamentosModulo.editar(' + l.id + ')', 'editar') +
-      app.botaoAcao('Duplicar', 'lancamentosModulo.duplicar(' + l.id + ')', 'duplicar') +
-      app.botaoAcao('Excluir', 'lancamentosModulo.excluir(' + l.id + ')', 'excluir', true);
+      app.botaoAcao('Duplicar', 'lancamentosModulo.duplicar(' + l.id + ')', 'duplicar');
+
+    if (l.status === 'pago') {
+      acoes += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + l.id + ')', 'editar');
+    }
+
+    acoes += app.botaoAcao('Excluir', 'lancamentosModulo.excluir(' + l.id + ')', 'excluir', true);
+
+    var chkStatus = lancamentosModulo.selecionados.status[l.id] ? ' checked' : '';
+    var chkPresenca = lancamentosModulo.selecionados.presenca[l.id] ? ' checked' : '';
 
     var tr = document.createElement('tr');
     tr.innerHTML =
@@ -75,8 +112,10 @@ function lancamentosRender() {
       '<td><span class="badge badge-var">' + pagamentoTexto + '</span></td>' +
       '<td class="money">' + formatarMoeda(l.valor) + '</td>' +
       '<td class="money">' + formatarMoeda(l.suaParte) + '</td>' +
-      '<td><span class="badge ' + statusBadge + '">' + statusTexto + '</span></td>' +
-      '<td><span class="badge ' + p.classe + '">' + p.rotulo + '</span></td>' +
+      '<td><span class="celula-check"><input type="checkbox" class="chk-lanc" title="Selecionar status" onchange="lancamentosModulo.marcar(' + l.id + ',\'status\',this.checked)"' + chkStatus + '> ' +
+        '<span class="badge ' + statusBadge + '">' + statusTexto + '</span></span></td>' +
+      '<td><span class="celula-check"><input type="checkbox" class="chk-lanc" title="Selecionar presença" onchange="lancamentosModulo.marcar(' + l.id + ',\'presenca\',this.checked)"' + chkPresenca + '> ' +
+        '<span class="badge ' + p.classe + '">' + p.rotulo + '</span></span></td>' +
       '<td style="white-space:nowrap;">' + acoes + '</td>';
 
     tbody.appendChild(tr);
@@ -84,6 +123,174 @@ function lancamentosRender() {
 }
 
 var lancamentosModulo = {
+
+  // ---------- Busca e seleção em massa ----------
+
+  termo: '',                                  // texto digitado na busca
+  visiveis: [],                               // lançamentos do mês após a busca
+  selecionados: { status: {}, presenca: {} }, // ids marcados em cada coluna
+  mesAtual: null,                             // mês da última renderização
+
+  // remove acentos para a busca aceitar "avaliacao" e "avaliação", por exemplo
+  normalizar: function(texto) {
+    return normalizarTexto(texto);
+  },
+
+  formaPagamentoTexto: function(valor) {
+    return { dinheiro: 'Dinheiro', pix: 'Pix', clinica: 'Clínica', cartao: 'Cartão' }[valor] || valor || '-';
+  },
+
+  presencaRotulo: function(valor) {
+    var p = lancPresencaInfo[valor] || lancPresencaInfo.agendado;
+    return p.rotulo;
+  },
+
+  // busca em todas as colunas da tabela, menos Ação
+  correspondeBusca: function(l, termo) {
+    var f = obterFontePorId(l.fonteId);
+    var campos = [
+      l.data || '',
+      formatarData(l.data),
+      l.horario || '',
+      (l.tipo === 'avaliacao') ? 'Avaliação avaliacao' : 'Normal',
+      l.paciente || '',
+      f ? f.nome : '',
+      this.formaPagamentoTexto(l.pagamento),
+      formatarMoeda(l.valor),
+      l.valor,
+      formatarMoeda(l.suaParte),
+      l.suaParte,
+      (l.status === 'pago') ? 'Pago' : 'Pendente',
+      this.presencaRotulo(l.presenca)
+    ];
+
+    var texto = '';
+    for (var i = 0; i < campos.length; i++) {
+      var valor = campos[i];
+      if (valor === null || valor === undefined || valor === '') continue;
+      texto += ' ' + valor;
+    }
+    return this.normalizar(texto).indexOf(this.normalizar(termo)) !== -1;
+  },
+
+  buscar: function(valor) {
+    this.termo = String(valor || '').trim();
+    lancamentosRender();
+  },
+
+  limparBusca: function() {
+    this.termo = '';
+    var input = document.getElementById('lancBusca');
+    if (input) input.value = '';
+    lancamentosRender();
+  },
+
+  marcar: function(id, coluna, marcado) {
+    if (coluna !== 'status' && coluna !== 'presenca') return;
+    if (marcado) this.selecionados[coluna][id] = true;
+    else delete this.selecionados[coluna][id];
+    this.atualizarCabecalhos();
+    this.atualizarMassa();
+  },
+
+  marcarTodos: function(coluna, marcado) {
+    if (coluna !== 'status' && coluna !== 'presenca') return;
+    for (var i = 0; i < this.visiveis.length; i++) {
+      var id = this.visiveis[i].id;
+      if (marcado) this.selecionados[coluna][id] = true;
+      else delete this.selecionados[coluna][id];
+    }
+    lancamentosRender();
+  },
+
+  limparSelecao: function() {
+    this.selecionados = { status: {}, presenca: {} };
+    lancamentosRender();
+    app.toast('Seleção limpa.');
+  },
+
+  atualizarCabecalhos: function() {
+    var nomes = ['chkTodosStatus', 'chkTodosPresenca'];
+    var colunas = ['status', 'presenca'];
+    var total = this.visiveis.length;
+
+    for (var i = 0; i < colunas.length; i++) {
+      var coluna = colunas[i];
+      var chk = document.getElementById(nomes[i]);
+      if (!chk) continue;
+
+      var marcados = 0;
+      for (var j = 0; j < total; j++) {
+        if (this.selecionados[coluna][this.visiveis[j].id]) marcados++;
+      }
+
+      chk.checked = total > 0 && marcados === total;
+      chk.indeterminate = marcados > 0 && marcados < total;
+      chk.title = total > 0
+        ? marcados + ' de ' + total + ' selecionados'
+        : 'Marcar todos os visíveis';
+    }
+  },
+
+  atualizarMassa: function() {
+    var qtdStatus = Object.keys(this.selecionados.status).length;
+    var qtdPresenca = Object.keys(this.selecionados.presenca).length;
+
+    var resumo = document.getElementById('lancMassaResumo');
+    if (resumo) {
+      if (qtdStatus === 0 && qtdPresenca === 0) {
+        resumo.textContent = 'Marque as caixinhas para alterar vários atendimentos de uma vez.';
+      } else {
+        var partes = [];
+        if (qtdStatus > 0) partes.push(qtdStatus + ' status');
+        if (qtdPresenca > 0) partes.push(qtdPresenca + (qtdPresenca === 1 ? ' presença' : ' presenças'));
+        resumo.textContent = 'Selecionados: ' + partes.join(' e ');
+      }
+    }
+
+    var btnStatus = document.getElementById('btnAplicarStatus');
+    if (btnStatus) btnStatus.disabled = qtdStatus === 0;
+    var btnPresenca = document.getElementById('btnAplicarPresenca');
+    if (btnPresenca) btnPresenca.disabled = qtdPresenca === 0;
+    var btnLimpar = document.getElementById('btnLimparSelecao');
+    if (btnLimpar) btnLimpar.disabled = (qtdStatus + qtdPresenca) === 0;
+  },
+
+  aplicarEmMassa: function(coluna) {
+    if (coluna !== 'status' && coluna !== 'presenca') return;
+
+    var select = document.getElementById(coluna === 'status' ? 'massaStatus' : 'massaPresenca');
+    var novoValor = select ? select.value : '';
+    if (!novoValor) {
+      app.toast(coluna === 'status' ? 'Escolha o novo status.' : 'Escolha a nova presença.');
+      return;
+    }
+
+    var ids = Object.keys(this.selecionados[coluna]);
+    if (ids.length === 0) {
+      app.toast('Marque pelo menos um atendimento.');
+      return;
+    }
+
+    var alterados = 0;
+    for (var i = 0; i < lancamentos.length; i++) {
+      if (ids.indexOf(String(lancamentos[i].id)) === -1) continue;
+      lancamentos[i][coluna] = novoValor;
+      alterados++;
+    }
+
+    if (alterados === 0) return;
+
+    Store.salvar();
+    lancamentosRender();
+    if (typeof hojeModulo !== 'undefined') hojeModulo.render();
+    if (typeof agendaModulo !== 'undefined') agendaModulo.render();
+
+    var rotulo = (coluna === 'status')
+      ? ((novoValor === 'pago') ? 'Pago' : 'Pendente')
+      : this.presencaRotulo(novoValor);
+    app.toast(alterados + (alterados === 1 ? ' atendimento alterado para ' : ' atendimentos alterados para ') + rotulo + '.');
+  },
 
   abrirModal: function(opcoes) {
     opcoes = opcoes || {};
@@ -96,14 +303,14 @@ var lancamentosModulo = {
     var dataInput = document.getElementById('lancData');
     if (dataInput) dataInput.value = opcoes.data || hojeStr;
 
-    // gerar horários pré-cadastrados (7h às 22h, de 30 em 30 min)
+    // gerar horários pré-cadastrados (7h às 20h, de 30 em 30 min)
     var container = document.getElementById('timePresets');
     if (container) {
       var html = '';
-      for (var h = 7; h <= 22; h++) {
+      for (var h = 7; h <= 20; h++) {
         for (var k = 0; k < 2; k++) {
           var m = (k === 0) ? 0 : 30;
-          if (h === 22 && m === 30) continue;
+          if (h === 20 && m === 30) continue;
           var hh = (h < 10) ? '0' + h : h;
           var mm = (m < 10) ? '0' + m : m;
           var label = hh + ':' + mm;
@@ -173,6 +380,12 @@ var lancamentosModulo = {
     app.fecharModal('modalLancamento');
   },
 
+  // volta a data do formulário para hoje
+  usarHoje: function() {
+    var d = document.getElementById('lancData');
+    if (d) d.value = hojeStr;
+  },
+
   selecionarHorario: function(valor) {
     var inp = document.getElementById('lancHora');
     if (inp) inp.value = valor;
@@ -210,10 +423,10 @@ var lancamentosModulo = {
     var container = document.getElementById('timePresets');
     if (container) {
       var html = '';
-      for (var h = 7; h <= 22; h++) {
+      for (var h = 7; h <= 20; h++) {
         for (var k = 0; k < 2; k++) {
           var m = (k === 0) ? 0 : 30;
-          if (h === 22 && m === 30) continue;
+          if (h === 20 && m === 30) continue;
           var hh = (h < 10) ? '0' + h : h;
           var mm = (m < 10) ? '0' + m : m;
           var label = hh + ':' + mm;
@@ -425,6 +638,7 @@ var lancamentosModulo = {
     Store.salvar();
     lancamentosRender();
     if (typeof agendaModulo !== 'undefined') agendaModulo.render();
+    if (typeof hojeModulo !== 'undefined') hojeModulo.render();
     app.fecharModal('modalLancamento');
     app.toast(avisoToast);
     lancamentosEditId = null;
@@ -482,6 +696,7 @@ var lancamentosModulo = {
     Store.salvar();
     lancamentosRender();
     if (typeof agendaModulo !== 'undefined') agendaModulo.render();
+    if (typeof hojeModulo !== 'undefined') hojeModulo.render();
     app.toast('Lançamento excluído.');
   }
 
