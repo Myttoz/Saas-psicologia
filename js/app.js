@@ -93,7 +93,24 @@ var app = {
     if (sb) sb.classList.toggle('mobile-open');
   },
 
+  // Login é obrigatório quando a nuvem está ligada. Enquanto a tela de login
+  // estiver aberta, clique fora e ESC não podem liberar o acesso ao sistema.
+  loginVisivel: function() {
+    var login = document.getElementById('modalLogin');
+    return !!(login && login.classList.contains('show-modal'));
+  },
+
+  // Impede que o teclado (Tab/Enter) alcance botões do sistema por trás do login.
+  _setAppInerte: function(inerte) {
+    var raiz = document.querySelector('.app');
+    if (!raiz || !('inert' in raiz) || !raiz.children) return;
+    for (var i = 0; i < raiz.children.length; i++) {
+      if (raiz.children[i].id !== 'overlay') raiz.children[i].inert = inerte;
+    }
+  },
+
   fecharModais: function() {
+    if (this.loginVisivel()) return;
     var modais = document.querySelectorAll('.modal');
     for (var i = 0; i < modais.length; i++) {
       modais[i].classList.remove('show-modal');
@@ -171,6 +188,7 @@ var app = {
     var overlay = document.getElementById('overlay');
     // O login tem fundo próprio: a tela do sistema fica totalmente encoberta.
     if (overlay && id === 'modalLogin') overlay.classList.add('login-fundo');
+    if (id === 'modalLogin') this._setAppInerte(true);
     if (m) m.classList.add('show-modal');
     if (overlay) overlay.classList.add('open');
   },
@@ -183,6 +201,7 @@ var app = {
       overlay.classList.remove('open');
       overlay.classList.remove('login-fundo');
     }
+    if (id === 'modalLogin') this._setAppInerte(false);
   },
 
   sair: function() {
@@ -254,6 +273,9 @@ var app = {
 
   _setupAtalhos: function() {
     document.addEventListener('keydown', function(e) {
+      // Enquanto o login estiver na tela, nenhum atalho age no sistema.
+      if (app.loginVisivel()) return;
+
       // Ctrl + O (ou Command + O) — abre novo conforme aba atual
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o') {
         e.preventDefault();

@@ -1733,23 +1733,6 @@ svg { display: block; }
 
 .btn-login-entrar:active { transform: none; }
 
-.login-link {
-  display: block;
-  width: 100%;
-  margin: .95rem 0 0;
-  padding: .4rem;
-  border: 0;
-  background: transparent;
-  color: var(--primary-dark);
-  font-size: .86rem;
-  font-weight: 700;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.login-link:hover { color: var(--accent); }
-
 .login-separador {
   display: flex;
   align-items: center;
@@ -1815,9 +1798,7 @@ svg { display: block; }
 
 /* Foco visível para navegação por teclado. */
 .btn-login-entrar:focus,
-.btn-login-entrar:focus-visible,
-.login-link:focus,
-.login-link:focus-visible {
+.btn-login-entrar:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   box-shadow: 0 0 0 3px rgb(193 106 74 / 0.22);

@@ -197,8 +197,9 @@ Projeto: SaaS de gestão de atendimentos (psicóloga). Versão local, ainda sem 
   (`saas_sync_at`) e **pergunta** qual versão usar — nunca substitui sem escolha.
 - ✅ `Store.salvar()` registra `saas_sync_at` e chama `Backend.salvarSeConectado()`,
   com intervalo de 1,5 s para agrupar várias alterações em um único envio.
-- ✅ Modal **Entrar na sua conta** com opção "Continuar sem conectar". `app.sair()`
-  desconecta e volta a pedir login.
+- ✅ Tela de login **Bem-vinda** com logo e fundo próprio da marca. O login é
+  obrigatório: clique fora e ESC não fecham a tela, e não existe mais botão para
+  entrar sem conectar. `app.sair()` desconecta e volta a pedir login.
 - ✅ `supabase/schema.sql`: tabela `dados` + RLS com quatro políticas (select,
   insert, update, delete) usando `auth.uid() = user_id`. Pode ser rodado mais de
   uma vez.

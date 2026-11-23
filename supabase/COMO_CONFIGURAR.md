@@ -57,13 +57,18 @@ var CONFIG = {
 
 - Em **Authentication → Providers**, confirme que **Email** está habilitado.
 - Em **Authentication → Policies**, mantenha a RLS ligada na tabela `dados`.
-- Se quiser, limite novos cadastros: **Authentication → Providers → Email →
-  Allow new users to sign up = desligado** (você já criou a sua conta no passo 3).
+- **Bloqueie cadastros novos:** em **Authentication → Sign In / Providers**,
+  desligue **Allow new users to sign up** e também **Allow anonymous sign-ins**.
+  Assim, só as contas criadas por você em **Authentication → Users** conseguem
+  entrar — inclusive pelo Google. Usuários que já existem continuam entrando
+  normalmente. Se precisar de outra conta, crie você mesma em **Add user**.
 
 ## Como funciona depois de configurado
 
-- Ao abrir o sistema, aparece a tela **Entrar na sua conta**.
-- Dá para clicar em **Continuar sem conectar** e usar localmente.
+- Ao abrir o sistema, aparece a tela **Bem-vinda**. O acesso é obrigatório:
+  clicar fora ou apertar ESC não abre o sistema.
+- Use o e-mail/senha criados por você no Supabase (ou o botão do Google, quando
+  estiver configurado).
 - Depois de entrar, o sistema pergunta se prefere os dados da nuvem ou os deste
   navegador (escolha com atenção: a opção escolhida substitui a outra).
 - Toda alteração é enviada para a nuvem alguns segundos depois.
