@@ -6,7 +6,32 @@
     <description>Versões e novidades do Gestão de Pacientes (SaaS by Myttoz).</description>
     <language>pt-BR</language>
     <atom:link href="https://myttoz.github.io/Saas-psicologia/releases.rss" rel="self" type="application/rss+xml" />
-    <lastBuildDate>Mon, 23 Nov 2026 17:42:46 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 23 Nov 2026 18:01:21 GMT</lastBuildDate>
+<item>
+  <title>v1.1.0</title>
+  <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.1.0</link>
+  <guid isPermaLink="true">https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.1.0</guid>
+  <pubDate>Mon, 23 Nov 2026 17:42:45 GMT</pubDate>
+  <description><![CDATA[<h2>v1.1.0 — Organização e atalhos de publicação</h2>
+<p>Arrumamos a pasta do projeto e criamos atalhos para enviar e baixar versões com</p>
+<p>mais segurança. O uso diário do site continua exatamente o mesmo.</p>
+<p><strong>Data:</strong> 23/11/2026</p>
+<h2>✨ Novidades</h2>
+<ul><li>Pasta <strong>Removidos</strong> para guardar rascunhos e arquivos pessoais que não devem</li></ul>
+<p>subir para o GitHub. O material da Lívia continua fora do Git.</p>
+<ul><li>Atalhos novos:</li><li>Linux: <code>subirpsicologa</code> e <code>baixarpsicologa</code> (em <code>~/bin</code>).</li><li>Windows 11: <code>scripts/publicar.ps1</code> e <code>scripts/baixar.ps1</code>.</li></ul>
+<h2>🔧 Melhorias</h2>
+<ul><li>Os atalhos conferem o ramo <code>main</code>, exigem a nota de release antes de criar a</li></ul>
+<p>tag e avisam se a versão já foi publicada.</p>
+<ul><li>A tag agora é criada com descrição (anotada), e nunca é reaproveitada.</li><li>O feed <code>releases.rss</code> do start.me continua sendo atualizado sozinho.</li></ul>
+<h2>🔒 Segurança</h2>
+<ul><li>Nada de pessoal é enviado: a pasta <code>Removidos</code> e a pasta <code>Livia</code> ficam</li></ul>
+<p>ignoradas pelo Git.</p>
+<h2>🚀 Como atualizar</h2>
+<p>1. Abra o site e recarregue com <strong>Ctrl+F5</strong> (ou Command+R).</p>
+<p>2. No celular, feche e abra o aplicativo novamente.</p>
+<p>SaaS by Myttoz</p>]]></description>
+</item>
 <item>
   <title>v1.0.0</title>
   <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.0.0</link>
