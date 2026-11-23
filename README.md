@@ -54,6 +54,12 @@ feito por você: o sistema só prepara o texto.
 - Feed do GitHub (alternativa):
   https://github.com/Myttoz/Saas-psicologia/releases.atom
 
+**Regra de versão:** toda mudança vira `commit` + `push origin main` (publica o
+site). Quando houver algo novo para a profissional ver, crie
+`RELEASE_NOTES_vX.Y.Z.md`, uma tag `vX.Y.Z` e rode `git push origin vX.Y.Z`
+(publica a release e atualiza o feed). O passo a passo está em
+`supabase/COMO_CONFIGURAR.md`.
+
 ---
 
 SaaS by Myttoz

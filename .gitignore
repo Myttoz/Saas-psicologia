@@ -25,6 +25,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Arquivos pessoais/históricos que NÃO devem subir para o GitHub
+Removidos/
+
 # Documentos pessoais e materiais da Lívia (NUNCA publicar)
 Livia/
 

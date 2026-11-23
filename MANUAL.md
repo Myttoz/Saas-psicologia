@@ -3,8 +3,9 @@
 Este arquivo guarda todas as instruções detalhadas do sistema. O `README.md` da
 página inicial traz só uma apresentação curta.
 
-> **Vai continuar em outro computador?** Abra `PROMPT_PARA_CASA.md`, copie o texto
-> entre `COMEÇO` e `FIM` e cole na IA de lá.
+> **Histórico e rascunhos:** `COMO_CONTINUAR.md` e `PROMPT_PARA_CASA.md` ficam
+> na pasta `Removidos/` e não são publicados. O que vale hoje está neste manual
+> e em `supabase/COMO_CONFIGURAR.md`.
 
 ## Estrutura do projeto
 
@@ -42,14 +43,16 @@ Saas Psicologa/
 │   ├── deploy.yml       # Publicação automática no GitHub Pages
 │   └── release.yml      # Release automática ao empurrar uma tag v*
 ├── scripts/
-│   └── gerar_feed.py    # Gera os feeds a partir das releases do GitHub
+│   ├── gerar_feed.py    # Gera os feeds a partir das releases do GitHub
+│   ├── publicar.ps1     # Windows 11: commit + push + tag/release
+│   └── baixar.ps1       # Windows 11: trazer a versão mais recente
 ├── releases.rss         # Feed RSS 2.0 recomendado (para o start.me)
 ├── releases.xml         # Mesmo feed, com extensão .xml
 ├── Livia/               # Documentos pessoais (NÃO versionar — está no .gitignore)
+├── Removidos/           # Histórico/rascunhos pessoais (NÃO versionado)
 ├── README.md            # Apresentação curta do site
 ├── MANUAL.md            # Este arquivo
-├── COMO_CONTINUAR.md    # Ponto de parada e próximos passos
-├── PROMPT_PARA_CASA.md  # Prompt para a IA continuar em outro computador
+├── RELEASE_NOTES_v1.0.0.md # Notas da versão publicada
 └── .gitignore           # Arquivos ignorados pelo git
 ```
 

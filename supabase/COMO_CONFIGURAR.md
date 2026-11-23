@@ -118,7 +118,7 @@ Se você recriar o projeto, as chaves mudam — aí sim é preciso atualizar
 ## 4. Publicar uma nova versão (release automática)
 
 Quando o código mudar, você só precisa dar o push final. As notas de release
-já ficam prontas no arquivo `RELEASE_NOTES_v1.0.0.md`.
+ficam no arquivo `RELEASE_NOTES_vX.Y.Z.md` (a próxima é `v1.1.0`).
 
 1. No terminal da pasta do projeto, rode:
 
@@ -131,9 +131,15 @@ git push origin main
 2. Depois, crie a versão e empurre a etiqueta:
 
 ```bash
-git tag -a v1.0.0 -m "v1.0.0"
-git push origin v1.0.0
+git tag -a v1.1.0 -m "v1.1.0"
+git push origin v1.1.0
 ```
+
+**Atalhos:** no Linux, `subirpsicologa "mensagem" v1.1.0` faz os dois passos
+juntos; `baixarpsicologa` traz a última versão. No Windows 11, use
+`.\scripts\publicar.ps1 "mensagem" v1.1.0` e `.\scripts\baixar.ps1`.
+Exemplos de mensagem: `"Corrige filtro da agenda"`, `"Ajusta textos do manual"`.
+O atalho recusa versão repetida e exige o arquivo `RELEASE_NOTES_vX.Y.Z.md`.
 
 3. O GitHub cria a release sozinho e atualiza o feed do site:
    **https://myttoz.github.io/Saas-psicologia/releases.rss**
