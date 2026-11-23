@@ -1,6 +1,12 @@
-# Como continuar — ponto de parada
+# Como continuar — ponto de parada (registro histórico)
 
-Projeto: SaaS de gestão de atendimentos (psicóloga). Versão local, ainda sem banco online.
+Projeto: SaaS de gestão de atendimentos (psicóloga).
+
+> **Estado atual:** este arquivo é um registro do que foi feito em cada fase.
+> Para saber como o sistema funciona **hoje** (nuvem, MFA, criptografia,
+> releases), leia o [MANUAL.md](MANUAL.md) e o guia
+> [supabase/COMO_CONFIGURAR.md](supabase/COMO_CONFIGURAR.md). O que está aqui
+> abaixo descreve fases antigas — por exemplo, o backup já está na versão 4.
 
 > Para continuar em outro computador: copie o bloco entre `COMEÇO` e `FIM` do
 > arquivo `PROMPT_PARA_CASA.md` e cole na IA de lá. Ele foca **somente na próxima

@@ -206,8 +206,11 @@ var app = {
 
   sair: function() {
     if (confirm('Sair do sistema?')) {
-      // bloqueia o prontuário ao sair (se estiver desbloqueado)
+      // Ao sair, nada de clínico pode ficar legível neste navegador.
       if (typeof segurancaModulo !== 'undefined') segurancaModulo.bloquear();
+      if (typeof backupModulo !== 'undefined' && backupModulo.aplicarVazio) {
+        backupModulo.aplicarVazio();
+      }
       if (typeof Backend !== 'undefined' && Backend.configurado()) {
         Backend.sair();
         this.trocarPagina('resumos');

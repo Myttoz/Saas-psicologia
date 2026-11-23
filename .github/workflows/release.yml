@@ -1,0 +1,31 @@
+name: Publicar release automática
+
+# Quando uma tag v1.0.0, v1.1.0... chegar ao GitHub, este workflow cria a
+# release sozinho. O feed Atom do repositório é atualizado na hora.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Criar release com as notas da versão
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -e
+          NOTAS="RELEASE_NOTES_${TAG}.md"
+          if [ -f "$NOTAS" ]; then
+            gh release create "$TAG" --title "$TAG" --notes-file "$NOTAS" --verify-tag
+          else
+            gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
+          fi

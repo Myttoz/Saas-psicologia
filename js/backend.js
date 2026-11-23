@@ -1,38 +1,24 @@
 // ============================================================================
-// Backend opcional (Supabase) — login e sincronização dos dados
-// Se CONFIG.usarBackend for false, este arquivo não faz nada e o sistema
-// continua funcionando somente com localStorage, como antes.
+// Backend (Supabase) — login, verificação em duas etapas e sincronização
+// A nuvem é a fonte da verdade: ao entrar, os dados dela sempre são usados.
 // A chave anon é pública; a proteção real é a RLS em supabase/schema.sql.
+// A chave service_role nunca aparece aqui.
 // ============================================================================
 
 var Backend = {
 
   CHAVE_TOKEN: 'saas_auth_token',
+  CHAVE_REFRESH: 'saas_auth_refresh',
   CHAVE_USUARIO: 'saas_auth_usuario',
   CHAVE_SYNC: 'saas_sync_at',
-  CHAVE_STATE: 'saas_oauth_state',
+  CHAVE_MFA_RECUSADO: 'saas_mfa_recusado',
+
   _timer: null,
-
-  // Número aleatório que liga o retorno do Google à solicitação feita aqui.
-  _novoState: function() {
-    var bytes = new Uint8Array(24);
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      crypto.getRandomValues(bytes);
-    } else {
-      for (var i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
-    }
-    var s = '';
-    for (var j = 0; j < bytes.length; j++) s += ('0' + bytes[j].toString(16)).slice(-2);
-    return s;
-  },
-
-  _limparHash: function(loc) {
-    var limpa = (loc.pathname || '') + (loc.search || '');
-    try {
-      if (window.history && window.history.replaceState) window.history.replaceState(null, '', limpa);
-      else loc.hash = '';
-    } catch (e) {}
-  },
+  _pendente: null,      // login/reautenticação esperando código de 2 etapas
+  _modoMfa: '',         // 'convite' | 'enroll'
+  _mfaEnroll: null,
+  _reautenticarCallback: null,
+  _aplicandoRemoto: false,
 
   configurado: function() {
     return !!(typeof CONFIG !== 'undefined' && CONFIG.usarBackend &&
@@ -45,6 +31,10 @@ var Backend = {
 
   token: function() {
     try { return sessionStorage.getItem(this.CHAVE_TOKEN); } catch (e) { return null; }
+  },
+
+  refreshToken: function() {
+    try { return sessionStorage.getItem(this.CHAVE_REFRESH); } catch (e) { return null; }
   },
 
   usuario: function() {
@@ -69,6 +59,12 @@ var Backend = {
     return h;
   },
 
+  headersComToken: function(token) {
+    var h = this.headers(false);
+    if (token) h['Authorization'] = 'Bearer ' + token;
+    return h;
+  },
+
   mensagem: function(texto, erro) {
     var el = document.getElementById('loginErro');
     if (!el) return;
@@ -77,12 +73,285 @@ var Backend = {
     el.style.color = erro ? '#C16A4A' : 'var(--text-muted)';
   },
 
-  // Chamado pelo app.init()
+  mensagemMfa: function(texto, erro) {
+    var el = document.getElementById('mfaErro');
+    if (!el) return;
+    el.textContent = texto || '';
+    el.style.display = texto ? 'block' : 'none';
+    el.style.color = erro ? '#C16A4A' : 'var(--text-muted)';
+  },
+
+  mensagemReaut: function(texto, erro) {
+    var el = document.getElementById('reauthErro');
+    if (!el) return;
+    el.textContent = texto || '';
+    el.style.display = texto ? 'block' : 'none';
+    el.style.color = erro ? '#C16A4A' : 'var(--text-muted)';
+  },
+
+  // ---------- utilidades de rede ----------
+
+  _resposta: function(resposta) {
+    return resposta.json().catch(function() { return {}; }).then(function(dados) {
+      if (!resposta.ok) {
+        var erro = new Error(dados.msg || dados.message || 'Não foi possível concluir a operação.');
+        erro.dados = dados;
+        throw erro;
+      }
+      return dados;
+    });
+  },
+
+  _post: function(caminho, headers, corpo) {
+    return fetch(this.base() + caminho, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(corpo || {})
+    }).then(this._resposta);
+  },
+
+  // Lê o conteúdo de um token JWT sem verificar a assinatura (o Supabase
+  // verifica nas chamadas). Serve apenas para saber o nível de segurança (aal).
+  decodificarJwt: function(token) {
+    try {
+      var parte = String(token || '').split('.')[1];
+      if (!parte) return null;
+      parte = parte.replace(/-/g, '+').replace(/_/g, '/');
+      while (parte.length % 4) parte += '=';
+      return JSON.parse(atob(parte));
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // ---------- verificação em duas etapas (MFA / TOTP) ----------
+
+  _fatoresVerificados: function(usuario) {
+    var lista = (usuario && Array.isArray(usuario.factors)) ? usuario.factors : [];
+    var bons = [];
+    for (var i = 0; i < lista.length; i++) {
+      var f = lista[i];
+      if (f && f.status === 'verified' && (f.factor_type === 'totp' || f.factor_type === 'phone')) {
+        bons.push(f);
+      }
+    }
+    return bons;
+  },
+
+  // Devolve true quando a conta tem 2º fator e a sessão ainda não passou por ele.
+  verificarMfa: function(sessao) {
+    var payload = this.decodificarJwt(sessao.token);
+    if (payload && payload.aal === 'aal2') {
+      sessao.fatores = [];
+      return Promise.resolve(false);
+    }
+    var fatores = this._fatoresVerificados(sessao.usuario);
+    sessao.fatores = fatores;
+    return Promise.resolve(fatores.length > 0);
+  },
+
+  // Desafia o fator e troca o token por um de nível aal2.
+  concluirDesafioMfa: function(codigo) {
+    var p = this._pendente;
+    if (!p) return Promise.reject(new Error('Não há verificação em duas etapas ativa.'));
+
+    // Login, reautenticação e retomada de sessão guardam a sessão diretamente;
+    // a ativação do fator usa um envelope. Normaliza os dois formatos aqui.
+    if (!p.sessao && p.token) {
+      p = this._pendente = {
+        sessao: {
+          token: p.token,
+          refresh_token: p.refresh_token,
+          usuario: p.usuario
+        },
+        fatores: p.fatores || [],
+        mfa: !!p.mfa
+      };
+    }
+    if (!p.fatores || !p.fatores.length) {
+      return Promise.reject(new Error('Não há verificação em duas etapas ativa.'));
+    }
+    var codigoLimpo = String(codigo || '').replace(/\D/g, '');
+    if (codigoLimpo.length !== 6) {
+      return Promise.reject(new Error('Digite os 6 números do aplicativo.'));
+    }
+    var self = this;
+    var fator = p.fatores[0];
+    var headers = this.headersComToken(p.sessao.token);
+    var id = encodeURIComponent(fator.id);
+
+    return this._post('/auth/v1/factors/' + id + '/challenge', headers, {})
+      .then(function(desafio) {
+        if (!desafio || !desafio.id) throw new Error('Não foi possível iniciar a verificação. Tente de novo.');
+        return self._post('/auth/v1/factors/' + id + '/verify', headers, {
+          challenge_id: desafio.id,
+          code: codigoLimpo
+        });
+      })
+      .then(function(nova) {
+        if (!nova || !nova.access_token) throw new Error('Código inválido ou expirado.');
+        p.sessao = {
+          token: nova.access_token,
+          refresh_token: nova.refresh_token || p.sessao.refresh_token,
+          usuario: nova.user || p.sessao.usuario
+        };
+        p.mfa = false;
+        p.fatores = [];
+        return p.sessao;
+      });
+  },
+
+  _resolverMfa: function(campoId, erroId, aoSucesso) {
+    var self = this;
+    var campo = document.getElementById(campoId);
+    var codigo = campo ? campo.value : '';
+    this.concluirDesafioMfa(codigo).then(function(sessao) {
+      self._pendente = null;
+      if (campo) campo.value = '';
+      aoSucesso(sessao);
+    }).catch(function(erro) {
+      var el = document.getElementById(erroId);
+      if (el) {
+        el.textContent = erro.message || 'Código inválido.';
+        el.style.display = 'block';
+        el.style.color = '#C16A4A';
+      }
+    });
+  },
+
+  _mostrarCampoMfa: function(grupoId, mensagem) {
+    var grupo = document.getElementById(grupoId);
+    if (grupo) grupo.style.display = 'block';
+    var campo = grupoId === 'grupoMfaLogin' ?
+      document.getElementById('loginMfaCodigo') : document.getElementById('reauthMfaCodigo');
+    if (campo) { campo.value = ''; try { campo.focus(); } catch (e) {} }
+    if (grupoId === 'grupoMfaLogin') this.mensagem(mensagem, false);
+    else this.mensagemReaut(mensagem, false);
+  },
+
+  // ---------- convite para ativar o 2º fator ----------
+
+  mostrarConviteMfaSeNecessario: function(usuario) {
+    var fatores = this._fatoresVerificados(usuario);
+    if (fatores.length) return;
+    try {
+      if (localStorage.getItem(this.CHAVE_MFA_RECUSADO) === '1') return;
+    } catch (e) {}
+
+    this._modoMfa = 'convite';
+    this._mfaEnroll = null;
+    var intro = document.getElementById('mfaIntro');
+    if (intro) intro.textContent =
+      'Proteja sua conta com um código que muda a cada 30 segundos. ' +
+      'Use um aplicativo autenticador no celular (Google Authenticator, Authy, Microsoft Authenticator ou similar).';
+    var qr = document.getElementById('mfaQr');
+    if (qr) qr.style.display = 'none';
+    var segredo = document.getElementById('mfaSegredo');
+    if (segredo) segredo.style.display = 'none';
+    var campo = document.getElementById('grupoMfaCodigo');
+    if (campo) campo.style.display = 'none';
+    var botao = document.getElementById('mfaBotao');
+    if (botao) botao.textContent = 'Ativar agora';
+    var secundario = document.getElementById('mfaSecundario');
+    if (secundario) secundario.style.display = '';
+    this.mensagemMfa('');
+    app.abrirModal('modalMfa');
+  },
+
+  ativarMfa: function() {
+    var self = this;
+    if (this._modoMfa !== 'convite') return;
+    var headers = this.headersComToken(this.token());
+    this._post('/auth/v1/factors', headers, {
+      factor_type: 'totp',
+      friendly_name: 'App de autenticação'
+    }).then(function(dados) {
+      if (!dados || !dados.id || !dados.totp) throw new Error('Não foi possível iniciar a ativação.');
+      self._modoMfa = 'enroll';
+      self._mfaEnroll = dados;
+
+      var qr = document.getElementById('mfaQr');
+      if (qr) {
+        qr.innerHTML = '';
+        var svg = String((dados.totp && dados.totp.qr_code) || '');
+        if (svg) {
+          var img = document.createElement('img');
+          img.setAttribute('alt', 'QR code para o aplicativo autenticador');
+          try { img.src = 'data:image/svg+xml;base64,' + Cripto.base64(Cripto.utf8(svg)); } catch (e) {}
+          qr.appendChild(img);
+          qr.style.display = '';
+        }
+      }
+      var segredo = document.getElementById('mfaSegredo');
+      if (segredo) {
+        segredo.textContent = dados.totp.secret || '';
+        segredo.style.display = dados.totp.secret ? '' : 'none';
+      }
+      var intro = document.getElementById('mfaIntro');
+      if (intro) intro.textContent =
+        'Escaneie o QR code com o aplicativo (ou digite o código secreto acima) ' +
+        'e informe os 6 números que ele mostrou.';
+      var grupo = document.getElementById('grupoMfaCodigo');
+      if (grupo) grupo.style.display = 'block';
+      var botao = document.getElementById('mfaBotao');
+      if (botao) botao.textContent = 'Confirmar ativação';
+      var secundario = document.getElementById('mfaSecundario');
+      if (secundario) secundario.style.display = 'none';
+      var campo = document.getElementById('mfaCodigo');
+      if (campo) { campo.value = ''; try { campo.focus(); } catch (e) {} }
+      self.mensagemMfa('');
+    }).catch(function(erro) {
+      self.mensagemMfa(erro.message || 'Não foi possível ativar a verificação.', true);
+    });
+  },
+
+  confirmarMfa: function() {
+    if (this._modoMfa !== 'enroll' || !this._mfaEnroll) return;
+    var self = this;
+    var campo = document.getElementById('mfaCodigo');
+    var codigo = campo ? campo.value : '';
+    this._pendente = {
+      sessao: {
+        token: this.token(),
+        refresh_token: this.refreshToken(),
+        usuario: this.usuario()
+      },
+      fatores: [{ id: this._mfaEnroll.id }],
+      mfa: false
+    };
+    this.concluirDesafioMfa(codigo).then(function(sessao) {
+      self._guardarSessao(sessao);
+      self._pendente = null;
+      self._modoMfa = '';
+      self._mfaEnroll = null;
+      try { localStorage.removeItem(self.CHAVE_MFA_RECUSADO); } catch (e) {}
+      app.fecharModal('modalMfa');
+      app.toast('Verificação em duas etapas ativada.');
+    }).catch(function(erro) {
+      self.mensagemMfa(erro.message || 'Código inválido.', true);
+    });
+  },
+
+  recusarMfa: function() {
+    try { localStorage.setItem(this.CHAVE_MFA_RECUSADO, '1'); } catch (e) {}
+    this._modoMfa = '';
+    app.fecharModal('modalMfa');
+    app.toast('Você pode ativar a verificação em duas etapas depois.');
+  },
+
+  fecharMfa: function() {
+    this._modoMfa = '';
+    this._mfaEnroll = null;
+    app.fecharModal('modalMfa');
+  },
+
+  // ---------- login ----------
+
   iniciar: function() {
     if (!this.configurado()) return;
-    if (this.processarRetorno()) return;
     if (typeof fetch !== 'function') {
       app.toast('Este navegador não suporta sincronização online.');
+      this.mostrarLogin();
       return;
     }
     if (!this.conectado()) {
@@ -97,160 +366,254 @@ var Backend = {
     var senha = document.getElementById('loginSenha');
     if (email) email.value = '';
     if (senha) senha.value = '';
+    var grupo = document.getElementById('grupoMfaLogin');
+    if (grupo) grupo.style.display = 'none';
     this.mensagem('');
     app.abrirModal('modalLogin');
     if (email) { try { email.focus(); } catch (e) {} }
   },
 
-  entrar: function() {
-    var email = document.getElementById('loginEmail');
-    var senha = document.getElementById('loginSenha');
-    var usuario = email ? email.value.trim() : '';
-    var senhaValor = senha ? senha.value : '';
+  _guardarSessao: function(sessao) {
+    try {
+      sessionStorage.setItem(this.CHAVE_TOKEN, sessao.token);
+      if (sessao.refresh_token) sessionStorage.setItem(this.CHAVE_REFRESH, sessao.refresh_token);
+      sessionStorage.setItem(this.CHAVE_USUARIO, JSON.stringify(sessao.usuario || {}));
+    } catch (e) {}
+  },
 
-    if (!usuario || !senhaValor) {
-      this.mensagem('Informe o e-mail e a senha.', true);
+  autenticarSenha: function(email, senha) {
+    var self = this;
+    return this._post('/auth/v1/token?grant_type=password', this.headers(false), {
+      email: email,
+      password: senha
+    }).then(function(dados) {
+      if (!dados.access_token) throw new Error('E-mail ou senha incorretos.');
+      var payload = self.decodificarJwt(dados.access_token);
+      var sessao = {
+        token: dados.access_token,
+        refresh_token: dados.refresh_token || '',
+        usuario: dados.user || { id: (payload && payload.sub) || '', email: email }
+      };
+      return self.verificarMfa(sessao).then(function(necessaria) {
+        sessao.mfa = necessaria;
+        return sessao;
+      });
+    }).catch(function() {
+      // Não mostramos a mensagem bruta do Supabase (ela vem em inglês e pode
+      // revelar detalhes da conta). Qualquer falha aqui vira aviso amigável.
+      throw new Error('E-mail ou senha incorretos.');
+    });
+  },
+
+  entrar: function() {
+    var self = this;
+    this.mensagem('');
+
+    if (this._pendente && this._pendente.mfa) {
+      this._resolverMfa('loginMfaCodigo', 'loginErro', function(sessao) {
+        self._entrarComSessao(sessao);
+      });
       return false;
     }
 
-    var self = this;
-    fetch(this.base() + '/auth/v1/token?grant_type=password', {
-      method: 'POST',
-      headers: this.headers(false),
-      body: JSON.stringify({ email: usuario, password: senhaValor })
-    }).then(function(resposta) {
-      return resposta.json().then(function(dados) {
-        if (!resposta.ok || !dados.access_token) {
-          throw new Error('E-mail ou senha incorretos.');
-        }
-        try {
-          sessionStorage.setItem(self.CHAVE_TOKEN, dados.access_token);
-          sessionStorage.setItem(self.CHAVE_USUARIO, JSON.stringify(
-            dados.user || { id: (dados.user && dados.user.id) || '', email: usuario }
-          ));
-        } catch (e) {}
-        app.fecharModal('modalLogin');
-        app.toast('Conectado. Sincronizando dados...');
-        self.sincronizarNoInicio();
-      });
+    var emailEl = document.getElementById('loginEmail');
+    var senhaEl = document.getElementById('loginSenha');
+    var email = emailEl ? emailEl.value.trim() : '';
+    var senha = senhaEl ? senhaEl.value : '';
+
+    if (!email || !senha) {
+      this.mensagem('Informe o e-mail e a senha.', true);
+      return false;
+    }
+    if (senhaEl) senhaEl.value = '';
+
+    this.autenticarSenha(email, senha).then(function(sessao) {
+      if (sessao.mfa) {
+        self._pendente = sessao;
+        self._mostrarCampoMfa('grupoMfaLogin',
+          'Agora digite o código de 6 números do seu aplicativo autenticador.');
+        return;
+      }
+      self._entrarComSessao(sessao);
     }).catch(function(erro) {
       self.mensagem(erro.message || 'Não foi possível conectar. Tente novamente.', true);
     });
     return false;
   },
 
-  // Login com Google: abremos a página do Google no Supabase, que devolve o
-  // usuário para o endereço deste site. As credenciais do Google ficam só no
-  // Supabase — nunca entram no código do site.
-  entrarComGoogle: function() {
-    if (!this.configurado()) return;
-    var loc = (typeof window !== 'undefined' && window.location) ? window.location : null;
-    if (!loc || typeof loc.href !== 'string') return;
-    var retorno = loc.href.split('#')[0];
-    var state = this._novoState();
-    try { sessionStorage.setItem(this.CHAVE_STATE, state); } catch (e) {}
-    var url = this.base() + '/auth/v1/authorize?provider=google' +
-      '&apikey=' + encodeURIComponent(CONFIG.supabaseAnonKey) +
-      '&redirect_to=' + encodeURIComponent(retorno) +
-      '&state=' + encodeURIComponent(state);
-    window.location.href = url;
+  _entrarComSessao: function(sessao) {
+    var self = this;
+    this._guardarSessao(sessao);
+    app.fecharModal('modalLogin');
+    app.toast('Conectado. Carregando os dados da nuvem...');
+    this.sincronizarNoInicio().then(function() {
+      self.mostrarConviteMfaSeNecessario(sessao.usuario);
+    });
   },
 
-  // Depois do login com Google, o token vem no final da URL (#access_token=...).
-  // Só aceitamos se o "state" conferir com o número gerado quando o botão foi
-  // clicado. Isso bloqueia links falsos que tentam trocar a conta da pessoa.
-  processarRetorno: function() {
-    var loc = (typeof window !== 'undefined' && window.location) ? window.location : null;
-    if (!loc || typeof loc.hash !== 'string') return false;
-    var hash = loc.hash.replace(/^#/, '');
-    if (!hash) return false;
+  // ---------- reautenticação para ações críticas ----------
 
-    var partes = {};
-    hash.split('&').forEach(function(item) {
-      var i = item.indexOf('=');
-      if (i < 0) return;
-      try {
-        partes[decodeURIComponent(item.slice(0, i))] =
-          decodeURIComponent(item.slice(i + 1).replace(/\+/g, ' '));
-      } catch (e) {}
+  reautenticar: function(callback) {
+    if (!this.configurado() || !this.conectado()) {
+      if (callback) callback();
+      return;
+    }
+    this._reautenticarCallback = callback || null;
+    this._pendente = null;
+    this.mensagemReaut('');
+    var grupo = document.getElementById('grupoMfaReauth');
+    if (grupo) grupo.style.display = 'none';
+    var email = document.getElementById('reauthEmail');
+    var senha = document.getElementById('reauthSenha');
+    var usuario = this.usuario();
+    if (email) email.value = (usuario && usuario.email) || '';
+    if (senha) senha.value = '';
+    var codigo = document.getElementById('reauthMfaCodigo');
+    if (codigo) codigo.value = '';
+    app.abrirModal('modalReautenticar');
+    if (senha) { try { senha.focus(); } catch (e) {} }
+  },
+
+  confirmarReautenticacao: function() {
+    var self = this;
+    this.mensagemReaut('');
+
+    if (this._pendente && this._pendente.mfa) {
+      this._resolverMfa('reauthMfaCodigo', 'reauthErro', function(sessao) {
+        self._finalizarReautenticacao(sessao);
+      });
+      return false;
+    }
+
+    var emailEl = document.getElementById('reauthEmail');
+    var senhaEl = document.getElementById('reauthSenha');
+    var email = emailEl ? emailEl.value.trim() : '';
+    var senha = senhaEl ? senhaEl.value : '';
+    if (!email || !senha) {
+      this.mensagemReaut('Informe o e-mail e a senha da sua conta.', true);
+      return false;
+    }
+    if (senhaEl) senhaEl.value = '';
+
+    this.autenticarSenha(email, senha).then(function(sessao) {
+      if (sessao.mfa) {
+        self._pendente = sessao;
+        self._mostrarCampoMfa('grupoMfaReauth',
+          'Digite também o código de 6 números do aplicativo autenticador.');
+        return;
+      }
+      self._finalizarReautenticacao(sessao);
+    }).catch(function(erro) {
+      self.mensagemReaut(erro.message || 'Não foi possível confirmar a senha.', true);
     });
+    return false;
+  },
 
-    if (partes.error || !partes.access_token) {
-      this._limparHash(loc);
-      this.mostrarLogin();
-      this.mensagem('O login com Google não foi concluído. Tente novamente.', true);
-      return true;
+  _finalizarReautenticacao: function(sessao) {
+    var atual = this.usuario();
+    var novo = sessao.usuario;
+    if (!atual || !novo || !atual.id || novo.id !== atual.id) {
+      this.mensagemReaut('Essa conta não é a mesma que está conectada. Ação cancelada.', true);
+      return;
     }
-
-    var esperado = null;
-    try {
-      esperado = sessionStorage.getItem(this.CHAVE_STATE);
-      sessionStorage.removeItem(this.CHAVE_STATE);
-    } catch (e) {}
-
-    // Se já havia uma sessão válida, um retorno sem state não pode substituí-la.
-    if (!esperado || partes.state !== esperado) {
-      this._limparHash(loc);
-      this.mostrarLogin();
-      this.mensagem('Login recusado por segurança. Use o botão Entrar com Google novamente.', true);
-      return true;
+    var callback = this._reautenticarCallback;
+    this._reautenticarCallback = null;
+    this._pendente = null;
+    // Guarda o token com nível aal2: sem isso a RLS continuaria bloqueando
+    // as ações protegidas de quem ativou o segundo fator.
+    this._guardarSessao(sessao);
+    app.fecharModal('modalReautenticar');
+    if (typeof segurancaModulo !== 'undefined') {
+      segurancaModulo.registrar('Senha confirmada para ação sensível');
     }
-
-    var usuario = null;
-    try {
-      var payload = partes.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      while (payload.length % 4) payload += '=';
-      var dados = JSON.parse(atob(payload));
-      usuario = {
-        id: dados.sub || '',
-        email: dados.email || '',
-        nome: (dados.user_metadata && dados.user_metadata.full_name) || ''
-      };
-    } catch (e) {}
-
-    try {
-      sessionStorage.setItem(this.CHAVE_TOKEN, partes.access_token);
-      if (usuario && usuario.id) sessionStorage.setItem(this.CHAVE_USUARIO, JSON.stringify(usuario));
-    } catch (e) {}
-
-    this._limparHash(loc);
-
-    try { window.location.reload(); } catch (e) {}
-    return true;
+    if (callback) callback();
   },
 
   sair: function() {
     try {
       sessionStorage.removeItem(this.CHAVE_TOKEN);
+      sessionStorage.removeItem(this.CHAVE_REFRESH);
       sessionStorage.removeItem(this.CHAVE_USUARIO);
-      sessionStorage.removeItem(this.CHAVE_STATE);
     } catch (e) {}
+    this._pendente = null;
+    this._reautenticarCallback = null;
     if (this._timer) { clearTimeout(this._timer); this._timer = null; }
+  },
+
+  // ---------- sessão ----------
+
+  renovarSePreciso: function() {
+    var payload = this.decodificarJwt(this.token());
+    if (!payload || !payload.exp || (payload.exp * 1000) > (Date.now() + 60000)) {
+      return Promise.resolve();
+    }
+    var refresh = this.refreshToken();
+    if (!refresh) return Promise.reject(new Error('Sessão expirada.'));
+    var self = this;
+    return this._post('/auth/v1/token?grant_type=refresh_token', this.headers(false), {
+      refresh_token: refresh
+    }).then(function(dados) {
+      if (!dados.access_token) throw new Error('Sessão expirada.');
+      self._guardarSessao({
+        token: dados.access_token,
+        refresh_token: dados.refresh_token || refresh,
+        usuario: dados.user || self.usuario()
+      });
+    });
   },
 
   verificarSessao: function() {
     var self = this;
-    return fetch(this.base() + '/auth/v1/user', {
-      headers: this.headers(true)
-    }).then(function(resposta) {
-      if (!resposta.ok) throw new Error('Sessão expirada.');
-      self.sincronizarNoInicio();
-    }).catch(function() {
-      self.sair();
-      self.mostrarLogin();
-    });
+    return this.renovarSePreciso()
+      .then(function() {
+        return fetch(self.base() + '/auth/v1/user', { headers: self.headers(true) });
+      })
+      .then(function(resposta) {
+        if (!resposta.ok) throw new Error('Sessão expirada.');
+        return resposta.json();
+      })
+      .then(function(usuario) {
+        var sessao = {
+          token: self.token(),
+          refresh_token: self.refreshToken(),
+          usuario: usuario
+        };
+        self._guardarSessao(sessao);
+        return self.verificarMfa(sessao).then(function(necessaria) {
+          if (necessaria) {
+            self._pendente = sessao;
+            self.mostrarLogin();
+            self._mostrarCampoMfa('grupoMfaLogin',
+              'Sua conta usa verificação em duas etapas. Digite o código de 6 números.');
+            return;
+          }
+          self.sincronizarNoInicio().then(function() {
+            self.mostrarConviteMfaSeNecessario(usuario);
+          });
+        });
+      })
+      .catch(function() {
+        self.sair();
+        self.mostrarLogin();
+      });
   },
 
-  // Dados enviados para a nuvem (mesmo conteúdo do backup, com data de controle)
+  // ---------- dados ----------
+
   coletarDados: function() {
+    var chave = '';
+    if (typeof segurancaModulo !== 'undefined' && segurancaModulo.lerRegistroChave) {
+      chave = segurancaModulo.lerRegistroChave() || '';
+    }
     return {
       app: 'saas-livia',
-      versao: 3,
+      versao: 4,
       fontes: fontes,
       pacientes: pacientes,
       lancamentos: lancamentos,
       evolucoes: evolucoes,
       dadosProfissional: dadosProfissional,
+      criptografia: { chave: chave },
       atualizadoEm: new Date().toISOString()
     };
   },
@@ -258,10 +621,8 @@ var Backend = {
   carregar: function() {
     var usuario = this.usuario();
     if (!usuario || !usuario.id) return Promise.resolve(null);
-
     var url = this.base() + '/rest/v1/dados?select=conteudo&user_id=eq.' +
       encodeURIComponent(usuario.id);
-
     return fetch(url, { headers: this.headers(true) })
       .then(function(resposta) {
         if (!resposta.ok) throw new Error('Não foi possível ler os dados da nuvem.');
@@ -275,11 +636,9 @@ var Backend = {
   salvar: function(dados) {
     var usuario = this.usuario();
     if (!usuario || !usuario.id) return Promise.resolve(false);
-
     var url = this.base() + '/rest/v1/dados?on_conflict=user_id';
     var headers = this.headers(true);
     headers['Prefer'] = 'resolution=merge-duplicates,return=minimal';
-
     return fetch(url, {
       method: 'POST',
       headers: headers,
@@ -295,9 +654,8 @@ var Backend = {
     });
   },
 
-  // Usado por Store.salvar(): agrupa várias alterações em um único envio
   salvarSeConectado: function() {
-    if (!this.configurado() || !this.conectado()) return;
+    if (!this.configurado() || !this.conectado() || this._aplicandoRemoto) return;
     if (this._timer) clearTimeout(this._timer);
     var self = this;
     this._timer = setTimeout(function() {
@@ -310,60 +668,66 @@ var Backend = {
     }, 1500);
   },
 
-  // No login: escolhe a versão mais recente (nuvem ou navegador)
+  // A nuvem manda: ao entrar, o que está lá substitui o navegador.
+  // Conta nova começa vazia; dados antigos só entram por importação explícita.
   sincronizarNoInicio: function() {
     var self = this;
     return this.carregar().then(function(remoto) {
-      var localEm = '';
-      try { localEm = sessionStorage.getItem(self.CHAVE_SYNC) || ''; } catch (e) {}
-      var remotoEm = remoto && remoto.atualizadoEm ? remoto.atualizadoEm : '';
-
-      // Conta nova: nunca enviamos os dados locais sem a pessoa pedir.
-      // Isso evita que um login indevido copie o prontuário para outra conta.
-      if (!remoto) {
-        var enviarNovo = confirm(
-          'Esta conta ainda não tem dados na nuvem.\n\n' +
-          'Deseja enviar os dados deste navegador para a nuvem?\n' +
-          'Clique em Cancelar para começar do zero nesta conta.'
-        );
-        if (enviarNovo) {
-          self.salvar(self.coletarDados()).then(function(ok) {
-            if (ok) app.toast('Dados deste navegador enviados para a nuvem.');
-          });
-        }
-        return;
-      }
-
-      if (remotoEm > localEm) {
-        var usarNuvem = confirm(
-          'Foram encontrados dados salvos na nuvem (' +
-          remotoEm.slice(0, 10) + ').\n\n' +
-          'Clique em OK para usar os dados da nuvem neste navegador.\n' +
-          'Clique em Cancelar para manter os dados deste navegador.'
-        );
-        if (usarNuvem) {
+      var deveSalvar = false;
+      self._aplicandoRemoto = true;
+      try {
+        if (!remoto || typeof remoto !== 'object' || !remoto.app) {
+          backupModulo.aplicarVazio();
+          app.toast('Conta nova: começando do zero. Use Importar backup para trazer dados antigos.');
+          deveSalvar = true;
+        } else {
           backupModulo._aplicarDados(remoto);
-          app.toast('Dados da nuvem carregados.');
-          return;
+          try { sessionStorage.setItem(self.CHAVE_SYNC, remoto.atualizadoEm || ''); } catch (e) {}
+          app.toast('Dados carregados da nuvem.');
         }
+      } finally {
+        self._aplicandoRemoto = false;
       }
-
-      var substituir = confirm(
-        'Enviar os dados deste navegador para a nuvem?\n\n' +
-        'Os dados que estavam salvos nesta conta serão substituídos.'
-      );
-      if (!substituir) {
-        backupModulo._aplicarDados(remoto);
-        app.toast('Dados da nuvem carregados.');
-        return;
+      if (typeof segurancaModulo !== 'undefined' && segurancaModulo.carregarTrilhaRemota) {
+        segurancaModulo.carregarTrilhaRemota();
       }
-
-      self.salvar(self.coletarDados()).then(function(ok) {
-        if (ok) app.toast('Dados deste navegador enviados para a nuvem.');
+      if (!deveSalvar) return null;
+      return self.salvar(self.coletarDados()).then(function(ok) {
+        if (ok) {
+          try { sessionStorage.setItem(self.CHAVE_SYNC, new Date().toISOString()); } catch (e) {}
+        }
       });
     }).catch(function() {
-      app.toast('Não foi possível sincronizar. Os dados locais continuam disponíveis.');
+      app.toast('Não foi possível acessar a nuvem. Os dados da nuvem continuarão valendo na próxima entrada.');
     });
+  },
+
+  // ---------- trilha de acesso no banco ----------
+
+  registrarAuditoria: function(acao, detalhe) {
+    if (!this.configurado() || !this.conectado()) return;
+    var usuario = this.usuario();
+    if (!usuario || !usuario.id) return;
+    var headers = this.headers(true);
+    headers['Prefer'] = 'return=minimal';
+    fetch(this.base() + '/rest/v1/auditoria', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        user_id: usuario.id,
+        acao: String(acao || '').slice(0, 120),
+        detalhe: String(detalhe || '').slice(0, 300)
+      })
+    }).catch(function() {});
+  },
+
+  carregarAuditoria: function() {
+    if (!this.configurado() || !this.conectado()) return Promise.resolve([]);
+    var url = this.base() + '/rest/v1/auditoria?select=criado_em,acao,detalhe&order=criado_em.desc&limit=50';
+    return fetch(url, { headers: this.headers(true) })
+      .then(function(resposta) { return resposta.ok ? resposta.json() : []; })
+      .then(function(lista) { return Array.isArray(lista) ? lista : []; })
+      .catch(function() { return []; });
   }
 
 };

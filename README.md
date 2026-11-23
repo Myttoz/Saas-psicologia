@@ -4,9 +4,7 @@
 
 Um lugar simples para organizar o dia a dia de uma clínica de psicologia:
 agenda, atendimentos, pacientes, convênios e recebimentos — tudo na mesma tela.
-
-O sistema abre no navegador, funciona no computador e no celular, e guarda os
-dados de forma protegida na nuvem.
+Feito para abrir no computador e no celular, com os dados guardados na nuvem.
 
 ## O que o site faz
 
@@ -14,34 +12,43 @@ dados de forma protegida na nuvem.
 - ✅ **Painel do dia** com quem falta confirmar, quem deve e o valor a receber.
 - 👥 **Pacientes e convênios** cadastrados com busca e percentuais de repasse.
 - 💰 **Lançamentos e resumos** com o ganho e o repasse de cada atendimento.
-- 📄 **Recibo em PDF** com nome, CRP, assinatura e logo da profissional.
+- 📄 **Recibo em PDF** com nome, CRP `04/74163`, assinatura e logo da profissional.
 - 📲 **Confirmação pelo WhatsApp** com mensagem pronta, sem custo nem API.
-- 📒 **Prontuário protegido por senha** para registrar as evoluções.
+- 📒 **Prontuário cifrado** — as evoluções são escritas com AES-GCM; a senha
+  nunca fica salva em texto.
 - 📊 **Exportação para o contador** com os dados do mês prontos em planilha.
 - 📴 **Funciona offline** depois de instalado no celular.
 
 ## Como entrar
 
-Acesse o site:
+Acesse **https://myttoz.github.io/Saas-psicologia/**
 
-**https://myttoz.github.io/Saas-psicologia/**
+A tela pede e-mail e senha. Use a conta que você mesma criou no Supabase. Se
+ativou a verificação em duas etapas, digite também o código de 6 números do
+aplicativo. Não há botão de Google: só entram as contas criadas por você.
 
-Use o e-mail e a senha criados no Supabase. Na primeira vez, o sistema pergunta
-se você quer usar os dados da nuvem ou os deste navegador — escolha com atenção,
-pois a opção escolhida substitui a outra.
+A **nuvem é a fonte da verdade**: ao entrar, os dados dela substituem os do
+navegador. Nada sobe automaticamente do computador para a nuvem. Para trazer
+dados de um backup, use **Importar backup** — o sistema pede a senha da conta
+e o código do aplicativo antes de aceitar.
 
 ## Privacidade
 
-Cada conta vê somente os próprios dados. As informações clínicas ficam
-protegidas, e o envio de mensagens pelo WhatsApp é feito por você: o sistema só
-prepara o texto.
+Cada conta vê somente os próprios dados. As evoluções do prontuário são
+cifradas com uma chave que existe só na memória enquanto o prontuário está
+aberto; sem a senha, ninguém consegue lê-las — nem você. Guarde sua senha em
+local seguro, porque não há recuperação. O envio de mensagens pelo WhatsApp é
+feito por você: o sistema só prepara o texto.
 
 > Este sistema é uma ferramenta de organização. Ele não substitui as regras do
 > CFP, a LGPD nem assinatura digital.
 
-## Manual completo
+## Documentação e novidades
 
-O passo a passo detalhado de cada função está no [MANUAL.md](MANUAL.md).
+- Passo a passo completo: [MANUAL.md](MANUAL.md)
+- Configuração da nuvem e das senhas: [supabase/COMO_CONFIGURAR.md](supabase/COMO_CONFIGURAR.md)
+- Novidades de cada versão:
+  https://github.com/Myttoz/Saas-psicologia/releases.atom
 
 ---
 

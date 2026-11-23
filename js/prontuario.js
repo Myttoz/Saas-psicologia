@@ -1,6 +1,9 @@
 // ============================================================================
 // Prontuário — evolução por sessão (queixa, intervenção, evolução e plano)
-// Dado clínico sensível: acesso protegido por senha e trilha de acesso.
+//
+// O texto clínico NÃO fica legível no navegador, no backup nem na nuvem:
+// cada evolução é salva como { id, cifrado:true, iv, dados }. O texto só
+// aparece em memória depois que a senha do prontuário abre a chave AES.
 // ============================================================================
 
 var prontuarioEditId = null;
@@ -8,6 +11,7 @@ var prontuarioEditId = null;
 var prontuarioModulo = {
 
   termo: '',
+  _cache: {}, // id -> evolução legível (somente em memória)
 
   // Modelos curtos para escrever mais rápido — preenchem só os campos vazios
   MODELO: {
@@ -41,13 +45,145 @@ var prontuarioModulo = {
     }
   },
 
+  // ---------- Texto legível (somente na memória) ----------
+
+  limparCache: function() {
+    this._cache = {};
+  },
+
+  chaveCache: function(id) {
+    return String(id);
+  },
+
+  // Decifra as evoluções ainda não carregadas. Precisa da chave desbloqueada.
+  garantirCache: function() {
+    var self = this;
+    if (!segurancaModulo.estaDesbloqueado() || typeof Cripto === 'undefined') {
+      return Promise.resolve(false);
+    }
+    var chave = segurancaModulo.chaveAes;
+    var promessas = [];
+
+    for (var i = 0; i < evolucoes.length; i++) {
+      var ev = evolucoes[i];
+      var chaveCache = this.chaveCache(ev.id);
+      if (this._cache[chaveCache]) continue;
+
+      if (!ev.cifrado) {
+        // Formato antigo: ainda legível; será cifrado na migração.
+        this._cache[chaveCache] = this._copia(ev);
+        continue;
+      }
+
+      (function(registro) {
+        promessas.push(
+          Cripto.decifrar(chave, registro).then(function(obj) {
+            obj.id = registro.id;
+            self._cache[self.chaveCache(registro.id)] = obj;
+          }).catch(function() {
+            self._cache[self.chaveCache(registro.id)] = {
+              id: registro.id,
+              paciente: '',
+              data: '',
+              queixa: '',
+              intervencao: '',
+              evolucao: '',
+              plano: '',
+              erro: true
+            };
+          })
+        );
+      })(ev);
+    }
+
+    if (!promessas.length) return Promise.resolve(true);
+    return Promise.all(promessas).then(function() { return true; });
+  },
+
+  plain: function(ev) {
+    if (!ev) return null;
+    return this._cache[this.chaveCache(ev.id)] || (ev.cifrado ? null : this._copia(ev));
+  },
+
+  _copia: function(obj) {
+    var copia = {};
+    for (var chave in obj) {
+      if (!Object.prototype.hasOwnProperty.call(obj, chave)) continue;
+      if (chave === 'cifrado' || chave === 'iv' || chave === 'dados') continue;
+      copia[chave] = obj[chave];
+    }
+    return copia;
+  },
+
+  // ---------- Migração e troca de chave ----------
+
+  // Cifra evoluções salvas pelas versões antigas em texto legível.
+  migrarParaChave: function(chave) {
+    var self = this;
+    var promessas = [];
+
+    for (var i = 0; i < evolucoes.length; i++) {
+      var ev = evolucoes[i];
+      if (ev.cifrado) continue;
+      (function(registro, indice) {
+        promessas.push(Cripto.cifrar(chave, self._copia(registro)).then(function(cifrado) {
+          var novo = { id: registro.id };
+          for (var chaveCampo in cifrado) {
+            if (Object.prototype.hasOwnProperty.call(cifrado, chaveCampo)) novo[chaveCampo] = cifrado[chaveCampo];
+          }
+          evolucoes[indice] = novo;
+        }));
+      })(ev, i);
+    }
+
+    if (!promessas.length) return Promise.resolve(false);
+    return Promise.all(promessas).then(function() {
+      self.limparCache();
+      if (typeof Store !== 'undefined') Store.salvar();
+      return true;
+    });
+  },
+
+  // Usado quando a senha do prontuário é trocada: lê com a chave antiga e
+  // grava tudo com a chave nova. Se qualquer leitura falhar, nada é salvo.
+  recifrar: function(chaveAntiga, chaveNova) {
+    var self = this;
+    var promessas = [];
+
+    for (var i = 0; i < evolucoes.length; i++) {
+      var ev = evolucoes[i];
+      (function(registro) {
+        var leitura = registro.cifrado ?
+          Cripto.decifrar(chaveAntiga, registro) :
+          Promise.resolve(self._copia(registro));
+        promessas.push(leitura.then(function(objeto) {
+          objeto.id = registro.id;
+          return Cripto.cifrar(chaveNova, objeto);
+        }).then(function(cifrado) {
+          var novo = { id: registro.id };
+          for (var campo in cifrado) {
+            if (Object.prototype.hasOwnProperty.call(cifrado, campo)) novo[campo] = cifrado[campo];
+          }
+          return novo;
+        }));
+      })(ev);
+    }
+
+    // Só substitui a lista depois que TODOS os registros foram recifrados.
+    return Promise.all(promessas).then(function(novos) {
+      evolucoes = novos;
+      self.limparCache();
+      if (typeof Store !== 'undefined') Store.salvar();
+      return true;
+    });
+  },
+
   // ---------- Renderização ----------
 
   render: function() {
     var lista = document.getElementById('evolucoesLista');
     if (!lista) return;
 
-    var resumo = document.getElementById('evolucoesResumo');
     var subtitulo = document.getElementById('prontuarioSubtitulo');
 
     if (typeof segurancaModulo === 'undefined' || !segurancaModulo.estaDesbloqueado()) {
@@ -56,7 +192,7 @@ var prontuarioModulo = {
         '<div class="bloqueio-aviso">' +
           '<div class="bloqueio-icone">🔒</div>' +
           '<h3>Prontuário protegido</h3>' +
-          '<p>Este conteúdo é sensível. Digite sua senha para consultar ou registrar evoluções.</p>' +
+          '<p>Este conteúdo é cifrado. Digite sua senha para consultar ou registrar evoluções.</p>' +
           '<button type="button" class="btn btn-primary" onclick="prontuarioModulo.solicitarAcesso()">' +
             'Desbloquear prontuário</button>' +
         '</div>';
@@ -64,13 +200,24 @@ var prontuarioModulo = {
       return;
     }
 
+    var self = this;
+    this.garantirCache().then(function() { self._renderComCache(); });
+  },
+
+  _renderComCache: function() {
+    var lista = document.getElementById('evolucoesLista');
+    if (!lista) return;
+    var resumo = document.getElementById('evolucoesResumo');
+    var subtitulo = document.getElementById('prontuarioSubtitulo');
+
     this.preencherPacientes();
 
-    var termo = this.termo.toLowerCase().trim();
+    var termo = normalizarTexto(this.termo);
     var filtrados = [];
     for (var i = 0; i < evolucoes.length; i++) {
-      var ev = evolucoes[i];
-      var texto = [ev.paciente, ev.queixa, ev.intervencao, ev.evolucao, ev.plano].join(' ').toLowerCase();
+      var ev = this.plain(evolucoes[i]);
+      if (!ev) continue;
+      var texto = normalizarTexto([ev.paciente, ev.queixa, ev.intervencao, ev.evolucao, ev.plano].join(' '));
       if (termo === '' || texto.indexOf(termo) !== -1) filtrados.push(ev);
     }
 
@@ -98,7 +245,7 @@ var prontuarioModulo = {
             'Escrever a primeira evolução</button>' +
         '</div>';
     } else {
-      for (var i = 0; i < filtrados.length; i++) lista.appendChild(this.card(filtrados[i]));
+      for (var j = 0; j < filtrados.length; j++) lista.appendChild(this.card(filtrados[j]));
     }
 
     segurancaModulo.renderTrilha();
@@ -111,6 +258,17 @@ var prontuarioModulo = {
 
     var div = document.createElement('div');
     div.className = 'evolucao-card';
+    if (ev.erro) {
+      div.innerHTML =
+        '<div class="evolucao-cab"><div><div class="evolucao-data">' +
+        escapeHtml(ev.data || 'Data desconhecida') + '</div>' +
+        '<div class="evolucao-paciente">Evolução indisponível</div></div></div>' +
+        '<div class="evolucao-trechos"><p class="texto-vazio">' +
+        'Não foi possível abrir este registro com a chave atual.' +
+        '</p></div>';
+      return div;
+    }
+
     div.innerHTML =
       '<div class="evolucao-cab">' +
         '<div>' +
@@ -151,14 +309,12 @@ var prontuarioModulo = {
     segurancaModulo.exigirAcesso(depois || function() { self.render(); });
   },
 
-  // Abre o modal de evolução. Se estiver bloqueado, abre após a senha.
   abrirModal: function(opcoes) {
     var self = this;
     opcoes = opcoes || {};
     segurancaModulo.exigirAcesso(function() { self.mostrarModal(opcoes); });
   },
 
-  // Chamado pelo Painel Hoje ao finalizar/ registrar uma sessão
   abrirDaSessao: function(id) {
     var l = null;
     for (var i = 0; i < lancamentos.length; i++) {
@@ -179,29 +335,37 @@ var prontuarioModulo = {
   },
 
   mostrarModal: function(opcoes) {
+    var self = this;
     if (!segurancaModulo.estaDesbloqueado()) {
-      segurancaModulo.exigirAcesso(function() { prontuarioModulo.mostrarModal(opcoes); });
+      segurancaModulo.exigirAcesso(function() { self.mostrarModal(opcoes); });
       return;
     }
     segurancaModulo.registrarAtividade();
+    this.garantirCache().then(function() { self._mostrarModal(opcoes); });
+  },
+
+  _mostrarModal: function(opcoes) {
+    opcoes = opcoes || {};
+    if (!segurancaModulo.estaDesbloqueado()) return;
 
     var form = document.getElementById('formEvolucao');
     if (form) form.reset();
 
     prontuarioEditId = opcoes.id || null;
-    var ev = prontuarioEditId ? this.buscarPorId(prontuarioEditId) : null;
+    var bruto = prontuarioEditId ? this.buscarPorId(prontuarioEditId) : null;
+    var ev = bruto ? this.plain(bruto) : null;
 
     var titulo = document.querySelector('#modalEvolucao .modal-title');
-    if (titulo) titulo.textContent = ev ? 'Editar evolução' : 'Nova evolução';
+    if (titulo) titulo.textContent = ev && !ev.erro ? 'Editar evolução' : 'Nova evolução';
 
     var paciente = document.getElementById('evoPaciente');
-    if (paciente) paciente.value = ev ? ev.paciente : (opcoes.paciente || '');
+    if (paciente) paciente.value = ev && !ev.erro ? ev.paciente : (opcoes.paciente || '');
 
     var data = document.getElementById('evoData');
-    if (data) data.value = ev ? ev.data : (opcoes.data || hojeStr);
+    if (data) data.value = ev && !ev.erro ? ev.data : (opcoes.data || hojeStr);
 
     var lancId = document.getElementById('evoLancamentoId');
-    if (lancId) lancId.value = ev ? (ev.lancamentoId || '') : (opcoes.lancamentoId || '');
+    if (lancId) lancId.value = ev && !ev.erro ? (ev.lancamentoId || '') : (opcoes.lancamentoId || '');
 
     var campos = ['evoQueixa', 'evoIntervencao', 'evoEvolucao', 'evoPlano'];
     var chaves = ['queixa', 'intervencao', 'evolucao', 'plano'];
@@ -234,7 +398,6 @@ var prontuarioModulo = {
       var atual = String(el.value);
       var podeTrocar = !atual.trim();
 
-      // se o texto ainda é o de algum modelo, pode ser substituído por outro
       if (!podeTrocar) {
         for (var nomeModelo in this.MODELO) {
           if (this.MODELO[nomeModelo][campo.chave] === atual) {
@@ -244,7 +407,6 @@ var prontuarioModulo = {
         }
       }
 
-      // o que foi digitado manualmente nunca é apagado
       if (podeTrocar) el.value = modelo[campo.chave];
     }
 
@@ -279,6 +441,10 @@ var prontuarioModulo = {
     }
 
     var agora = new Date().toISOString();
+    var bruto = prontuarioEditId ? this.buscarPorId(prontuarioEditId) : null;
+    var anterior = bruto ? this.plain(bruto) : null;
+    var editando = !!prontuarioEditId && !!anterior;
+
     var registro = {
       paciente: nome,
       data: data ? data.value : hojeStr,
@@ -287,30 +453,39 @@ var prontuarioModulo = {
       intervencao: this.valor('evoIntervencao'),
       evolucao: this.valor('evoEvolucao'),
       plano: this.valor('evoPlano'),
+      criadoEm: anterior && anterior.criadoEm ? anterior.criadoEm : agora,
       atualizadoEm: agora
     };
 
-    var editando = !!prontuarioEditId;
-    if (editando) {
-      var atual = this.buscarPorId(prontuarioEditId);
-      if (atual) {
-        for (var chave in registro) atual[chave] = registro[chave];
+    var chave = segurancaModulo.chaveAes;
+    return Cripto.cifrar(chave, registro).then(function(cifrado) {
+      var novo = { id: editando ? bruto.id : Date.now() };
+      for (var campo in cifrado) {
+        if (Object.prototype.hasOwnProperty.call(cifrado, campo)) novo[campo] = cifrado[campo];
       }
-    } else {
-      registro.id = Date.now();
-      registro.criadoEm = agora;
-      evolucoes.push(registro);
-    }
 
-    Store.salvar();
-    segurancaModulo.registrar(
-      editando ? 'Edição de evolução' : 'Nova evolução',
-      segurancaModulo.mascararNome(nome)
-    );
-    this.render();
-    app.fecharModal('modalEvolucao');
-    app.toast(editando ? 'Evolução atualizada.' : 'Evolução registrada.');
-    return false;
+      if (editando) {
+        for (var i = 0; i < evolucoes.length; i++) {
+          if (evolucoes[i].id === bruto.id) { evolucoes[i] = novo; break; }
+        }
+      } else {
+        evolucoes.push(novo);
+      }
+
+      self._cache[self.chaveCache(novo.id)] = registro;
+      if (typeof Store !== 'undefined') Store.salvar();
+      segurancaModulo.registrar(
+        editando ? 'Edição de evolução' : 'Nova evolução',
+        segurancaModulo.mascararNome(nome)
+      );
+      self.render();
+      app.fecharModal('modalEvolucao');
+      app.toast(editando ? 'Evolução atualizada.' : 'Evolução registrada.');
+      return true;
+    }).catch(function() {
+      app.toast('Não foi possível cifrar a evolução. Tente novamente.');
+      return false;
+    });
   },
 
   valor: function(id) {
@@ -320,36 +495,45 @@ var prontuarioModulo = {
 
   editar: function(id) {
     var self = this;
-    var ev = this.buscarPorId(id);
-    if (!ev) return;
+    var bruto = this.buscarPorId(id);
+    if (!bruto) return;
     // O registro da consulta só entra na trilha depois da senha conferida.
     segurancaModulo.exigirAcesso(function() {
-      segurancaModulo.registrar('Consulta de evolução', segurancaModulo.mascararNome(ev.paciente));
-      self.mostrarModal({ id: id });
+      self.garantirCache().then(function() {
+        var ev = self.plain(bruto);
+        segurancaModulo.registrar('Consulta de evolução',
+          segurancaModulo.mascararNome(ev && ev.paciente));
+        self.mostrarModal({ id: id });
+      });
     });
   },
 
   excluir: function(id) {
     var self = this;
-    var ev = this.buscarPorId(id);
-    if (!ev) return;
+    var bruto = this.buscarPorId(id);
+    if (!bruto) return;
     if (!segurancaModulo.estaDesbloqueado()) {
       segurancaModulo.exigirAcesso(function() { self.excluir(id); });
       return;
     }
-    segurancaModulo.registrarAtividade();
-    if (!confirm('Excluir esta evolução? Esta ação não pode ser desfeita.')) return;
+    this.garantirCache().then(function() {
+      var ev = self.plain(bruto);
+      var nome = ev && ev.paciente;
+      segurancaModulo.registrarAtividade();
+      if (!confirm('Excluir esta evolução? Esta ação não pode ser desfeita.')) return;
 
-    var novo = [];
-    for (var i = 0; i < evolucoes.length; i++) {
-      if (evolucoes[i].id !== id) novo.push(evolucoes[i]);
-    }
-    evolucoes = novo;
+      var novo = [];
+      for (var i = 0; i < evolucoes.length; i++) {
+        if (evolucoes[i].id !== id) novo.push(evolucoes[i]);
+      }
+      evolucoes = novo;
+      delete self._cache[self.chaveCache(id)];
 
-    Store.salvar();
-    segurancaModulo.registrar('Exclusão de evolução', segurancaModulo.mascararNome(ev.paciente));
-    this.render();
-    app.toast('Evolução excluída.');
+      if (typeof Store !== 'undefined') Store.salvar();
+      segurancaModulo.registrar('Exclusão de evolução', segurancaModulo.mascararNome(nome));
+      self.render();
+      app.toast('Evolução excluída.');
+    });
   }
 
 };

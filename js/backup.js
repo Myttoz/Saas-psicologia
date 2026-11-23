@@ -1,27 +1,56 @@
 // ============================================================================
 // Backup — exportar, importar e restaurar o backup automático
-// Permite levar pacientes, lançamentos e evoluções entre máquinas (notebook e celular).
-// O backup automático fica salvo neste navegador e não é enviado para a internet.
-// Atenção: o arquivo contém texto clínico — guarde-o em local protegido.
+//
+// O arquivo de backup e a nuvem guardam as evoluções já cifradas e o registro
+// da chave AES (nunca a chave em texto). Abrir, baixar, importar ou restaurar
+// um backup pede novamente a senha da conta — não basta um confirm().
 // ============================================================================
 
 var backupModulo = {
 
   CHAVE_AUTO: 'saas_backup_auto',
-  _importando: false, // evita que o backup automático seja sobrescrito ao restaurar
+  _importando: false,        // evita que o retrato automático seja sobrescrito ao restaurar
+  _pendenteImportacao: null, // arquivo lido, aplicado só depois da reautenticação
 
-  // Dados usados tanto no arquivo baixado quanto no retrato automático
+  // Dados usados no arquivo baixado, no retrato automático e na nuvem
   montarDados: function() {
+    var registroChave = (typeof segurancaModulo !== 'undefined' && segurancaModulo.lerRegistroChave) ?
+      (segurancaModulo.lerRegistroChave() || '') : '';
     return {
       app: 'saas-livia',
-      versao: 3,
+      versao: 4,
       exportadoEm: new Date().toISOString(),
       fontes: fontes,
       pacientes: pacientes,
       lancamentos: lancamentos,
       evolucoes: evolucoes,
-      dadosProfissional: dadosProfissional
+      dadosProfissional: dadosProfissional,
+      criptografia: { chave: registroChave }
     };
+  },
+
+  // Conta nova: a nuvem manda, o navegador começa sem dados clínicos.
+  // A senha local e o registro da chave são mantidos para poder cifrar o que
+  // vier a ser digitado; as evoluções antigas não são enviadas.
+  aplicarVazio: function() {
+    this._importando = true;
+    try {
+      pacientes = [];
+      lancamentos = [];
+      evolucoes = [];
+      dadosProfissional = { nome: '', crp: CRP_PADRAO, cpf: '', assinatura: '' };
+      if (typeof prontuarioModulo !== 'undefined') prontuarioModulo.limparCache();
+      if (typeof segurancaModulo !== 'undefined') {
+        segurancaModulo.desbloqueado = false;
+        segurancaModulo.chaveAes = null;
+      }
+      if (typeof Store !== 'undefined') Store.salvar();
+    } finally {
+      this._importando = false;
+    }
+    var paginaAtiva = document.querySelector('.page.active');
+    if (paginaAtiva) app.renderizarPagina(paginaAtiva.id.replace('page-', ''));
+    this.atualizarInfoAuto();
   },
 
   // ---------- Validação de segurança (backup e nuvem) ----------
@@ -32,6 +61,7 @@ var backupModulo = {
   LIMITE_TEXTO: 20000,
   LIMITE_CURTO: 300,
   LIMITE_ASSINATURA: 400000,
+  LIMITE_CHAVE: 300,
 
   _inteiro: function(valor) {
     if (typeof valor !== 'number' && !(typeof valor === 'string' && /^\d+$/.test(valor))) return null;
@@ -60,8 +90,16 @@ var backupModulo = {
 
   _assinaturaValida: function(valor) {
     var s = this._texto(valor, this.LIMITE_ASSINATURA);
-    // Somente PNG/JPG em base64, como o sistema gera. Nada de SVG, javascript: ou HTML.
     return /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(s) ? s : '';
+  },
+
+  _chaveValida: function(valor) {
+    var s = this._texto(valor, this.LIMITE_CHAVE);
+    if (!s) return ''; // backup da versão antiga, sem criptografia
+    if (typeof Cripto === 'undefined' || !Cripto.disponivel() || !Cripto.registroValido(s)) {
+      throw new Error('O registro da chave de criptografia do backup é inválido.');
+    }
+    return s;
   },
 
   // Devolve uma cópia limpa. Lança erro com mensagem clara se o backup for inválido.
@@ -98,6 +136,18 @@ var backupModulo = {
             if (limpo[chave] === null && chave === 'id') {
               throw new Error('Identificador inválido em ' + nome + '.');
             }
+          } else if (chave === 'cifrado' || chave === 'iv' || chave === 'dados') {
+            // Campos do texto cifrado: base64 e iv rigorosos.
+            if (chave === 'cifrado') {
+              if (item[chave] !== true) throw new Error('Registro cifrado inválido em ' + nome + '.');
+              limpo[chave] = true;
+            } else {
+              var texto = self._texto(item[chave], self.LIMITE_TEXTO);
+              if (!/^[A-Za-z0-9+/]+={0,2}$/.test(texto)) {
+                throw new Error('Registro cifrado inválido em ' + nome + '.');
+              }
+              limpo[chave] = texto;
+            }
           } else if (item[chave] === null) {
             limpo[chave] = null;
           } else if (typeof item[chave] === 'number' || typeof item[chave] === 'boolean') {
@@ -108,15 +158,20 @@ var backupModulo = {
             limpo[chave] = self._texto(item[chave], longo ? self.LIMITE_TEXTO : self.LIMITE_CURTO);
           }
         }
+        // Uma evolução cifrada precisa ter os três campos juntos.
+        if (limpo.cifrado && (!limpo.iv || !limpo.dados)) {
+          throw new Error('Evolução cifrada incompleta em ' + nome + '.');
+        }
         saida.push(limpo);
       }
       return saida;
     }
 
     var dp = (dados.dadosProfissional && typeof dados.dadosProfissional === 'object') ? dados.dadosProfissional : {};
+    var cripto = (dados.criptografia && typeof dados.criptografia === 'object') ? dados.criptografia : {};
     return {
       app: 'saas-livia',
-      versao: 3,
+      versao: 4,
       exportadoEm: this._texto(dados.exportadoEm, 40),
       salvoEm: this._texto(dados.salvoEm, 40),
       atualizadoEm: this._texto(dados.atualizadoEm, 40),
@@ -129,7 +184,8 @@ var backupModulo = {
         crp: this._texto(dp.crp, this.LIMITE_CURTO) || CRP_PADRAO,
         cpf: this._texto(dp.cpf, this.LIMITE_CURTO),
         assinatura: this._assinaturaValida(dp.assinatura)
-      }
+      },
+      criptografia: { chave: this._chaveValida(cripto.chave) }
     };
   },
 
@@ -146,9 +202,18 @@ var backupModulo = {
     this.atualizarInfoAuto();
   },
 
+  // Barreira real para ações críticas: senha da conta (e código do app, se houver).
+  _reautenticar: function(acao) {
+    if (typeof Backend !== 'undefined' && Backend.configurado && Backend.configurado() &&
+        Backend.conectado && Backend.conectado()) {
+      Backend.reautenticar(acao);
+      return;
+    }
+    acao();
+  },
+
   // ---------- Backup automático (somente neste navegador) ----------
 
-  // Chamado pelo Store.salvar(): guarda a versão mais recente dos dados
   registrarAlteracao: function() {
     if (this._importando) return;
     try {
@@ -195,23 +260,27 @@ var backupModulo = {
       app.toast('Ainda não há backup automático para restaurar.');
       return;
     }
-
     var quando = (dados.salvoEm || dados.exportadoEm || '').slice(0, 10);
     var rotulo = quando ? formatarData(quando) : 'data desconhecida';
-    var confirmar = confirm(
-      'Restaurar o backup automático de ' + rotulo + '?\n\n' +
-      'Os dados atuais deste navegador serão substituídos. Continuar?'
-    );
-    if (!confirmar) return;
-
-    this._aplicarDados(dados);
-    app.toast('Backup automático restaurado.');
+    var self = this;
+    this._reautenticar(function() {
+      self._aplicarDados(dados);
+      if (typeof segurancaModulo !== 'undefined') {
+        segurancaModulo.registrar('Backup automático restaurado', rotulo);
+      }
+      app.toast('Backup automático restaurado.');
+    });
   },
 
-  // Aplica dados vindos do arquivo ou do retrato automático
+  // Aplica dados vindos do arquivo, do retrato automático ou da nuvem
   _aplicarDados: function(dados) {
     // Revalida mesmo aqui: a nuvem também chama esta função diretamente.
     var limpos = this.normalizar(dados);
+
+    if (limpos.criptografia.chave && typeof segurancaModulo !== 'undefined') {
+      segurancaModulo.aplicarRegistroChave(limpos.criptografia.chave);
+    }
+    if (typeof prontuarioModulo !== 'undefined') prontuarioModulo.limparCache();
 
     this._importando = true;
     try {
@@ -221,12 +290,11 @@ var backupModulo = {
       evolucoes = limpos.evolucoes;
       dadosProfissional = limpos.dadosProfissional;
 
-      Store.salvar();
+      if (typeof Store !== 'undefined') Store.salvar();
     } finally {
       this._importando = false;
     }
 
-    // re-renderiza a página ativa
     var paginaAtiva = document.querySelector('.page.active');
     if (paginaAtiva) {
       app.renderizarPagina(paginaAtiva.id.replace('page-', ''));
@@ -236,30 +304,32 @@ var backupModulo = {
 
   // ---------- Backup em arquivo ----------
 
-  // Baixa um arquivo .json com todos os dados do sistema
   exportar: function() {
-    var json = JSON.stringify(this.montarDados(), null, 2);
-    var blob = new Blob([json], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
+    var self = this;
+    this._reautenticar(function() {
+      var json = JSON.stringify(self.montarDados(), null, 2);
+      var blob = new Blob([json], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
 
-    var hojeBackup = new Date();
-    var nome = 'backup-livia-' +
-      hojeBackup.getFullYear() + '-' +
-      String(hojeBackup.getMonth() + 1).padStart(2, '0') + '-' +
-      String(hojeBackup.getDate()).padStart(2, '0') + '.json';
+      var hojeBackup = new Date();
+      var nome = 'backup-livia-' +
+        hojeBackup.getFullYear() + '-' +
+        String(hojeBackup.getMonth() + 1).padStart(2, '0') + '-' +
+        String(hojeBackup.getDate()).padStart(2, '0') + '.json';
 
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = nome;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-    app.toast('Backup exportado: ' + nome);
+      if (typeof segurancaModulo !== 'undefined') segurancaModulo.registrar('Backup exportado', nome);
+      app.toast('Backup exportado: ' + nome);
+    });
   },
 
-  // Abre o seletor de arquivo
   importar: function() {
     var input = document.getElementById('backupFileInput');
     if (input) {
@@ -268,12 +338,12 @@ var backupModulo = {
     }
   },
 
-  // Lê o arquivo escolhido, valida e substitui os dados atuais
+  // Lê o arquivo escolhido, valida e só aplica depois da reautenticação.
   processarArquivo: function(input) {
     var arquivo = input.files && input.files[0];
     if (!arquivo) return;
 
-    if (arquivo.size > backupModulo.LIMITE_ARQUIVO) {
+    if (arquivo.size > this.LIMITE_ARQUIVO) {
       app.toast('Arquivo muito grande. O limite é 5 MB.');
       return;
     }
@@ -289,28 +359,31 @@ var backupModulo = {
       }
 
       try {
-        backupModulo.normalizar(dados);
+        dados = backupModulo.normalizar(dados);
       } catch (erro) {
         app.toast(erro.message || 'Este arquivo não é um backup válido.');
         return;
       }
 
-      var dataExport = (dados.exportadoEm || '').slice(0, 10);
-      var rotuloData = dataExport ? formatarData(dataExport) : 'data desconhecida';
+      backupModulo._pendenteImportacao = dados;
+      var resumo = dados.pacientes.length + ' paciente(s), ' +
+        dados.lancamentos.length + ' lançamento(s) e ' +
+        dados.evolucoes.length + ' evolução(ões).';
 
-      var confirmar = confirm(
-        'Importar backup de ' + rotuloData + '?\n\n' +
-        'O backup contém:\n' +
-        '• ' + dados.pacientes.length + ' paciente(s)\n' +
-        '• ' + dados.lancamentos.length + ' lançamento(s)\n' +
-        '• ' + dados.fontes.length + ' convênio(s)\n' +
-        '• ' + ((dados.evolucoes || []).length) + ' evolução(ões) clínica(s)\n\n' +
-        'Os dados ATUAIS deste navegador serão substituídos. Continuar?'
-      );
-      if (!confirmar) return;
-
-      backupModulo._aplicarDados(dados);
-      app.toast('Backup importado com sucesso.');
+      backupModulo._reautenticar(function() {
+        var pendente = backupModulo._pendenteImportacao;
+        backupModulo._pendenteImportacao = null;
+        if (!pendente) return;
+        backupModulo._aplicarDados(pendente);
+        if (typeof segurancaModulo !== 'undefined') {
+          segurancaModulo.registrar('Backup importado', resumo);
+        }
+        if (pendente.criptografia && pendente.criptografia.chave) {
+          app.toast('Backup importado. Digite a senha do prontuário para ler as evoluções.');
+        } else {
+          app.toast('Backup importado com sucesso.');
+        }
+      });
     };
 
     leitor.readAsText(arquivo);

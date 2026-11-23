@@ -2,6 +2,11 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<!-- CSP: só scripts e estilos vindos do próprio site. Nada de objetos, plugins
+     ou formulários para outros endereços. Os handlers inline ainda exigem
+     'unsafe-inline' (o sistema é construído com eles); os demais bloqueios já
+     valem. frame-ancestors só funciona em cabeçalho HTTP — veja _headers. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://wrdkbafdzjsqonyidrwv.supabase.co https://*.supabase.co; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Sistema de Atendimentos — Gestão de Pacientes</title>
 <meta name="theme-color" content="#7A9E8F">
@@ -325,14 +330,17 @@
             <div class="page-subtitle" id="prontuarioSubtitulo">Evoluções por sessão</div>
           </div>
           <div class="header-actions">
+            <button class="btn btn-outline" onclick="segurancaModulo.solicitarTrocaSenha()" title="Troca a senha do prontuário (pede a senha da conta)">🔑 Trocar senha</button>
             <button class="btn btn-outline" onclick="segurancaModulo.bloquear()" title="Bloqueia o prontuário agora">🔒 Bloquear</button>
             <button class="btn btn-primary" onclick="prontuarioModulo.abrirModal()">+ Nova evolução</button>
           </div>
         </div>
 
         <div class="alert-note">
-          <strong>Informação sensível.</strong> O prontuário é protegido por senha neste aparelho
-          e registra os acessos. Guarde os backups em local seguro.
+          <strong>Informação sensível.</strong> As evoluções são cifradas com uma chave que
+          depende da senha do prontuário. Sem essa senha, nem o backup aberto mostra o texto.
+          Os acessos ficam registrados também na nuvem. Guarde a senha e os backups em local seguro:
+          não há recuperação se a senha for perdida.
         </div>
 
         <div class="card">
@@ -554,9 +562,10 @@
   </div>
   <div class="modal-body">
     <div class="alert-note" id="senhaAviso">
-      Esta senha protege o prontuário neste navegador. Anote-a em local seguro:
-      sem ela não será possível consultar as evoluções neste aparelho.
-      Ela não substitui login nem criptografia — isso virá com a versão online.
+      Esta senha gera a chave que cifra as evoluções no navegador, no backup e
+      na nuvem. Anote-a em local seguro: sem ela não será possível ler o
+      prontuário, mesmo com o arquivo de backup em mãos. Não há recuperação.
+      Use uma senha diferente da senha da sua conta.
     </div>
     <form id="formSenha" onsubmit="return segurancaModulo.confirmar();">
       <div class="form-group">
@@ -701,21 +710,101 @@
         <label class="form-label" for="loginSenha">Senha</label>
         <input type="password" id="loginSenha" class="form-control" placeholder="Sua senha" autocomplete="current-password">
       </div>
+      <div class="form-group" id="grupoMfaLogin" style="display:none;">
+        <label class="form-label" for="loginMfaCodigo">Código do aplicativo (6 números)</label>
+        <input type="text" id="loginMfaCodigo" class="form-control" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+      </div>
       <div class="senha-erro erro" id="loginErro" style="display:none;"></div>
       <button type="submit" class="btn-login-entrar">Entrar</button>
     </form>
-    <div class="login-separador">ou</div>
-    <button type="button" class="btn-login-google" onclick="Backend.entrarComGoogle()">
-      <svg class="google-icone" viewBox="0 0 48 48" aria-hidden="true">
-        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-        <path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.77-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.51 2.56 10.78l7.97-6.19z"/>
-        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-      </svg>
-      Entrar com Google
-    </button>
+    <p class="login-nota">Somente contas criadas pela profissional no Supabase podem entrar.</p>
   </div>
   <div class="login-rodape">SaaS by Myttoz</div>
+</div>
+
+<!-- Modal: verificação em duas etapas (convite e ativação) -->
+<div class="modal" id="modalMfa" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Verificação em duas etapas</div>
+    <button class="modal-close" onclick="Backend.fecharMfa()">&times;</button>
+  </div>
+  <div class="modal-body">
+    <p class="mfa-intro" id="mfaIntro"></p>
+    <div class="mfa-qr" id="mfaQr" style="display:none;"></div>
+    <div class="mfa-segredo" id="mfaSegredo" style="display:none;"></div>
+    <div class="form-group" id="grupoMfaCodigo" style="display:none;">
+      <label class="form-label" for="mfaCodigo">Código de 6 números</label>
+      <input type="text" id="mfaCodigo" class="form-control" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+    </div>
+    <div class="senha-erro erro" id="mfaErro" style="display:none;"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" id="mfaSecundario" onclick="Backend.recusarMfa()">Agora não</button>
+    <button type="button" class="btn btn-primary" id="mfaBotao" onclick="Backend.ativarMfa()">Ativar agora</button>
+  </div>
+</div>
+
+<!-- Modal: senha da conta novamente antes de ações críticas -->
+<div class="modal modal-login modal-reaut" id="modalReautenticar" onclick="event.stopPropagation()">
+  <div class="login-cabecalho">
+    <img src="assets/logo.jpeg" alt="Logo" class="login-logo">
+    <div class="login-titulo">Confirme sua senha</div>
+    <div class="login-subtitulo">Ação protegida</div>
+  </div>
+  <div class="login-corpo">
+    <p class="login-intro">Esta ação mexe com todos os seus dados. Informe novamente a senha da sua conta para continuar.</p>
+    <form id="formReautenticar" onsubmit="return Backend.confirmarReautenticacao();">
+      <div class="form-group">
+        <label class="form-label" for="reauthEmail">E-mail da conta</label>
+        <input type="email" id="reauthEmail" class="form-control" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="reauthSenha">Senha da conta</label>
+        <input type="password" id="reauthSenha" class="form-control" autocomplete="current-password">
+      </div>
+      <div class="form-group" id="grupoMfaReauth" style="display:none;">
+        <label class="form-label" for="reauthMfaCodigo">Código do aplicativo (6 números)</label>
+        <input type="text" id="reauthMfaCodigo" class="form-control" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+      </div>
+      <div class="senha-erro erro" id="reauthErro" style="display:none;"></div>
+      <button type="submit" class="btn-login-entrar">Confirmar e continuar</button>
+    </form>
+  </div>
+  <div class="login-rodape">SaaS by Myttoz</div>
+</div>
+
+<!-- Modal: trocar a senha do prontuário (cifra tudo de novo) -->
+<div class="modal" id="modalTrocarSenha" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Trocar senha do prontuário</div>
+    <button class="modal-close" onclick="app.fecharModal('modalTrocarSenha')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="alert-note">
+      A nova senha vai gerar uma chave nova e todas as evoluções serão cifradas
+      novamente. Guarde-a bem: depois de trocar, a senha antiga não abre mais o
+      prontuário nem os backups feitos com ela.
+    </div>
+    <form id="formTrocarSenha" onsubmit="return segurancaModulo.confirmarTrocaSenha();">
+      <div class="form-group">
+        <label class="form-label">Senha atual do prontuário</label>
+        <input type="password" id="trocaSenhaAtual" class="form-control" autocomplete="current-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nova senha (mínimo de 4 caracteres)</label>
+        <input type="password" id="trocaSenhaNova" class="form-control" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Repita a nova senha</label>
+        <input type="password" id="trocaSenhaConfirmar" class="form-control" autocomplete="new-password">
+      </div>
+      <div class="senha-erro erro" id="trocaSenhaErro" style="display:none;"></div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="app.fecharModal('modalTrocarSenha')">Cancelar</button>
+    <button type="button" class="btn btn-primary" onclick="segurancaModulo.confirmarTrocaSenha()">Trocar senha</button>
+  </div>
 </div>
 
 </div><!-- fim overlay -->
@@ -730,6 +819,7 @@
 <input type="file" id="backupFileInput" accept=".json,application/json" style="display:none;" onchange="backupModulo.processarArquivo(this)">
 
 <script src="js/config.js"></script>
+<script src="js/cripto.js"></script>
 <script src="js/data.js"></script>
 <script src="js/backend.js"></script>
 <script src="js/meses.js"></script>

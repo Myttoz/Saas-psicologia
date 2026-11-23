@@ -15,11 +15,12 @@ Saas Psicologa/
 │   └── style.css        # Estilos visuais
 ├── js/
 │   ├── config.js        # Configuração do Supabase (URL e chave anon)
+│   ├── cripto.js        # AES-GCM + PBKDF2 (WebCrypto) das evoluções
 │   ├── data.js          # Dados, regra de cálculo e armazenamento local
-│   ├── backend.js       # Login e sincronização com Supabase
+│   ├── backend.js       # Login, MFA, auditoria e sincronização com Supabase
 │   ├── meses.js         # Navegação mensal clicável
 │   ├── hoje.js          # Painel Hoje + fluxo de sessão com cronômetro
-│   ├── seguranca.js     # Senha PBKDF2 do prontuário + trilha de acesso
+│   ├── seguranca.js     # Senha do prontuário, chave AES e trilha de acesso
 │   ├── app.js           # Navegação, modais, utilitários
 │   ├── agenda.js        # Grade semanal
 │   ├── pacientes.js     # Cadastro de pacientes
@@ -35,10 +36,11 @@ Saas Psicologa/
 ├── manifest.webmanifest # Dados para instalar no celular
 ├── sw.js                # Service worker (deixa o sistema disponível offline)
 ├── supabase/
-│   ├── schema.sql       # Tabela + RLS (cada conta vê só seus dados)
-│   └── COMO_CONFIGURAR.md # Guia em passos para criar o projeto
+│   ├── schema.sql       # Tabelas, RLS, auditoria e regra do MFA
+│   └── COMO_CONFIGURAR.md # Guia pessoal: contas, senhas e MFA
 ├── .github/workflows/
-│   └── deploy.yml       # Publicação automática no GitHub Pages
+│   ├── deploy.yml       # Publicação automática no GitHub Pages
+│   └── release.yml      # Release automática ao empurrar uma tag v*
 ├── Livia/               # Documentos pessoais (NÃO versionar — está no .gitignore)
 ├── README.md            # Apresentação curta do site
 ├── MANUAL.md            # Este arquivo
@@ -55,6 +57,11 @@ Saas Psicologa/
 4. No celular, envie a pasta para o aparelho e abra o `index.html`.
 
 O sistema funciona **offline** e guarda os dados no próprio navegador (localStorage). Para **instalar no celular e usar sem internet de verdade**, é preciso publicar o site em HTTPS (por exemplo, GitHub Pages) — abrindo o arquivo direto do computador, o navegador não permite essa instalação.
+
+> **Importante:** a cifragem das evoluções usa WebCrypto, que alguns navegadores
+> não liberam quando o arquivo é aberto como `file://`. Para ter criptografia
+> garantida, use sempre o endereço publicado em HTTPS:
+> https://myttoz.github.io/Saas-psicologia/
 
 ## Regra de cálculo
 
@@ -92,8 +99,9 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
   Compareceu em verde forte, para diferenciar de relance.
 - **Prontuário/evolução por sessão**: queixa, intervenção, evolução e plano para
   a próxima; 4 modelos rápidos, histórico buscável por paciente ou texto e botão
-  "Escrever evolução" no Painel Hoje (já preenche paciente e data). Acesso
-  protegido por senha local, bloqueio por inatividade e trilha de acesso.
+  "Escrever evolução" no Painel Hoje (já preenche paciente e data). Evoluções
+  cifradas com AES-GCM, bloqueio por inatividade e trilha de acesso local e no
+  banco.
 - **Repetição semanal**: criar 4/8/12 sessões de uma vez (retornos fixos),
   sem duplicar o que já existe.
 - **Confirmação pelo WhatsApp**: botão em cada agendado abre o WhatsApp com a
@@ -116,17 +124,20 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
   volta para esse último retrato, com confirmação. A sidebar mostra quando ele
   foi salvo. Ele serve para voltar atrás **no mesmo navegador** — para trocar de
   máquina, use Exportar/Importar.
-- **Senha do prontuário com PBKDF2**: guardada como
-  `pbkdf2$12000$<sal>$<hash>` — sal aleatória de 16 bytes e hash SHA-256 de
-  32 bytes, com 12.000 iterações. A senha em texto nunca é salva. Senhas antigas
-  continuam funcionando e são atualizadas no primeiro desbloqueio. Veja os
-  limites reais em "Como usar o prontuário", abaixo.
+- **Senha do prontuário com AES-GCM**: a senha gera, por PBKDF2-HMAC-SHA256 com
+  600.000 iterações, uma chave que cifra cada evolução (`cifrado: true, iv,
+  dados`). A chave fica só na memória; o que é salvo é um "registro da chave"
+  com sal e um texto de conferência. A senha em texto nunca é salva. Senhas
+  antigas continuam funcionando e são migradas no primeiro desbloqueio. Veja
+  os detalhes em "Como usar o prontuário", abaixo.
 - **PWA**: manifesto, service worker e ícones já incluídos. Depois de publicar em
   HTTPS, use o menu do navegador **Adicionar à tela inicial** / **Instalar app**
   para abrir como aplicativo e usar offline.
-- **Nuvem (ligada)**: login com e-mail/senha e sincronização automática via
-  Supabase. Ao abrir o sistema, aparece a tela "Entrar na sua conta" — use o
-  e-mail e a senha criados no Supabase. O guia está em
+- **Nuvem (ligada)**: login obrigatório com e-mail/senha (e código de 6 números
+  quando o MFA estiver ativo) e sincronização via Supabase. A tela de entrada se
+  chama **Bem-vinda**, tem fundo opaco e não pode ser fechada clicando fora ou
+  com ESC. **Google removido**: só entram contas criadas por você. A nuvem é a
+  fonte da verdade; nada sobe automático do navegador. Guia em
   `supabase/COMO_CONFIGURAR.md`.
 - Menu lateral: Hoje, Agenda, Resumos, Lançamentos, Convênios, Pacientes,
   Prontuário e Situação Paciente.
@@ -167,38 +178,77 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
 
 ### O que a senha do prontuário protege — e o que não protege
 
-**Como ela fica salva:** no navegador, na chave `saas_seguranca_senha`, no
-formato `pbkdf2$12000$<sal em hex>$<hash em hex>`. A sal é sorteada pelo
-navegador (`crypto.getRandomValues`) e o código recebe a senha 12.000 vezes com
-SHA-256 antes de gerar o hash. A comparação com a senha digitada é feita em
-tempo constante. A senha em texto puro **não** fica salva em nenhum lugar.
+**Como funciona:** a senha nunca é guardada em texto. O que fica no navegador é
+um registro `pbkdf2$600000$<sal>$<hash>` (sal de 16 bytes, hash SHA-256 de 32
+bytes) e um registro da chave AES (`aesgcm$...`). A chave AES de verdade é
+derivada da senha quando você desbloqueia e existe **somente na memória**; ao
+sair ou trancar, ela é descartada. Cada evolução é salva como
+`{ id, cifrado: true, iv, dados }` — o texto clínico não aparece legível no
+localStorage, no backup nem no JSON que vai para a nuvem. A cifragem usa
+AES-GCM com tag de 128 bits: se alguém alterar um byte do registro cifrado, a
+leitura falha em vez de mostrar texto trocado.
 
-**O que isso resolve:** impede que alguém que abra o site no mesmo navegador
-veja o prontuário sem digitar a senha. Depois de 3 erros, há bloqueio de 30
-segundos (que continua mesmo recarregando a página); após 15 minutos parada, o
-prontuário tranca sozinho. Trocar a senha exige a senha atual.
+**O que isso resolve:**
+
+- Impede que alguém que abra o site no mesmo navegador veja o prontuário sem a
+  senha — nem lendo o armazenamento direto.
+- As evoluções viajam cifradas para a nuvem e para o backup. Mesmo que o JSON
+  vaze, o conteúdo clínico continua fechado sem a senha.
+- Depois de 3 erros, há bloqueio de 30 segundos (continua ao recarregar); após
+  15 minutos parada, o prontuário tranca sozinho.
+- Trocar a senha exige a senha atual **e** a conta da nuvem confirmada com o
+  código do aplicativo (reautenticação). A troca é atômica: todas as evoluções
+  são recifradas antes de qualquer coisa ser gravada. Se der erro, a senha e a
+  chave antigas continuam valendo e nada fica ilegível.
+- A trilha de acesso fica no navegador e também no banco (`auditoria`), com as
+  iniciais do paciente em vez do texto clínico.
 
 **O que isso NÃO resolve (seja honesta com isso):**
 
-- A senha é um **bloqueio da interface**, não criptografia do conteúdo. Quem
-  tiver acesso ao computador, ao navegador ou ao arquivo de backup consegue ler
-  `saas_evolucoes`, o CPF e a assinatura direto no armazenamento, sem senha.
-- As evoluções, o CPF e a assinatura viajam para a nuvem e para o backup em
-  texto legível dentro do JSON. O Supabase protege o acesso com login e RLS
-  (cada conta vê só os próprios dados), mas não criptografa o conteúdo do JSON
-  para a própria profissional.
-- 12.000 iterações de PBKDF2 em JavaScript puro estão abaixo da recomendação
-  atual (a OWASP sugere ~600.000). Mais iterações deixariam o login lento neste
-  projeto, que roda sem servidor e sem bibliotecas. Isso é aceitável como
-  tranca local, não como cofre de dados clínicos.
-- Se a senha for esquecida, não há recuperação: é preciso apagar a chave
-  `saas_seguranca_senha` no navegador e criar outra. As evoluções continuam no
-  backup.
+- A senha do prontuário **não tem recuperação**. Ela é a única coisa que abre a
+  chave. Se esquecer, não há como decryptar as evoluções — nem você, nem nós.
+  Anote-a em local seguro. (Isso não é a senha da conta Supabase, que pode ser
+  redefinida no painel.)
+- O que não é evolução — por exemplo CPF e assinatura do recibo, nomes e
+  valores — continua legível no JSON. O Supabase protege o acesso com login,
+  RLS e MFA, mas não cifra esses campos para a própria profissional.
+- O sistema roda no navegador, sem servidor de aplicação. A proteção depende de
+  você manter o computador protegido, usar o site em HTTPS e guardar bem os
+  backups.
+- Isto não substitui prontuário eletrônico certificado, assinatura digital nem
+  as obrigações do CFP/LGPD.
 
-Na prática: use uma senha que você não usa em mais nada, mantenha o computador
-protegido, guarde os backups em local seguro e nunca compartilhe o arquivo JSON.
-Este sistema não substitui prontuário eletrônico certificado, assinatura digital
-nem as obrigações do CFP/LGPD.
+## Verificação em duas etapas (MFA)
+
+Se você ativou o MFA na sua conta do Supabase, o login passa a pedir um código
+de 6 números do aplicativo autenticador. O mesmo código é pedido antes de
+**importar um backup** e antes de **trocar a senha do prontuário**
+(reautenticação). Isso vale também no banco: as políticas `aal2` em
+`supabase/schema.sql` impedem ler ou gravar dados com um token que só passou
+pela senha.
+
+- Onde ativar: painel do Supabase → **Authentication → Users** → seu usuário →
+  **MFA** → fator **TOTP**. Ou pelo site, em **Ativar verificação em duas
+  etapas** na sidebar.
+- Guarde os **códigos de recuperação** que o Supabase mostrar. Sem eles e sem o
+  celular, só redefinindo a conta no painel.
+- O passo a passo completo está em `supabase/COMO_CONFIGURAR.md`.
+
+## Como funciona a nuvem
+
+- **Login obrigatório:** a tela **Bem-vinda** tem fundo opaco; clicar fora,
+  apertar ESC ou usar atalhos não abre o sistema. O título é só "Bem-vinda".
+- **Só contas criadas por você:** o Google foi removido do site e desligado no
+  Supabase. Não existe "Continuar sem conectar".
+- **Nuvem é a fonte da verdade:** ao entrar, os dados da nuvem substituem os do
+  navegador. Se a conta for nova, ela começa vazia e recebe um retrato vazio —
+  os dados que estavam no computador **não** são enviados.
+- **Sem subida automática:** nada do navegador sobe sozinho. Para levar dados,
+  use **Importar backup**, que pede senha da conta e código do aplicativo.
+- **Sair limpa tudo:** o botão **Sair** apaga os dados locais deste navegador,
+  tranca o prontuário e volta para a tela de login.
+- **Trilha:** cada ação sensível gera um registro em `public.auditoria`, que não
+  pode ser apagado ou editado pelo site.
 
 ## Como usar WhatsApp e recibos
 
@@ -240,8 +290,9 @@ uma alteração. Ele fica só neste navegador — não substitui o **Exportar ba
 
 **Senha:** se você já usava a versão anterior, entre normalmente uma vez. A senha
 antiga continua funcionando e é convertida para o formato mais forte sem você
-precisar fazer nada. Se esquecer a senha, será preciso limpar a chave
-`saas_seguranca_senha` manualmente no navegador (as evoluções continuam no backup).
+precisar fazer nada; as evoluções legadas são cifradas nessa primeira abertura.
+Se esquecer a senha do prontuário, não há recuperação — as evoluções cifradas
+continuam no backup, mas sem a senha não podem ser lidas.
 
 **Celular:** com o site no ar em HTTPS, abra o endereço no celular e use o menu
 do navegador:
@@ -263,35 +314,53 @@ internet. As alterações são sincronizadas com a nuvem quando há conexão.
 
 ## Nuvem e publicação (estado atual)
 
-1. ✅ Projeto Supabase criado, tabela `dados` com RLS e usuário de acesso.
-2. ✅ `js/config.js` preenchido com a URL do projeto e a chave **anon**;
-   `usarBackend: true`. A chave `service_role` não foi usada.
-3. ✅ Repositório GitHub criado, primeiro commit feito e push realizado na branch `main`.
-4. ⏳ Falta ativar em **GitHub → Settings → Pages → Source = GitHub Actions**
-   e conferir o site no ar.
-5. ⏳ Ao abrir o endereço publicado, entre com e-mail/senha e escolha se usa os
-   dados da nuvem ou os deste navegador.
+1. ✅ Projeto Supabase criado; tabelas `dados` e `auditoria` com RLS, função de
+   MFA e usuário de acesso criado por você.
+2. ✅ Login com e-mail/senha obrigatório, com código de 6 números quando o MFA
+   estiver ativo. Google removido do site e desligado no painel.
+3. ✅ `js/config.js` preenchido com a URL do projeto e a chave **anon**;
+   `usarBackend: true`. A chave `service_role` nunca foi usada.
+4. ✅ Nuvem como fonte da verdade: sem "Continuar sem conectar" e sem subida
+   automática de dados locais.
+5. ✅ Evoluções cifradas (AES-GCM), backup versão 4, trilha no banco e CSP real.
+6. ✅ Site publicado em https://myttoz.github.io/Saas-psicologia/ e release
+   automática por tag.
 
 > A chave anon é pública e pode ficar no site. Cada projeto Supabase tem as
 > próprias chaves: as do projeto de Finanças não servem aqui.
 
+## Novidades de cada versão (release)
+
+Ao empurrar uma tag `v*`, o GitHub cria a release e atualiza o feed:
+https://github.com/Myttoz/Saas-psicologia/releases.atom
+
+1. Faça as alterações e rode `git add .`, `git commit -m "mensagem"` e
+   `git push origin main` (isso publica o site).
+2. Rode `git tag -a v1.0.0 -m "v1.0.0"` e `git push origin v1.0.0`
+   (isso publica a release).
+3. As notas vêm de `RELEASE_NOTES_v1.0.0.md`. Para a próxima versão, crie
+   `RELEASE_NOTES_v1.1.0.md`, use a tag `v1.1.0` e assim por diante.
+
+> Se o `git push` pedir usuário/senha, use um token do GitHub com permissões
+> `repo` e `workflow`.
+
 ## Próximos blocos (a desenvolver)
 
-1. Ativar o GitHub Pages e testar o sistema no ar.
-2. Gestão Anual (criação de anos limpos e exclusão com confirmação).
+1. Gestão Anual (criação de anos limpos e exclusão com confirmação).
 
 ## Versionamento (Git)
 
-O primeiro commit foi feito na branch `main` e contém todas as fases. A partir
-de agora, cada etapa concluída gera um novo commit. A pasta `Livia/` continua
-fora do versionamento (está no `.gitignore`).
+Cada etapa concluída gera um commit na branch `main`. A pasta `Livia/`
+continua fora do versionamento (está no `.gitignore`). Depois do push da
+branch, empurre a tag `v*` para gerar a release automática.
 
-Comandos úteis para conferir o estado:
+Comandos úteis:
 
 ```bash
 git status                  # o que mudou
 git diff                    # mudanças ainda não confirmadas
 git log --oneline           # histórico dos commits
+git tag -l                  # versões já marcadas
 ```
 
 > A pasta `Livia/` (documentos pessoais) e `backup-*.json` estão no

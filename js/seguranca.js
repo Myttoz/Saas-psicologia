@@ -1,12 +1,17 @@
 // ============================================================================
-// Segurança local do prontuário — senha com PBKDF2 + trilha de acesso
-// A senha não é mais guardada com hash simples: agora usa PBKDF2-SHA256 com
-// sal aleatória e muitas iterações. Ainda é um bloqueio local: login/RLS e
-// criptografia dos dados em banco virão com o Supabase.
+// Segurança do prontuário — senha PBKDF2 + chave AES-GCM + trilha de acesso
+//
+// A senha do prontuário continua sendo conferida com PBKDF2, mas agora ela
+// também gera (via Cripto) a chave que cifra as evoluções. A chave fica só na
+// memória enquanto o prontuário está desbloqueado. O registro da chave (sal +
+// conferência cifrada) vai no backup e na nuvem — a senha em texto nunca é
+// salva, e não existe recuperação se ela for esquecida.
+//
+// O código PBKDF2 em JavaScript puro abaixo fica apenas para abrir registros
+// criados nas versões antigas. Registros novos usam WebCrypto (600.000 it.).
 // ============================================================================
 
-// ---------- Criptografia em JavaScript puro (funciona em file://) ----------
-// SHA-256 + HMAC + PBKDF2 implementados aqui para não depender de servidor.
+// ---------- PBKDF2 antigo, somente para compatibilidade ----------
 
 var SEG_K = [
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
@@ -207,14 +212,18 @@ function seg_conferir(senha, registro) {
   return segurancaModulo.hash(senha) === registro;
 }
 
+// ---------- Módulo ----------
+
 var segurancaModulo = {
 
   CHAVE_SENHA: 'saas_seguranca_senha',
+  CHAVE_CHAVE: 'saas_cripto_chave',
   CHAVE_TRILHA: 'saas_seguranca_trilha',
   CHAVE_BLOQUEIO: 'saas_seguranca_bloqueio',
-  INATIVIDADE: 15 * 60 * 1000, // 15 minutos
+  INATIVIDADE: 15 * 60 * 1000,
 
   desbloqueado: false,
+  chaveAes: null,
   ultimaAtividade: 0,
   tentativas: 0,
   bloqueioAte: 0,
@@ -223,7 +232,6 @@ var segurancaModulo = {
   relogio: null,
 
   init: function() {
-    // O bloqueio por tentativas dura mesmo se a pessoa recarregar a página.
     try {
       var ate = Number(sessionStorage.getItem(this.CHAVE_BLOQUEIO) || 0);
       if (ate > Date.now()) this.bloqueioAte = ate;
@@ -231,6 +239,7 @@ var segurancaModulo = {
     } catch (e) {}
     this.iniciarRelogio();
     this.renderTrilha();
+    this.carregarTrilhaRemota();
   },
 
   iniciarRelogio: function() {
@@ -241,6 +250,8 @@ var segurancaModulo = {
   verificarInatividade: function() {
     if (this.desbloqueado && Date.now() - this.ultimaAtividade > this.INATIVIDADE) {
       this.desbloqueado = false;
+      this.chaveAes = null;
+      if (typeof prontuarioModulo !== 'undefined') prontuarioModulo.limparCache();
       this.registrar('Bloqueio automático por inatividade');
       this.renderTrilha();
       app.toast('Prontuário bloqueado por inatividade.');
@@ -249,11 +260,15 @@ var segurancaModulo = {
   },
 
   estaDesbloqueado: function() {
-    return this.desbloqueado;
+    return this.desbloqueado && !!this.chaveAes;
   },
 
   registrarAtividade: function() {
     this.ultimaAtividade = Date.now();
+  },
+
+  criptografiaDisponivel: function() {
+    return typeof Cripto !== 'undefined' && Cripto.disponivel();
   },
 
   // ---------- Senha ----------
@@ -266,27 +281,56 @@ var segurancaModulo = {
     return !!this.lerHash();
   },
 
-  // Formato guardado: pbkdf2$iteracoes$saltEmHex$hashEmHex
+  // Prepara pbkdf2$iteracoes$salt$hash sem gravar. Separar preparação de
+  // gravação permite trocar senha e recifrar as evoluções de forma atômica.
+  prepararRegistroSenha: function(senha) {
+    if (this.criptografiaDisponivel()) return Cripto.criarRegistroSenha(senha);
+    return Promise.resolve(seg_criarRegistro(senha));
+  },
+
   salvarRegistro: function(senha) {
-    try { localStorage.setItem(this.CHAVE_SENHA, seg_criarRegistro(senha)); } catch (e) {}
+    var self = this;
+    return this.prepararRegistroSenha(senha).then(function(registro) {
+      try { localStorage.setItem(self.CHAVE_SENHA, registro); } catch (e) {}
+      return registro;
+    });
   },
 
-  // Confere a senha digitada com o registro salvo (aceita o formato antigo)
   verificarSenha: function(senha) {
-    return seg_conferir(senha, this.lerHash());
+    var registro = this.lerHash();
+    if (!registro) return Promise.resolve(false);
+    if (this.criptografiaDisponivel() && registro.indexOf('pbkdf2$') === 0) {
+      return Cripto.conferirRegistroSenha(senha, registro);
+    }
+    return Promise.resolve(seg_conferir(senha, registro));
   },
 
-  // Se a senha veio da versão antiga, troca pelo registro forte no primeiro acesso
+  // Sobe para 600.000 iterações e cria o registro da chave quando a pessoa já
+  // vinha da versão anterior. A senha não muda.
   migrarSeNecessario: function(senha) {
     var atual = this.lerHash();
-    if (!atual || atual.indexOf('pbkdf2$') === 0) return false;
-    this.salvarRegistro(senha);
-    this.registrar('Senha atualizada para proteção mais forte');
-    return true;
+    var self = this;
+    if (!atual) return Promise.resolve(false);
+
+    if (atual.indexOf('pbkdf2$') !== 0) {
+      return this.salvarRegistro(senha).then(function() {
+        self.registrar('Senha atualizada para proteção mais forte');
+        return true;
+      });
+    }
+
+    if (this.criptografiaDisponivel()) {
+      return Cripto.migrarRegistroSenha(senha, atual).then(function(novo) {
+        if (!novo) return false;
+        try { localStorage.setItem(self.CHAVE_SENHA, novo); } catch (e) {}
+        self.registrar('Senha atualizada para proteção mais forte');
+        return true;
+      });
+    }
+    return Promise.resolve(false);
   },
 
   // Mantido SOMENTE para reconhecer senhas criadas antes do PBKDF2.
-  // Não é usado para senhas novas nem para conferir acesso diretamente.
   hash: function(texto) {
     var sal = 'saas-livia-prontuario-v2|';
     var s = sal + String(texto);
@@ -300,17 +344,69 @@ var segurancaModulo = {
     return h1.toString(16) + '-' + h2.toString(16);
   },
 
-  // Só troca a senha quem está desbloqueado e sabe a senha atual.
-  trocarSenha: function(nova, atual) {
-    if (!nova || String(nova).length < 4) return false;
-    if (!this.estaDesbloqueado() || !this.verificarSenha(atual)) return false;
-    this.salvarRegistro(nova);
-    this.registrar('Senha de acesso alterada');
-    this.renderTrilha();
+  // ---------- Registro da chave AES ----------
+
+  lerRegistroChave: function() {
+    try { return localStorage.getItem(this.CHAVE_CHAVE) || ''; } catch (e) { return ''; }
+  },
+
+  salvarRegistroChave: function(registro) {
+    try { localStorage.setItem(this.CHAVE_CHAVE, registro); } catch (e) {}
+  },
+
+  // Usado quando chega um backup ou um carregamento da nuvem.
+  aplicarRegistroChave: function(registro) {
+    var valor = String(registro || '');
+    if (!valor) return false; // backup antigo: mantém a chave atual
+    if (!this.criptografiaDisponivel() || !Cripto.registroValido(valor)) return false;
+    this.salvarRegistroChave(valor);
+    this.desbloqueado = false;
+    this.chaveAes = null;
+    if (typeof prontuarioModulo !== 'undefined') prontuarioModulo.limparCache();
     return true;
   },
 
-  // Exige acesso. Se estiver bloqueado, abre o modal e guarda o que fazer depois.
+  // Prepara uma chave nova sem gravar o registro (usado na troca de senha).
+  prepararChave: function(senha) {
+    if (!this.criptografiaDisponivel()) {
+      return Promise.reject(new Error(
+        'Este navegador não oferece criptografia. Abra o site pelo endereço HTTPS.'
+      ));
+    }
+    return Cripto.criarRegistroChave(senha);
+  },
+
+  // Cria uma chave nova (primeira criação) e grava o registro.
+  renovarChave: function(senha) {
+    var self = this;
+    return this.prepararChave(senha).then(function(resultado) {
+      self.salvarRegistroChave(resultado.registro);
+      return resultado.chave;
+    });
+  },
+
+  // Abre a chave existente ou cria uma quando ainda não houver registro.
+  derChave: function(senha) {
+    var registro = this.lerRegistroChave();
+    if (!registro) return this.renovarChave(senha);
+    if (!this.criptografiaDisponivel()) {
+      return Promise.reject(new Error(
+        'Não foi possível abrir as evoluções: este navegador não oferece criptografia. Abra o site pelo HTTPS.'
+      ));
+    }
+    if (!Cripto.registroValido(registro)) {
+      return Promise.reject(new Error(
+        'O registro da chave está corrompido. Não é possível abrir as evoluções com segurança.'
+      ));
+    }
+    return Cripto.abrirRegistroChave(registro, senha).then(function(chave) {
+      if (!chave) throw new Error('Não foi possível abrir a chave com essa senha.');
+      return chave;
+    });
+  },
+
+  // ---------- Fluxo da tela de senha ----------
+
   exigirAcesso: function(callback) {
     if (!this.temSenha()) {
       this.modo = 'criar';
@@ -318,7 +414,7 @@ var segurancaModulo = {
       this.mostrarModal();
       return false;
     }
-    if (!this.desbloqueado) {
+    if (!this.estaDesbloqueado()) {
       this.modo = 'desbloquear';
       this.aposDesbloqueio = callback || null;
       this.mostrarModal();
@@ -331,22 +427,16 @@ var segurancaModulo = {
 
   mostrarModal: function() {
     var criar = this.modo === 'criar';
-
     var titulo = document.getElementById('senhaTitulo');
-    if (titulo) titulo.textContent = criar ? 'Criar senha de acesso' : 'Desbloquear prontuário';
-
+    if (titulo) titulo.textContent = criar ? 'Criar senha do prontuário' : 'Desbloquear prontuário';
     var aviso = document.getElementById('senhaAviso');
     if (aviso) aviso.style.display = criar ? 'block' : 'none';
-
     var confirmarGroup = document.getElementById('grupoConfirmarSenha');
     if (confirmarGroup) confirmarGroup.style.display = criar ? 'block' : 'none';
-
     var label = document.getElementById('labelNovaSenha');
     if (label) label.textContent = criar ? 'Crie uma senha' : 'Digite sua senha';
-
     var botao = document.getElementById('senhaBotao');
     if (botao) botao.textContent = criar ? 'Criar senha' : 'Entrar';
-
     var nova = document.getElementById('senhaNova');
     if (nova) nova.value = '';
     var confirmar = document.getElementById('senhaConfirmar');
@@ -365,76 +455,117 @@ var segurancaModulo = {
     el.style.display = texto ? 'block' : 'none';
   },
 
+  mensagemTroca: function(texto, erro) {
+    var el = document.getElementById('trocaSenhaErro');
+    if (!el) return;
+    el.textContent = texto || '';
+    el.className = 'senha-erro' + (erro ? ' erro' : '');
+    el.style.display = texto ? 'block' : 'none';
+  },
+
   confirmar: function() {
     if (this.modo === 'criar') return this.criarSenha();
     return this.desbloquear();
   },
 
   criarSenha: function() {
-    var nova = document.getElementById('senhaNova');
-    var confirmar = document.getElementById('senhaConfirmar');
-    var senha = nova ? nova.value : '';
+    var self = this;
+    var novaEl = document.getElementById('senhaNova');
+    var confirmarEl = document.getElementById('senhaConfirmar');
+    var senha = novaEl ? novaEl.value : '';
 
     if (senha.length < 4) {
       this.mensagem('Use pelo menos 4 caracteres.', true);
-      return false;
+      return Promise.resolve(false);
     }
-    if (senha !== (confirmar ? confirmar.value : '')) {
+    if (senha !== (confirmarEl ? confirmarEl.value : '')) {
       this.mensagem('As senhas não coincidem.', true);
-      return false;
+      return Promise.resolve(false);
     }
 
-    this.salvarRegistro(senha);
-    this.desbloqueado = true;
-    this.tentativas = 0;
-    this.bloqueioAte = 0;
-    try { sessionStorage.removeItem(this.CHAVE_BLOQUEIO); } catch (e) {}
-    this.registrarAtividade();
-    this.registrar('Senha de acesso criada');
-    app.fecharModal('modalSenha');
-    app.toast('Senha criada. Prontuário desbloqueado.');
-    this.renderTrilha();
-    this.executarPendente();
-    return false;
+    return this.salvarRegistro(senha)
+      .then(function() { return self.renovarChave(senha); })
+      .then(function(chave) {
+        self.chaveAes = chave;
+        self.desbloqueado = true;
+        self.tentativas = 0;
+        self.bloqueioAte = 0;
+        try { sessionStorage.removeItem(self.CHAVE_BLOQUEIO); } catch (e) {}
+        self.registrarAtividade();
+        if (typeof prontuarioModulo !== 'undefined' && prontuarioModulo.migrarParaChave) {
+          return prontuarioModulo.migrarParaChave(chave);
+        }
+        return null;
+      })
+      .then(function() {
+        if (typeof Store !== 'undefined') Store.salvar();
+        self.registrar('Senha de acesso criada');
+        app.fecharModal('modalSenha');
+        app.toast('Senha criada. Evoluções protegidas com criptografia.');
+        self.renderTrilha();
+        if (typeof prontuarioModulo !== 'undefined') prontuarioModulo.render();
+        self.executarPendente();
+        return true;
+      })
+      .catch(function(erro) {
+        self.mensagem(erro.message || 'Não foi possível criar a senha.', true);
+        return false;
+      });
   },
 
   desbloquear: function() {
+    var self = this;
     if (Date.now() < this.bloqueioAte) {
       this.mensagem('Aguarde alguns segundos e tente novamente.', true);
-      return false;
+      return Promise.resolve(false);
     }
 
     var nova = document.getElementById('senhaNova');
     var digitada = nova ? nova.value : '';
 
-    if (!this.verificarSenha(digitada)) {
-      this.tentativas++;
-      this.registrar('Tentativa de acesso com senha incorreta');
-      if (this.tentativas >= 3) {
-        this.bloqueioAte = Date.now() + 30000;
-        this.tentativas = 0;
-        try { sessionStorage.setItem(this.CHAVE_BLOQUEIO, String(this.bloqueioAte)); } catch (e) {}
-        this.mensagem('Três tentativas erradas. Aguarde 30 segundos.', true);
-      } else {
-        this.mensagem('Senha incorreta. Tente novamente.', true);
+    return this.verificarSenha(digitada).then(function(ok) {
+      if (!ok) {
+        self.tentativas++;
+        self.registrar('Tentativa de acesso com senha incorreta');
+        if (self.tentativas >= 3) {
+          self.bloqueioAte = Date.now() + 30000;
+          self.tentativas = 0;
+          try { sessionStorage.setItem(self.CHAVE_BLOQUEIO, String(self.bloqueioAte)); } catch (e) {}
+          self.mensagem('Três tentativas erradas. Aguarde 30 segundos.', true);
+        } else {
+          self.mensagem('Senha incorreta. Tente novamente.', true);
+        }
+        if (nova) { nova.value = ''; try { nova.focus(); } catch (e) {} }
+        self.renderTrilha();
+        return false;
       }
-      if (nova) { nova.value = ''; try { nova.focus(); } catch (e) {} }
-      this.renderTrilha();
-      return false;
-    }
 
-    this.desbloqueado = true;
-    this.tentativas = 0;
-    this.bloqueioAte = 0;
-    try { sessionStorage.removeItem(this.CHAVE_BLOQUEIO); } catch (e) {}
-    this.registrarAtividade();
-    this.migrarSeNecessario(digitada);
-    this.registrar('Desbloqueio do prontuário');
-    app.fecharModal('modalSenha');
-    app.toast('Prontuário desbloqueado.');
-    this.renderTrilha();
-    this.executarPendente();
-    return false;
+      return self.derChave(digitada).then(function(chave) {
+        self.chaveAes = chave;
+        self.desbloqueado = true;
+        self.tentativas = 0;
+        self.bloqueioAte = 0;
+        try { sessionStorage.removeItem(self.CHAVE_BLOQUEIO); } catch (e) {}
+        self.registrarAtividade();
+        return Promise.all([
+          self.migrarSeNecessario(digitada),
+          (typeof prontuarioModulo !== 'undefined' && prontuarioModulo.migrarParaChave) ?
+            prontuarioModulo.migrarParaChave(chave) : Promise.resolve(false)
+        ]);
+      }).then(function() {
+        self.registrar('Desbloqueio do prontuário');
+        if (typeof Store !== 'undefined') Store.salvar();
+        app.fecharModal('modalSenha');
+        app.toast('Prontuário desbloqueado.');
+        self.renderTrilha();
+        if (typeof prontuarioModulo !== 'undefined') prontuarioModulo.render();
+        self.executarPendente();
+        return true;
+      });
+    }).catch(function(erro) {
+      self.mensagem(erro.message || 'Não foi possível desbloquear.', true);
+      return false;
+    });
   },
 
   executarPendente: function() {
@@ -446,10 +577,104 @@ var segurancaModulo = {
   bloquear: function() {
     if (!this.desbloqueado) return;
     this.desbloqueado = false;
+    this.chaveAes = null;
+    if (typeof prontuarioModulo !== 'undefined') prontuarioModulo.limparCache();
     this.registrar('Bloqueio manual');
     this.renderTrilha();
     if (typeof prontuarioModulo !== 'undefined') prontuarioModulo.render();
     app.toast('Prontuário bloqueado.');
+  },
+
+  // ---------- Troca de senha com recifração ----------
+
+  solicitarTrocaSenha: function() {
+    var self = this;
+    var abrir = function() {
+      var atual = document.getElementById('trocaSenhaAtual');
+      var nova = document.getElementById('trocaSenhaNova');
+      var conf = document.getElementById('trocaSenhaConfirmar');
+      if (atual) atual.value = '';
+      if (nova) nova.value = '';
+      if (conf) conf.value = '';
+      self.mensagemTroca('');
+      app.abrirModal('modalTrocarSenha');
+      if (atual) { try { atual.focus(); } catch (e) {} }
+    };
+
+    // A senha da conta é confirmada antes de mexer na chave de todas as evoluções.
+    if (typeof Backend !== 'undefined' && Backend.configurado && Backend.configurado() &&
+        Backend.conectado && Backend.conectado()) {
+      Backend.reautenticar(abrir);
+      return;
+    }
+    abrir();
+  },
+
+  trocarSenha: function(nova, atual) {
+    var self = this;
+    if (!nova || String(nova).length < 4) return Promise.resolve(false);
+    if (!this.estaDesbloqueado()) return Promise.resolve(false);
+
+    return this.verificarSenha(atual).then(function(ok) {
+      if (!ok) return false;
+      // Nada é gravado antes da recifração terminar. Se ela falhar, a senha e
+      // a chave antigas continuam valendo e nenhuma evolução fica ilegível.
+      return Promise.all([
+        self.prepararRegistroSenha(nova),
+        self.prepararChave(nova)
+      ]).then(function(resultados) {
+        var registroNovo = resultados[0];
+        var chaveNova = resultados[1].chave;
+        var registroChaveNovo = resultados[1].registro;
+        var antiga = self.chaveAes;
+        var promessa = (typeof prontuarioModulo !== 'undefined' && prontuarioModulo.recifrar) ?
+          prontuarioModulo.recifrar(antiga, chaveNova) : Promise.resolve(true);
+        return promessa.then(function() {
+          try { localStorage.setItem(self.CHAVE_SENHA, registroNovo); } catch (e) {}
+          self.salvarRegistroChave(registroChaveNovo);
+          self.chaveAes = chaveNova;
+          if (typeof Store !== 'undefined') Store.salvar();
+          self.registrar('Senha de acesso alterada — evoluções recifradas');
+          self.renderTrilha();
+          return true;
+        });
+      });
+    }).catch(function() {
+      return false;
+    });
+  },
+
+  confirmarTrocaSenha: function() {
+    var self = this;
+    var atual = document.getElementById('trocaSenhaAtual');
+    var nova = document.getElementById('trocaSenhaNova');
+    var conf = document.getElementById('trocaSenhaConfirmar');
+    var senhaAtual = atual ? atual.value : '';
+    var senhaNova = nova ? nova.value : '';
+    var confirmacao = conf ? conf.value : '';
+
+    if (senhaNova.length < 4) {
+      this.mensagemTroca('Use pelo menos 4 caracteres na nova senha.', true);
+      return false;
+    }
+    if (senhaNova !== confirmacao) {
+      this.mensagemTroca('As novas senhas não coincidem.', true);
+      return false;
+    }
+    if (senhaNova === senhaAtual) {
+      this.mensagemTroca('Escolha uma senha diferente da atual.', true);
+      return false;
+    }
+
+    this.trocarSenha(senhaNova, senhaAtual).then(function(ok) {
+      if (!ok) {
+        self.mensagemTroca('A senha atual está incorreta ou a criptografia falhou.', true);
+        return;
+      }
+      app.fecharModal('modalTrocarSenha');
+      app.toast('Senha trocada. Guarde a nova em local seguro.');
+    });
+    return false;
   },
 
   // ---------- Trilha de acesso ----------
@@ -468,11 +693,40 @@ var segurancaModulo = {
     var trilha = this.lerTrilha();
     trilha.unshift({
       ts: new Date().toISOString(),
-      acao: acao,
-      detalhe: detalhe || ''
+      acao: String(acao),
+      detalhe: String(detalhe || '')
     });
     if (trilha.length > 500) trilha.length = 500;
     try { localStorage.setItem(this.CHAVE_TRILHA, JSON.stringify(trilha)); } catch (e) {}
+    if (typeof Backend !== 'undefined' && Backend.registrarAuditoria) {
+      Backend.registrarAuditoria(acao, detalhe);
+    }
+  },
+
+  // Junta a trilha do banco com a deste navegador, sem duplicar eventos.
+  carregarTrilhaRemota: function() {
+    if (typeof Backend === 'undefined' || !Backend.carregarAuditoria) return;
+    if (!Backend.configurado || !Backend.configurado() || !Backend.conectado || !Backend.conectado()) return;
+    var self = this;
+    Backend.carregarAuditoria().then(function(lista) {
+      if (!lista || !lista.length) return;
+      var trilha = self.lerTrilha();
+      var vistos = {};
+      for (var i = 0; i < trilha.length; i++) {
+        vistos[trilha[i].ts + '|' + trilha[i].acao + '|' + (trilha[i].detalhe || '')] = true;
+      }
+      for (var j = 0; j < lista.length; j++) {
+        var item = lista[j];
+        var chave = (item.criado_em || '') + '|' + (item.acao || '') + '|' + (item.detalhe || '');
+        if (vistos[chave]) continue;
+        trilha.push({ ts: item.criado_em || '', acao: item.acao || '', detalhe: item.detalhe || '', remoto: true });
+        vistos[chave] = true;
+      }
+      trilha.sort(function(a, b) { return String(b.ts).localeCompare(String(a.ts)); });
+      if (trilha.length > 500) trilha.length = 500;
+      try { localStorage.setItem(self.CHAVE_TRILHA, JSON.stringify(trilha)); } catch (e) {}
+      self.renderTrilha();
+    });
   },
 
   mascararNome: function(nome) {
@@ -504,7 +758,8 @@ var segurancaModulo = {
       try { quando = new Date(item.ts).toLocaleString('pt-BR'); } catch (e) { quando = item.ts; }
       html += '<div class="trilha-item">' +
         '<span class="trilha-data">' + escapeHtml(quando) + '</span>' +
-        '<span class="trilha-acao">' + escapeHtml(item.acao) + '</span>' +
+        '<span class="trilha-acao">' + escapeHtml(item.acao) +
+          (item.remoto ? ' <span class="trilha-nuvem">nuvem</span>' : '') + '</span>' +
         (item.detalhe ? '<span class="trilha-detalhe">' + escapeHtml(item.detalhe) + '</span>' : '') +
         '</div>';
     }
