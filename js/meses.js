@@ -1,5 +1,5 @@
 // ============================================================================
-// Meses — navegação mensal clicável (12 meses do ano atual)
+// Meses — navegação mensal clicável (12 meses do ano em uso na Gestão Anual)
 // ============================================================================
 
 var mesesModulo = {
@@ -19,14 +19,24 @@ var mesesModulo = {
   },
 
   init: function() {
-    var atual = this.ano + '-' + String(new Date().getMonth() + 1).padStart(2, '0');
-    this.selecao.lancamentos = atual;
-    this.selecao.resumos = atual;
-    this.selecao.situacao = atual;
+    var ano = (typeof anoAtivo !== 'undefined' && anoAtivo) ? anoAtivo : new Date().getFullYear();
+    this.ano = ano;
+    this.reiniciarSelecao(ano);
+  },
 
-    this.render('mesesLancamentos', 'lancamentos');
-    this.render('mesesResumos', 'resumos');
-    this.render('mesesSituacao', 'situacao');
+  // Chamado quando o ano muda na Gestão Anual: mantém o número do mês, troca o ano.
+  reiniciarSelecao: function(ano) {
+    var mes = new Date().getMonth() + 1;
+    var contexto;
+    for (contexto in this.selecao) {
+      if (!Object.prototype.hasOwnProperty.call(this.selecao, contexto)) continue;
+      var atual = this.selecao[contexto];
+      if (atual && atual.indexOf('-') !== -1) {
+        mes = parseInt(atual.split('-')[1], 10) || mes;
+      }
+      this.selecao[contexto] = ano + '-' + String(mes).padStart(2, '0');
+      this.render(this.idDoElemento(contexto), contexto);
+    }
   },
 
   idDoElemento: function(contexto) {

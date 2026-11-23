@@ -680,12 +680,14 @@ var Backend = {
     }
     return {
       app: 'saas-livia',
-      versao: 4,
+      versao: 5,
       fontes: fontes,
       pacientes: pacientes,
       lancamentos: lancamentos,
       evolucoes: evolucoes,
       dadosProfissional: dadosProfissional,
+      anos: anos,
+      anoAtivo: anoAtivo,
       criptografia: { chave: chave },
       atualizadoEm: new Date().toISOString()
     };

@@ -39,7 +39,7 @@ $alteracoes = Get-GitTexto @('status', '--porcelain')
 if ($alteracoes) {
     Write-Host 'ERRO: ha alteracoes locais nao salvas. Envie-as antes de baixar:' -ForegroundColor Red
     Write-Host (Get-GitTexto @('status', '--short'))
-    Write-Host 'Dica: .\scripts\publicar.ps1 "mensagem"'
+    Write-Host 'Dica: .\scripts\publicar.ps1 (ele sugere a mensagem e a versao)'
     exit 1
 }
 

@@ -798,6 +798,24 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 .empty h3 { font-size: 1.1rem; font-weight: 800; color: var(--text); margin-bottom: .4rem; }
 .empty p { font-size: .9rem; }
 
+/* ---------- Gestão Anual ---------- */
+.anos-lista { display: grid; gap: .75rem; }
+.ano-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .85rem 1rem;
+  background: var(--surface);
+}
+.ano-linha.ativo { border-color: var(--primary); background: var(--primary-light); }
+.ano-linha .cell-sub { margin-top: .25rem; }
+@media (max-width: 768px) {
+  .ano-linha { flex-direction: column; align-items: flex-start; }
+}
+
 /* ---------- Modals ---------- */
 .overlay {
   position: fixed;

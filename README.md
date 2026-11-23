@@ -9,6 +9,7 @@ Feito para abrir no computador e no celular, com os dados guardados na nuvem.
 ## O que o site faz
 
 - 📅 **Agenda semanal** com horários de 7h às 20h e criação rápida de sessões.
+- 🗓️ **Gestão Anual**: crie anos vazios, troque o ano em uso e exclua um ano só com senha e código.
 - ✅ **Painel do dia** com quem falta confirmar, quem deve e o valor a receber.
 - 👥 **Pacientes e convênios** cadastrados com busca e percentuais de repasse.
 - 💰 **Lançamentos e resumos** com o ganho e o repasse de cada atendimento.
@@ -56,10 +57,19 @@ feito por você: o sistema só prepara o texto.
 - Feed do GitHub (alternativa):
   https://github.com/Myttoz/Saas-psicologia/releases.atom
 
-**Regra de versão:** toda mudança vira `commit` + `push origin main` (publica o
-site). Quando houver algo novo para a profissional ver, crie
-`RELEASE_NOTES_vX.Y.Z.md`, uma tag `vX.Y.Z` e rode `git push origin vX.Y.Z`
-(publica a release e atualiza o feed). O passo a passo está em
+**Regra de versão:** rode `subirpsi` no Linux (ou `.\scripts\publicar.ps1` no
+Windows) no lugar do `git push`. Ele sugere a descrição e a versão sozinhos e
+faz commit, push da tag e notas de release. Padrão adotado (exemplo saindo da
+`v1.2.0`):
+
+| Começo da mensagem | Quando usar | Versão |
+|---|---|---|
+| `feat: nova função` | algo novo no site | `v1.3.0` (2º número) |
+| `fix: corrige ...` | conserto de algo que já existia | `v1.2.1` (3º número) |
+| `security:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:` | segurança, textos, visual, organização, testes, automação | `v1.2.1` |
+| `feat!: ...` | muda o jeito de usar / quebra algo | `v2.0.0` (1º número) |
+
+Nunca reaproveite uma versão já publicada. O passo a passo está em
 `supabase/COMO_CONFIGURAR.md`.
 
 ---

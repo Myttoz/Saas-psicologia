@@ -18,13 +18,15 @@ var backupModulo = {
       (segurancaModulo.lerRegistroChave() || '') : '';
     return {
       app: 'saas-livia',
-      versao: 4,
+      versao: 5,
       exportadoEm: new Date().toISOString(),
       fontes: fontes,
       pacientes: pacientes,
       lancamentos: lancamentos,
       evolucoes: evolucoes,
       dadosProfissional: dadosProfissional,
+      anos: anos,
+      anoAtivo: anoAtivo,
       criptografia: { chave: registroChave }
     };
   },
@@ -39,6 +41,10 @@ var backupModulo = {
       lancamentos = [];
       evolucoes = [];
       dadosProfissional = { nome: '', crp: CRP_PADRAO, cpf: '', assinatura: '' };
+      anos = [];
+      anoAtivo = new Date().getFullYear();
+      if (typeof gestaoAnualModulo !== 'undefined') gestaoAnualModulo.garantirAnos();
+      if (typeof mesesModulo !== 'undefined') mesesModulo.ano = anoAtivo;
       if (typeof prontuarioModulo !== 'undefined') prontuarioModulo.limparCache();
       if (typeof segurancaModulo !== 'undefined') {
         segurancaModulo.desbloqueado = false;
@@ -169,9 +175,11 @@ var backupModulo = {
 
     var dp = (dados.dadosProfissional && typeof dados.dadosProfissional === 'object') ? dados.dadosProfissional : {};
     var cripto = (dados.criptografia && typeof dados.criptografia === 'object') ? dados.criptografia : {};
+    var anoAtivoNormal = typeof anoValido === 'function' ? anoValido(dados.anoAtivo) : null;
+    if (anoAtivoNormal === null) anoAtivoNormal = new Date().getFullYear();
     return {
       app: 'saas-livia',
-      versao: 4,
+      versao: 5,
       exportadoEm: this._texto(dados.exportadoEm, 40),
       salvoEm: this._texto(dados.salvoEm, 40),
       atualizadoEm: this._texto(dados.atualizadoEm, 40),
@@ -185,6 +193,8 @@ var backupModulo = {
         cpf: this._texto(dp.cpf, this.LIMITE_CURTO),
         assinatura: this._assinaturaValida(dp.assinatura)
       },
+      anos: typeof normalizarAnos === 'function' ? normalizarAnos(dados.anos) : [],
+      anoAtivo: anoAtivoNormal,
       criptografia: { chave: this._chaveValida(cripto.chave) }
     };
   },
@@ -289,6 +299,13 @@ var backupModulo = {
       lancamentos = limpos.lancamentos;
       evolucoes = limpos.evolucoes;
       dadosProfissional = limpos.dadosProfissional;
+      anos = limpos.anos;
+      anoAtivo = limpos.anoAtivo;
+      if (typeof gestaoAnualModulo !== 'undefined') gestaoAnualModulo.garantirAnos();
+      if (typeof mesesModulo !== 'undefined') {
+        mesesModulo.ano = anoAtivo;
+        mesesModulo.reiniciarSelecao(anoAtivo);
+      }
 
       if (typeof Store !== 'undefined') Store.salvar();
     } finally {

@@ -124,43 +124,53 @@ Se você recriar o projeto, as chaves mudam — aí sim é preciso atualizar
 
 ## 4. Publicar uma nova versão (release automática)
 
-Quando o código mudar, você só precisa dar o push final. As notas de release
-ficam no arquivo `RELEASE_NOTES_vX.Y.Z.md` (a próxima é `v1.1.0`).
+Você não precisa decorar comandos: rode `subirpsi` no Linux ou
+`.\scripts\publicar.ps1` no Windows, de preferência **sem argumentos**. Ele:
 
-1. No terminal da pasta do projeto, rode:
+1. olha os arquivos mudados e sugere a mensagem (`fix:`, `feat:`, `docs:`...);
+2. sugere a versão pelo padrão abaixo;
+3. cria `RELEASE_NOTES_vX.Y.Z.md` a partir do modelo, se ainda não existir;
+4. faz o commit, traz o que há no GitHub, envia `main` (publica o site) e envia a
+   tag (publica a release e atualiza o feed).
+
+**Padrão de mensagem e versão** (exemplo saindo da `v1.2.0`):
+
+| Começo da mensagem | Quando usar | Versão |
+|---|---|---|
+| `feat: ...` | nova função no site | `v1.3.0` (2º número) |
+| `fix: ...` | conserto do que já existia | `v1.2.1` (3º número) |
+| `security: ...` | segurança | `v1.2.1` |
+| `docs: ...` | manual e textos | `v1.2.1` |
+| `style: ...` | aparência | `v1.2.1` |
+| `refactor: ...` / `test: ...` / `chore: ...` | organização, testes, automação | `v1.2.1` |
+| `feat!: ...` | muda o jeito de usar / quebra algo | `v2.0.0` (1º número) |
+
+Se você escrever só a descrição, o atalho coloca o prefixo e avisa qual usou.
+Se não escrever nada, sugere mensagem **e** versão. Exemplos no Linux:
 
 ```bash
-git add .
-git commit -m "sua mensagem"
-git push origin main
+subirpsi                                  # sugere tudo
+subirpsi "corrige o filtro da agenda"     # sugere o prefixo e a versão
+subirpsi "feat: agenda nova" v1.3.0       # usa o que você passou
 ```
 
-2. Depois, crie a versão e empurre a etiqueta:
+Como os atalhos estão em `~/bin`, basta digitar o nome — não precisa escrever o
+caminho. `baixarpsi` traz a última versão. No Windows 11, use
+`.\scripts\publicar.ps1` e `.\scripts\baixar.ps1` (aceitam os mesmos argumentos;
+para simular, use `-Simular`). O atalho recusa versão repetida: nunca
+reaproveite uma tag publicada. Preencha o arquivo de notas com as novidades
+reais antes de publicar.
 
-```bash
-git tag -a v1.1.0 -m "v1.1.0"
-git push origin v1.1.0
-```
+O GitHub cria a release sozinho e atualiza o feed do site:
+**https://myttoz.github.io/Saas-psicologia/releases.rss**
+(cole esse endereço no widget de notícias/RSS do start.me). Se o widget estiver
+com "nenhum artigo disponível", apague o feed antigo dentro do widget e adicione
+este como novo. O mesmo feed também está em `releases.xml`, e o feed do GitHub
+`https://github.com/Myttoz/Saas-psicologia/releases.atom` continua disponível
+como alternativa.
 
-**Atalhos:** no Linux, `subirpsi "mensagem" vX.Y.Z` faz os dois passos juntos;
-`baixarpsi` traz a última versão. Como os atalhos estão em `~/bin`, basta digitar
-o nome — não precisa escrever o caminho. No Windows 11, use
-`.\scripts\publicar.ps1 "mensagem" vX.Y.Z` e `.\scripts\baixar.ps1`.
-Exemplos de mensagem: `"Corrige filtro da agenda"`, `"Ajusta textos do manual"`.
-O atalho recusa versão repetida e exige o arquivo `RELEASE_NOTES_vX.Y.Z.md`.
-
-3. O GitHub cria a release sozinho e atualiza o feed do site:
-   **https://myttoz.github.io/Saas-psicologia/releases.rss**
-   (cole esse endereço no widget de notícias/RSS do start.me). Se o widget
-   estiver com "nenhum artigo disponível", apague o feed antigo dentro do widget
-   e adicione este como novo. O mesmo feed também está em `releases.xml`, e o
-   feed do GitHub `https://github.com/Myttoz/Saas-psicologia/releases.atom`
-   continua disponível como alternativa.
-
-Para a **próxima** versão, use `v1.1.0`, `v1.2.0`... e crie um arquivo
-`RELEASE_NOTES_v1.1.0.md` com as novidades. Se não houver arquivo de notas, o
-GitHub gera um resumo automático. Trocar `main` publica o site; trocar a tag
-publica a release. São coisas diferentes.
+Trocar `main` publica o site; trocar a tag publica a release. São coisas
+diferentes.
 
 > Se o `git push` pedir usuário e senha, use um **Personal Access Token** com
 > permissões `repo` e `workflow` no lugar da senha da conta do GitHub.

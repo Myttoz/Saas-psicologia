@@ -337,9 +337,10 @@ internet. As alterações são sincronizadas com a nuvem quando há conexão.
    `usarBackend: true`. A chave `service_role` nunca foi usada.
 4. ✅ Nuvem como fonte da verdade: sem "Continuar sem conectar" e sem subida
    automática de dados locais.
-5. ✅ Evoluções cifradas (AES-GCM), backup versão 4, trilha no banco e CSP real.
+5. ✅ Evoluções cifradas (AES-GCM), backup versão 5, trilha no banco e CSP real.
 6. ✅ Site publicado em https://myttoz.github.io/Saas-psicologia/ e release
    automática por tag.
+7. ✅ Gestão Anual: anos limpos, troca de ano nos meses e exclusão protegida.
 
 > A chave anon é pública e pode ficar no site. Cada projeto Supabase tem as
 > próprias chaves: as do projeto de Finanças não servem aqui.
@@ -359,25 +360,102 @@ feed antigo dentro do widget e adicione o endereço acima como novo.
 O feed do GitHub (`https://github.com/Myttoz/Saas-psicologia/releases.atom`)
 também existe, mas alguns leitores não conseguem acessá-lo.
 
-1. Faça as alterações e rode `git add .`, `git commit -m "mensagem"` e
-   `git push origin main` (isso publica o site).
-2. Rode `git tag -a v1.0.0 -m "v1.0.0"` e `git push origin v1.0.0`
-   (isso publica a release).
-3. As notas vêm de `RELEASE_NOTES_v1.0.0.md`. Para a próxima versão, crie
-   `RELEASE_NOTES_v1.1.0.md`, use a tag `v1.1.0` e assim por diante.
+1. Rode `subirpsi` no Linux (ou `.\scripts\publicar.ps1` no Windows). Sem
+   argumentos, ele olha os arquivos mudados e sugere a mensagem e a versão.
+   Para escolher a descrição, rode `subirpsi "fix: corrige filtro da agenda"`.
+2. O atalho cria `RELEASE_NOTES_vX.Y.Z.md` a partir do modelo, faz o commit,
+   traz o que há no GitHub, envia `main` (publica o site) e envia a tag
+   (publica a release e atualiza o feed).
+3. Preencha o arquivo de notas com as novidades reais antes de rodar o atalho —
+   é esse texto que aparece na release e no RSS.
+
+### Padrão de mensagens e versões
+
+Adotamos **Conventional Commits + SemVer**. O número cresce conforme o tamanho
+da mudança: **1º** = muda o jeito de usar, **2º** = novidade, **3º** = ajuste ou
+correção. (A ideia inicial era 1º para novidade e 2º para correção; mantivemos
+a lógica, mas seguimos a ordem usada pelo mercado para combinar com o outro
+SaaS e com a automação.)
+
+| Começo da mensagem | Quando usar | Versão (ex.: de `v1.2.0`) |
+|---|---|---|
+| `feat: ...` | nova função no site | `v1.3.0` (2º número) |
+| `fix: ...` | conserto do que já existia | `v1.2.1` (3º número) |
+| `security: ...` | ajuste de acesso ou proteção | `v1.2.1` (3º número) |
+| `docs: ...` | manual, textos, notas | `v1.2.1` (3º número) |
+| `style: ...` | visual (cores, layout) | `v1.2.1` (3º número) |
+| `refactor: ...` | organizar código sem mudar o uso | `v1.2.1` (3º número) |
+| `test: ...` | testes | `v1.2.1` (3º número) |
+| `chore: ...` | automação, scripts, configuração | `v1.2.1` (3º número) |
+| `feat!: ...` (ou `fix!: ...`) | mudança grande que quebra algo | `v2.0.0` (1º número) |
+
+Se você escrever só a descrição (sem prefixo), o atalho escolhe o tipo e avisa
+qual usou. Se não escrever nada, ele sugere mensagem **e** versão. Versão já
+publicada nunca é reaproveitada: o atalho recusa.
 
 > Se o `git push` pedir usuário/senha, use um token do GitHub com permissões
 > `repo` e `workflow`.
 
+## Conferir a trilha de acesso
+
+A tabela da trilha chama **`public.auditoria`** (a outra, `public.dados`, guarda
+o JSON do sistema). Ela registra abertura do prontuário, troca de senha, backup,
+importação, criação, troca e exclusão de ano etc. Não guarda texto clínico.
+
+- **No site:** abra **Prontuário → Trilha de acesso**. Aparecem os registros
+  deste navegador e os que vieram da nuvem.
+- **No Supabase:** **Table Editor → public → auditoria**. Ou, no **SQL Editor**:
+
+```sql
+select criado_em, acao, detalhe
+from public.auditoria
+order by criado_em desc
+limit 50;
+```
+
+No painel você vê as contas; no site cada pessoa vê só os próprios registros.
+A RLS exige o código de 6 números quando a conta ativou MFA.
+
+## Gestão Anual (como usar)
+
+No menu lateral, clique em **Anos**.
+
+- **+ Criar ano novo:** escolha o ano (por exemplo, 2027). Ele começa vazio:
+  nenhum atendimento ou evolução é copiado. O ano novo passa a ser o ano em uso.
+- **Trabalhar neste ano:** muda o ano usado pelos atendimentos, resumos e
+  situação. Os botões de meses continuam com Jan…Dez, agora do ano escolhido.
+- **Excluir ano:** mostra quantos atendimentos e evoluções serão apagados, pede
+  para você digitar o ano e depois pede a senha da conta e o código do celular.
+  Pacientes e convênios não são apagados.
+
+Todas essas ações entram na trilha de acesso. Anos que já têm dados aparecem na
+lista mesmo quando o backup é antigo e ainda não guardava a lista de anos.
+
 ## Próximos blocos (a desenvolver)
 
-1. Gestão Anual (criação de anos limpos e exclusão com confirmação).
+Nenhum por enquanto. A Gestão Anual foi concluída nesta versão.
+
+## Antes de fechar o dia (checklist)
+
+1. Confirmar a verificação em duas etapas nas **duas** contas pelo botão
+   **🔐 Verificação em duas etapas** (a sua já está feita; falta a da outra
+   conta, com o segundo celular).
+2. Cadastrar o **segundo TOTP de reserva** (outro celular/app) e guardar os
+   segredos e as senhas fora do computador, em local seguro.
+3. Entrar com cada conta e conferir que o código de 6 números é pedido no login.
+4. Fazer uma alteração pequena, salvar, dar F5 e conferir na outra máquina que a
+   nuvem trouxe o dado. Conferir também a trilha na tabela `auditoria`.
+5. Testar **Importar backup** (pede senha e código), emitir um recibo e preparar
+   uma mensagem pelo WhatsApp.
+6. Rodar `subirpsi` (ou `publicar.ps1`) para fechar com commit + tag da versão.
 
 ## Versionamento (Git)
 
-Cada etapa concluída gera um commit na branch `main`. A pasta `Livia/`
-continua fora do versionamento (está no `.gitignore`). Depois do push da
-branch, empurre a tag `v*` para gerar a release automática.
+Cada etapa concluída gera um commit na branch `main`. A pasta `Livia/` e a pasta
+`Removidos/` continuam fora do versionamento (estão no `.gitignore`). Use
+`subirpsi` / `publicar.ps1` para não esquecer a tag: o atalho faz commit, push de
+`main` e push da tag, que gera a release automática. O padrão de mensagens e de
+versões está na seção "Novidades de cada versão (release)".
 
 Comandos úteis:
 

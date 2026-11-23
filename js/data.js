@@ -15,6 +15,11 @@ var evolucoes = []; // prontuário: evoluções por sessão (dado sensível)
 var CRP_PADRAO = '04/74163'; // CRP informado pela profissional — aparece no recibo
 var dadosProfissional = { nome: '', crp: CRP_PADRAO, cpf: '', assinatura: '' }; // usado no recibo
 
+// Gestão Anual: anos criados de propósito (podem estar vazios) e ano em uso.
+// Os anos com dados também aparecem mesmo se não estiverem nesta lista.
+var anos = [];
+var anoAtivo = new Date().getFullYear();
+
 var hoje = new Date();
 var hojeStr = hoje.getFullYear() + '-' +
   String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
@@ -58,6 +63,35 @@ function normalizarTexto(texto) {
     .replace(/[òóôõö]/g, 'o')
     .replace(/[ùúûü]/g, 'u')
     .replace(/ç/g, 'c');
+}
+
+// ============================================================================
+// Anos — validação usada pelo site, pelo backup e pela nuvem
+// ============================================================================
+
+function anoValido(valor) {
+  var n = Number(valor);
+  if (!isFinite(n) || Math.floor(n) !== n || n < 1900 || n > 2100) return null;
+  return n;
+}
+
+function normalizarAnos(valor) {
+  if (!Array.isArray(valor)) return [];
+  var saida = [];
+  var vistos = {};
+  for (var i = 0; i < valor.length; i++) {
+    var item = valor[i];
+    var objeto = item && typeof item === 'object' ? item : null;
+    var n = anoValido(objeto ? objeto.ano : item);
+    if (n === null || vistos[n]) continue;
+    vistos[n] = true;
+    saida.push({
+      ano: n,
+      criadoEm: objeto ? String(objeto.criadoEm || '').slice(0, 40) : ''
+    });
+  }
+  saida.sort(function(a, b) { return a.ano - b.ano; });
+  return saida;
 }
 
 // ============================================================================
@@ -120,6 +154,8 @@ var Store = {
       localStorage.setItem('saas_lancamentos', JSON.stringify(lancamentos));
       localStorage.setItem('saas_evolucoes', JSON.stringify(evolucoes));
       localStorage.setItem('saas_dados_profissional', JSON.stringify(dadosProfissional));
+      localStorage.setItem('saas_anos', JSON.stringify(anos));
+      localStorage.setItem('saas_ano_ativo', String(anoAtivo));
     } catch (e) {
       // armazenamento indisponível — ignora silenciosamente
     }
@@ -155,6 +191,10 @@ var Store = {
           assinatura: carregado.assinatura || ''
         };
       }
+      var a = localStorage.getItem('saas_anos');
+      if (a) anos = normalizarAnos(JSON.parse(a));
+      var at = anoValido(localStorage.getItem('saas_ano_ativo'));
+      if (at !== null) anoAtivo = at;
     } catch (e) {
       // ignora
     }

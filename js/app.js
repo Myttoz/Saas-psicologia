@@ -13,7 +13,10 @@ var app = {
     // inicializa drag-to-scroll nas tabelas
     this._setupDragScroll();
 
-    // inicializa os cabeçalhos de meses
+    // gestão anual primeiro: define o ano em uso antes dos cabeçalhos de meses
+    if (typeof gestaoAnualModulo !== 'undefined' && gestaoAnualModulo.inicializar()) {
+      if (typeof Store !== 'undefined') Store.salvar();
+    }
     if (typeof mesesModulo !== 'undefined') mesesModulo.init();
 
     // mostra a data do último backup automático
@@ -62,6 +65,7 @@ var app = {
         agenda: 'Agenda',
         resumos: 'Resumos',
         lancamentos: 'Lançamentos',
+        anos: 'Anos',
         fontes: 'Convênios',
         pacientes: 'Pacientes',
         prontuario: 'Prontuário',
@@ -136,6 +140,9 @@ var app = {
     if (id === 'lancamentos' && typeof lancamentosRender === 'function') {
       if (typeof preencherFontesSelects === 'function') preencherFontesSelects();
       lancamentosRender();
+    }
+    if (id === 'anos' && typeof gestaoAnualModulo !== 'undefined') {
+      gestaoAnualModulo.render();
     }
     if (id === 'situacao' && typeof situacaoModulo !== 'undefined') {
       situacaoModulo.render();
