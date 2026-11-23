@@ -14,19 +14,20 @@ antes de seguir.
 
 ### 1. Onde estamos
 
-O código está pronto e testado. A parte do recibo (CRP `04/74163`, linha para
-assinar à mão e logo como marca d'água) **já foi concluída — NÃO refazer, NÃO
-mexer nisso**.
+O código está pronto e testado. **NÃO refazer, NÃO mexer:** recibo (CRP
+`04/74163`, linha para assinar, marca d'água), senha PBKDF2, backup automático e
+toda a lógica de sincronização.
 
-O que falta é a **etapa de nuvem + publicação**, que já está preparada no código
-mas desligada. O seu trabalho agora é **guiar a usuária** para:
+A etapa de nuvem **já foi configurada aqui**: projeto Supabase criado, tabela
+com RLS, usuário de acesso, `js/config.js` preenchido com URL base e chave anon
+(`usarBackend: true`) e primeiro commit feito na branch `main`.
 
-1. criar o projeto no Supabase,
-2. pegar a URL e a chave `anon`,
-3. preencher `js/config.js` e ligar a nuvem,
-4. criar o repositório no GitHub e fazer o **primeiro commit/push**,
-5. ativar o GitHub Pages,
-6. testar o sistema no ar.
+O seu trabalho agora é **guiar a usuária** apenas para:
+
+1. ligar o remoto e dar o **push da branch `main`**,
+2. ativar o GitHub Pages (Source = GitHub Actions),
+3. abrir o site no ar, entrar com e-mail/senha e escolher a origem dos dados,
+4. depois, se ela quiser, seguir com a Gestão Anual.
 
 O guia detalhado já existe no arquivo `supabase/COMO_CONFIGURAR.md`. Use-o como
 roteiro, mas **não se limite a mandar ela ler**: conduza a conversa, pergunte uma
@@ -104,34 +105,26 @@ Então siga este roteiro:
 - Copiar a chave **anon / public** (começa com `eyJ...`).
 - Reforçar: a chave `service_role` **nunca** entra no site.
 
-**Passo E — preencher a configuração**
-Abra `js/config.js` e deixe assim, com os valores reais dela:
+**Passo E — configuração (JÁ FEITA, pular)**
+`js/config.js` já está com `usarBackend: true`, URL base e chave anon reais. A URL
+veio com `/rest/v1/` e esse final foi removido, porque o `Backend` monta os
+caminhos sozinho. A chave foi conferida: `role: anon`, `ref` igual ao da URL. O
+`teste-backend.js` foi adaptado para validar a config real sem quebrar os testes
+de modo local. Não refazer nada disso.
 
-```js
-var CONFIG = {
-  usarBackend: true,
-  supabaseUrl: 'https://SEU-PROJETO.supabase.co',
-  supabaseAnonKey: 'COLOQUE_AQUI_A_CHAVE_ANON'
-};
-```
-
-- **Atenção aos testes:** rode a bateria de testes **antes** de preencher a
-  configuração, pois `teste-backend.js` espera a config vazia no começo. Depois de
-  preencher com os valores reais, **não rode esse teste como está**; valide abrindo
-  o `index.html` no navegador e confirmando que a tela "Entrar na sua conta"
-  aparece.
-
-**Passo F — publicar**
-- O **primeiro commit já foi feito** e a branch local se chama **`main`**. Não
-  precisa commitar de novo; só configurar o remoto e dar o push.
-- Só com a permissão explícita dela: criar o repositório no GitHub (de preferência
-  com o nome sugerido pelo comando `git remote add origin <URL>` que você vai
-  montar) e fazer o **push da branch `main`**.
+**Passo F — publicar (próximo passo)**
+- O **primeiro commit já foi feito** e a branch local se chama **`main`**.
+- O repositório **já foi criado** pela Lívia:
+  `https://github.com/Myttoz/Saas-psicologia.git`. Só falta ligar o remoto e dar
+  o push da branch `main`:
+  ```bash
+  git remote add origin https://github.com/Myttoz/Saas-psicologia.git
+  git push -u origin main
+  ```
 - Conferir antes: nada de dado real em `Livia/`, nenhum `backup-*.json`, nenhuma
-  chave `service_role`. O `git add -A` é seguro porque `Livia/` está no
-  `.gitignore`.
+  chave `service_role`. O `Livia/` está no `.gitignore` e nunca entra no push.
 - No GitHub: **Settings → Pages → Source = GitHub Actions**. O workflow dispara
-  somente com push na branch `main` — por isso a branch foi renomeada.
+  somente com push na branch `main`.
 - O arquivo `.github/workflows/deploy.yml` já publica sozinho e envia somente
   `index.html`, `css`, `js`, `assets`, manifesto e service worker.
 

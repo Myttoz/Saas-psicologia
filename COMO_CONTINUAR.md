@@ -181,10 +181,13 @@ Projeto: SaaS de gestão de atendimentos (psicóloga). Versão local, ainda sem 
   (`.recibo-linha-assinatura`), para caber a assinatura manuscrita na folha
   impressa; antes ela era uma borda em cima, sem espaço.
 
-**Fase 10 — Nuvem + login + GitHub Pages (bloco atual, preparado, sem commit):**
-- ✅ `js/config.js`: configuração com `usarBackend: false`, URL e chave anon
-  vazias. Enquanto estiver assim, o sistema continua 100% local — nenhuma
-  chamada de rede, nenhuma tela de login.
+**Fase 10 — Nuvem + login + GitHub Pages (configurada, aguardando publicação):**
+- ✅ `js/config.js`: `usarBackend: true`, URL do projeto e chave anon preenchidas.
+  A URL informada pela Lívia veio com o final `/rest/v1/`; foi removido, porque o
+  `Backend` monta os caminhos (`/auth/v1/...`, `/rest/v1/...`) a partir da URL
+  base. A chave foi decodificada e conferida: `role: anon`, `ref` igual ao da URL.
+  A tabela `dados` existe no projeto (consulta anon retornou 401/permissão
+  negada, que é o esperado com RLS). Nenhuma chave `service_role` foi usada.
 - ✅ `js/backend.js`: login via Supabase Auth (`/auth/v1/token?grant_type=password`),
   token e usuário em `sessionStorage`, verificação de sessão em `/auth/v1/user`.
 - ✅ Sincronização em uma linha por usuário na tabela `dados` (JSON): leitura
@@ -248,13 +251,12 @@ Convênios iniciais: Clínica 30%, Particular 70%, Cideslestes 40%, Unimed vazia
 
 ## Próximos blocos (nesta ordem)
 
-1. **Configurar o Supabase e publicar (próximo passo, em andamento)** — seguir
-   `supabase/COMO_CONFIGURAR.md`, preencher `js/config.js` com URL e chave anon,
-   criar o repositório e fazer o **push da branch `main`** (o commit já existe e a
-   branch local já foi renomeada de `master` para `main`, porque o workflow só
-   dispara em `main`). Depois ativar GitHub Pages (Source = GitHub Actions).
-   Antes de publicar, conferir se não há dado real em `Livia/` nem em backup. O
-   prompt para a IA guiar esta etapa está em `PROMPT_PARA_CASA.md`.
+1. **Publicar (próximo passo)** — o Supabase já está configurado e o repositório
+   `https://github.com/Myttoz/Saas-psicologia.git` já foi criado. Falta ligar o
+   remoto, dar o **push da branch `main`** (o workflow só dispara em `main`) e
+   ativar GitHub Pages (Source = GitHub Actions). Conferir antes se não há dado
+   real em `Livia/` nem em backup. O prompt para a IA guiar está em
+   `PROMPT_PARA_CASA.md`.
 2. **Teste da Lívia** no Windows: conferir o recibo em PDF com a **linha de
    assinar de volta** e a **logo centralizada como marca d'água**, o envio da
    confirmação pelo WhatsApp, os cards "Faltam confirmar"/"Quem deve", a troca
@@ -287,16 +289,17 @@ Convênios iniciais: Clínica 30%, Particular 70%, Cideslestes 40%, Unimed vazia
 - PWA/offline **não funciona abrindo o arquivo local** (`file://`); o navegador
   ignora o service worker. Depois de publicar em HTTPS, instalar pelo menu do
   navegador ("Adicionar à tela inicial" / "Instalar app").
-- A nuvem está **preparada, mas desligada**: `js/config.js` está vazio. Sem URL e
-  chave anon preenchidas, não há login, não há envio de dados e nada muda no uso
-  diário. A chave `service_role` do Supabase **nunca** pode entrar no site.
+- A nuvem está **ligada**: `js/config.js` tem URL e chave anon reais. Ao abrir o
+  sistema, aparece a tela de login. A chave `service_role` do Supabase **nunca**
+  pode entrar no site. Cada projeto Supabase tem as próprias chaves — as do
+  projeto de Finanças não servem para este.
 - A sincronização usa **um JSON por profissional** e não é prontuário
   certificado: continue usando Exportar/Importar backup como rede de segurança.
 - A imagem da assinatura é apenas uma foto anexada ao recibo: **não é assinatura
   digital**. Assinatura com gov.br exigiria integração online (HTTPS, credenciais
   e backend), fora desta versão local.
-- O **primeiro commit local já foi feito** (base pronta para publicação: fases
-  1–10, recibo finalizado e nuvem preparada, porém desligada).
-- Nada foi **publicado** ainda: sem remote, sem push, sem GitHub Pages e sem
-  Supabase ativo. Falta só a configuração com as credenciais da Lívia e o push.
+- O **primeiro commit local já foi feito** (fases 1–10 e nuvem ligada). A config
+  real entrou em um commit seguinte, antes do push.
+- Nada foi **publicado** ainda: o remote foi informado, mas o push e a ativação
+  do GitHub Pages são os últimos passos.
 - Nada de Google Script/Google Cloud nesta etapa.

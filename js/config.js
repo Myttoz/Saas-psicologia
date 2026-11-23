@@ -1,13 +1,12 @@
 // ============================================================================
 // Configuração da nuvem (Supabase)
-// Deixe em branco para continuar usando somente o navegador (modo atual).
-// Quando o projeto Supabase estiver pronto, preencha as duas informações abaixo
-// e mude usarBackend para true. A chave "anon" é pública e pode ficar no site:
-// a segurança é feita pelas regras RLS no banco (ver supabase/schema.sql).
+// Project URL: copiada de Project Settings → API (sem o final /rest/v1/).
+// Chave anon: pública, pode ficar no site. A segurança é feita pela RLS no
+// banco (ver supabase/schema.sql). NUNCA colocar a chave service_role aqui.
 // ============================================================================
 
 var CONFIG = {
-  usarBackend: false,
-  supabaseUrl: '',
-  supabaseAnonKey: ''
+  usarBackend: true,
+  supabaseUrl: 'https://wrdkbafdzjsqonyidrwv.supabase.co',
+  supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndyZGtiYWZkempzcW9ueWlkcnd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU0MTIyNDMsImV4cCI6MjExMDk4ODI0M30.sFhoybS6jwyPmcDgGo7UIb0XN__UPbpNnBGPjgbX0bo'
 };

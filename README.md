@@ -121,9 +121,10 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
 - **PWA (preparado)**: manifesto, service worker e ícones já incluídos. Depois de
   publicar em HTTPS, use o menu do navegador **Adicionar à tela inicial** /
   **Instalar app** para abrir como aplicativo e usar offline.
-- **Nuvem (preparada, desligada por padrão)**: login com e-mail/senha e
-  sincronização automática via Supabase. Enquanto `js/config.js` estiver vazio,
-  nada muda no uso diário. O guia está em `supabase/COMO_CONFIGURAR.md`.
+- **Nuvem (ligada)**: login com e-mail/senha e sincronização automática via
+  Supabase. Ao abrir o sistema, aparece a tela "Entrar na sua conta" — use o
+  e-mail e a senha criados no Supabase. O guia está em
+  `supabase/COMO_CONFIGURAR.md`.
 - Menu lateral: Hoje, Agenda, Resumos, Lançamentos, Convênios, Pacientes,
   Prontuário e Situação Paciente.
 - Cabeçalho de meses clicável (12 meses do ano atual) em Lançamentos, Situação Paciente e Resumos.
@@ -228,31 +229,30 @@ nesta versão: continue usando Exportar/Importar backup para levar os dados.
 - Terracota: `#C16A4A`
 - Fundo off-white: `#F7F6F2`
 
-## Como ligar a nuvem e publicar
+## Nuvem e publicação (estado atual)
 
-1. Siga o guia `supabase/COMO_CONFIGURAR.md`: crie o projeto, rode o
-   `supabase/schema.sql`, crie o usuário e copie a URL e a chave **anon**.
-2. Preencha `js/config.js` com essas duas informações e mude `usarBackend`
-   para `true`.
-3. Crie o repositório no GitHub e faça o primeiro commit/push (o workflow
-   `.github/workflows/deploy.yml` já está pronto).
-4. Em **GitHub → Settings → Pages → Source**, escolha **GitHub Actions**.
-5. Abra o endereço publicado, entre com o e-mail/senha e escolha se usa os
+1. ✅ Projeto Supabase criado, tabela `dados` com RLS e usuário de acesso.
+2. ✅ `js/config.js` preenchido com a URL do projeto e a chave **anon**;
+   `usarBackend: true`. A chave `service_role` não foi usada.
+3. ✅ Repositório GitHub criado e primeiro commit feito na branch `main`.
+4. ⏳ Falta ativar em **GitHub → Settings → Pages → Source = GitHub Actions**
+   e conferir o site no ar.
+5. ⏳ Ao abrir o endereço publicado, entre com e-mail/senha e escolha se usa os
    dados da nuvem ou os deste navegador.
 
-> Nada disso foi feito ainda: não há projeto Supabase, chaves, remote nem site
-> no ar. A nuvem está apenas preparada para ser ligada quando você decidir.
+> A chave anon é pública e pode ficar no site. Cada projeto Supabase tem as
+> próprias chaves: as do projeto de Finanças não servem aqui.
 
 ## Próximos blocos (a desenvolver)
 
-1. Configurar o Supabase com as informações reais e publicar no GitHub Pages.
+1. Ativar o GitHub Pages e testar o sistema no ar.
 2. Gestão Anual (criação de anos limpos e exclusão com confirmação).
 
-## Versionamento (Git já inicializado)
+## Versionamento (Git)
 
-O repositório local está criado, mas **ainda não vamos fazer commit**: o
-primeiro commit será feito somente quando o site for lançado na web. Até lá,
-as mudanças ficam salvas como alterações pendentes no computador.
+O primeiro commit foi feito na branch `main` e contém todas as fases. A partir
+de agora, cada etapa concluída gera um novo commit. A pasta `Livia/` continua
+fora do versionamento (está no `.gitignore`).
 
 Comandos úteis para conferir o estado (sem commit):
 
