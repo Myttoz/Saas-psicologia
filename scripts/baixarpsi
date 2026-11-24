@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Traz a versão mais recente do SaaS da psicóloga do GitHub para este computador.
+# Uso: baixarpsi [--dry-run]
+set -euo pipefail
+
+PROJETO="$HOME/Documentos/Pessoal/Saas Psicologa"
+RAMO="main"
+SIMULAR=0
+
+for argumento in "$@"; do
+  case "$argumento" in
+    --dry-run) SIMULAR=1 ;;
+    *)
+      echo "Opção desconhecida: $argumento" >&2
+      echo "Uso: baixarpsi [--dry-run]" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [ ! -d "$PROJETO/.git" ]; then
+  echo "ERRO: pasta do projeto não encontrada: $PROJETO" >&2
+  exit 1
+fi
+cd "$PROJETO"
+
+RAMO_ATUAL="$(git symbolic-ref --short HEAD)"
+if [ "$RAMO_ATUAL" != "$RAMO" ]; then
+  echo "ERRO: você está no ramo '$RAMO_ATUAL'. Esperei '$RAMO'." >&2
+  exit 1
+fi
+
+if [ -n "$(git status --porcelain)" ]; then
+  echo "ERRO: há alterações locais não salvas. Envie-as antes de baixar:" >&2
+  git status --short >&2
+  echo "Dica: subirpsi (ele sugere a mensagem e a versão)" >&2
+  exit 1
+fi
+
+echo "=== baixando a última versão de origin/$RAMO (pull --rebase) ==="
+if [ "$SIMULAR" -eq 1 ]; then
+  echo "SIMULAR: git pull --rebase origin $RAMO"
+elif ! git pull --rebase origin "$RAMO"; then
+  echo "Falha no rebase. Para desfazer: git rebase --abort" >&2
+  exit 1
+fi
+
+echo "OK: sincronizado com $RAMO."

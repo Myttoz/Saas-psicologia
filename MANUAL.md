@@ -368,6 +368,8 @@ internet. As alterações são sincronizadas com a nuvem quando há conexão.
    automática por tag.
 7. ✅ Gestão Anual: anos limpos, troca de ano nos meses e exclusão protegida.
 8. ✅ Recibo oficial da Receita com CPF do paciente e código de verificação.
+9. ✅ Testes dentro do projeto (`tests/`) e conferência automática no GitHub a
+   cada publicação.
 
 > A chave anon é pública e pode ficar no site. Cada projeto Supabase tem as
 > próprias chaves: as do projeto de Finanças não servem aqui.
@@ -460,7 +462,29 @@ lista mesmo quando o backup é antigo e ainda não guardava a lista de anos.
 
 ## Próximos blocos (a desenvolver)
 
-Nenhum por enquanto. A Gestão Anual foi concluída nesta versão.
+- **Privacidade / LGPD**: aviso curto no site, consentimento por paciente e
+  botão para apagar dados com senha e código.
+- **Ficha do paciente mais completa**: nascimento, telefone, responsável e
+  carteira do convênio.
+- **Relatório mensal** pronto para exportar, com entradas, pendências e faltas.
+
+## Como saber se está tudo bem (testes automáticos)
+
+As 17 baterias de teste agora moram na pasta `tests/` do projeto, junto do código —
+não ficam mais só no computador. A cada publicação, o GitHub abre a conferência
+**Conferir testes** e verifica: sintaxe dos arquivos, IDs da tela, login, backup,
+nuvem, WhatsApp, recibo, segurança e padrão de versões.
+
+- Para ver o resultado: https://github.com/Myttoz/Saas-psicologia/actions
+- O selo no topo do `README.md` fica **verde** quando passou.
+- Se algum teste falhar, a conferência fica **vermelha**. Não use essa versão
+  antes de eu conferir o motivo.
+- No computador, rode `node tests/rodar.js` na pasta do projeto para conferir
+  antes de publicar.
+
+Os atalhos `subirpsi` e `baixarpsi` também passaram a morar em `scripts/`
+(versionados e testados). O que está em `~/bin` agora só chama esses arquivos —
+a forma de usar continua exatamente a mesma.
 
 ## Antes de fechar o dia (checklist)
 
@@ -474,7 +498,9 @@ Nenhum por enquanto. A Gestão Anual foi concluída nesta versão.
    nuvem trouxe o dado. Conferir também a trilha na tabela `auditoria`.
 5. Testar **Importar backup** (pede senha e código), preparar um recibo oficial e
    uma mensagem pelo WhatsApp.
-6. Rodar `subirpsi` (ou `publicar.ps1`) para fechar com commit + tag da versão.
+6. Rodar `node tests/rodar.js` e conferir que todas as baterias passaram.
+7. Rodar `subirpsi` (ou `publicar.ps1`) para fechar com commit + tag da versão.
+8. Depois da publicação, conferir o ✅ de **Conferir testes** no GitHub Actions.
 
 ## Versionamento (Git)
 
@@ -491,6 +517,7 @@ git status                  # o que mudou
 git diff                    # mudanças ainda não confirmadas
 git log --oneline           # histórico dos commits
 git tag -l                  # versões já marcadas
+node tests/rodar.js         # roda as 17 baterias de teste
 ```
 
 > A pasta `Livia/` (documentos pessoais) e `backup-*.json` estão no

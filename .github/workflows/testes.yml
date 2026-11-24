@@ -1,0 +1,42 @@
+name: Conferir testes
+
+# Roda sozinho a cada alteração no main e em pull requests. Se qualquer
+# bateria falhar, o GitHub avisa antes de confiar naquela versão.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  conferir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código (com todas as tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar o Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Conferir sintaxe dos arquivos do site
+        run: |
+          for f in js/*.js sw.js tests/*.js; do node --check "$f"; done
+
+      - name: Conferir estrutura (IDs, handlers e CSS)
+        run: node tests/validar-estrutura.js
+
+      - name: Rodar as baterias de teste
+        run: node tests/rodar.js
+
+      - name: Conferir workflows e feed
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 -c "import glob, yaml, xml.etree.ElementTree as ET; [yaml.safe_load(open(f)) for f in glob.glob('.github/workflows/*.yml')]; [ET.parse(f) for f in glob.glob('*.xml')]; print('YAML/XML OK')"

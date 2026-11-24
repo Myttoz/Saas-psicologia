@@ -2,6 +2,8 @@
 
 ![Logo](assets/logo.jpeg)
 
+[![Conferir testes](https://github.com/Myttoz/Saas-psicologia/actions/workflows/testes.yml/badge.svg)](https://github.com/Myttoz/Saas-psicologia/actions/workflows/testes.yml)
+
 Um lugar simples para organizar o dia a dia de uma clínica de psicologia:
 agenda, atendimentos, pacientes, convênios e recebimentos — tudo na mesma tela.
 Feito para abrir no computador e no celular, com os dados guardados na nuvem.
@@ -48,6 +50,15 @@ feito por você: o sistema só prepara o texto.
 
 > Este sistema é uma ferramenta de organização. Ele não substitui as regras do
 > CFP, a LGPD nem assinatura digital.
+
+## Conferência automática
+
+O GitHub roda os testes sozinhos a cada publicação. O selo no topo fica **verde**
+quando tudo passou. Para ver cada conferência, abra
+https://github.com/Myttoz/Saas-psicologia/actions e procure **Conferir testes**.
+Se aparecer vermelho, não use aquela versão até eu conferir.
+
+No computador, a conferência também pode ser feita com `node tests/rodar.js`.
 
 ## Documentação e novidades
 

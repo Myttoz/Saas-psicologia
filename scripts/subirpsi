@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+# Sobe as alterações do SaaS da psicóloga para o GitHub.
+#
+# Padrão adotado (Conventional Commits + versão SemVer):
+#   feat:    nova função        -> v1.4.0  (segundo número sobe)
+#   fix:     correção           -> v1.3.1  (terceiro número sobe)
+#   security: segurança         -> v1.3.1
+#   docs:    manual/textos      -> v1.3.1
+#   style:   aparência          -> v1.3.1
+#   chore:   automação/config   -> v1.3.1
+#   refactor: reorganizar       -> v1.3.1
+#   test:    testes             -> v1.3.1
+#   feat!:   mudança grande     -> v2.0.0  (primeiro número sobe)
+#
+# Uso:
+#   subirpsi                                   -> sugere mensagem e versão
+#   subirpsi "fix: corrige filtro"             -> sugere só a versão
+#   subirpsi "feat: agenda nova" v1.4.0        -> usa o que você passou
+#   subirpsi "..." v1.4.0 --dry-run            -> só mostra o que faria
+set -euo pipefail
+
+PROJETO="$HOME/Documentos/Pessoal/Saas Psicologa"
+RAMO="main"
+TIPOS="feat|fix|security|docs|style|refactor|test|chore"
+
+MENSAGEM=""
+VERSAO=""
+SIMULAR=0
+for argumento in "$@"; do
+  case "$argumento" in
+    --dry-run) SIMULAR=1 ;;
+    --*)
+      echo "Opção desconhecida: $argumento" >&2
+      echo "Uso: subirpsi [\"tipo: mensagem\"] [vX.Y.Z] [--dry-run]" >&2
+      exit 1
+      ;;
+    *)
+      if [ -z "$MENSAGEM" ]; then
+        MENSAGEM="$argumento"
+      elif [ -z "$VERSAO" ]; then
+        VERSAO="$argumento"
+      else
+        echo "Argumentos demais: $argumento" >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+rodar() {
+  if [ "$SIMULAR" -eq 1 ]; then
+    printf 'SIMULAR:'
+    printf ' %q' "$@"
+    printf '\n'
+  else
+    "$@"
+  fi
+}
+
+if [ ! -d "$PROJETO/.git" ]; then
+  echo "ERRO: pasta do projeto não encontrada: $PROJETO" >&2
+  exit 1
+fi
+cd "$PROJETO"
+
+RAMO_ATUAL="$(git symbolic-ref --short HEAD)"
+if [ "$RAMO_ATUAL" != "$RAMO" ]; then
+  echo "ERRO: você está no ramo '$RAMO_ATUAL'. Esperei '$RAMO'." >&2
+  exit 1
+fi
+
+rodar git fetch --tags --force
+
+arquivos_mudados() {
+  git status --porcelain -uall | cut -c4- | sed 's/ -> .*//'
+}
+
+tem_codigo_novo() {
+  git status --porcelain -uall | grep -E '^\?\? .*\.js$' >/dev/null 2>&1
+}
+
+tem_codigo_do_site() {
+  arquivos_mudados | grep -Eq '^(js/|css/|assets/|index\.html$|\.github/workflows/|_headers$|sw\.js$)'
+}
+
+sugerir_mensagem() {
+  local arquivos
+  arquivos="$(arquivos_mudados)"
+  if [ -z "$arquivos" ]; then
+    echo "chore: atualiza projeto"
+    return
+  fi
+  if printf '%s\n' "$arquivos" | grep -Eq '^(js/(backend|seguranca|cripto)\.js|supabase/schema\.sql|_headers|sw\.js)$'; then
+    echo "security: reforça proteção de dados"
+    return
+  fi
+  if tem_codigo_novo; then
+    echo "feat: adiciona nova função"
+    return
+  fi
+  if ! tem_codigo_do_site && printf '%s\n' "$arquivos" | grep -q '\.md$'; then
+    echo "docs: atualiza manual e padrão de versões"
+    return
+  fi
+  if printf '%s\n' "$arquivos" | grep -Eq '^(css/|assets/)'; then
+    echo "style: ajusta aparência"
+    return
+  fi
+  if printf '%s\n' "$arquivos" | grep -Eq '^(\.github/workflows/|scripts/)'; then
+    echo "chore: ajusta publicação e automação"
+    return
+  fi
+  if printf '%s\n' "$arquivos" | grep -q '^js/'; then
+    echo "fix: corrige comportamento do site"
+    return
+  fi
+  if printf '%s\n' "$arquivos" | grep -q '^index\.html$'; then
+    echo "feat: ajusta interface do site"
+    return
+  fi
+  echo "chore: atualiza projeto"
+}
+
+sugerir_tipo_pela_descricao() {
+  local texto="$1" sugerido
+  if printf '%s' "$texto" | grep -Eiq '^(corrige|conserta|resolve|ajusta o erro|remove (o )?bugs?)'; then
+    echo "fix"; return
+  fi
+  if printf '%s' "$texto" | grep -Eiq '^(adiciona|cria|novo|nova|implementa|introduz)'; then
+    echo "feat"; return
+  fi
+  if printf '%s' "$texto" | grep -Eiq '(senha|acesso|segurança|proteção|mfa|rls|criptograf)'; then
+    echo "security"; return
+  fi
+  if printf '%s' "$texto" | grep -Eiq '(manual|readme|notas|documenta|texto)'; then
+    echo "docs"; return
+  fi
+  if printf '%s' "$texto" | grep -Eiq '(cor|layout|visual|estilo|interface|botão|tela)'; then
+    echo "style"; return
+  fi
+  if printf '%s' "$texto" | grep -Eiq 'testes?'; then
+    echo "test"; return
+  fi
+  if printf '%s' "$texto" | grep -Eiq '(automação|workflow|script|deploy|feed|release|versão|tag|atalho)'; then
+    echo "chore"; return
+  fi
+  sugerido="$(sugerir_mensagem)"
+  echo "${sugerido%%:*}"
+}
+
+tipo_da_mensagem() {
+  printf '%s' "$1" | sed -nE 's/^([a-z]+)(\([^)]*\))?!?:.*/\1/p'
+}
+
+e_breaking() {
+  printf '%s' "$1" | grep -Eq '^[a-z]+(\([^)]*\))?!:'
+}
+
+proxima_versao() {
+  local mensagem="$1" atual maior menor patch tipo
+  atual="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
+  [ -z "$atual" ] && atual="v0.0.0"
+  atual="${atual#v}"
+  IFS='.' read -r maior menor patch <<< "$atual"
+  maior=$((10#$maior)); menor=$((10#$menor)); patch=$((10#$patch))
+
+  if e_breaking "$mensagem"; then
+    maior=$((maior + 1)); menor=0; patch=0
+  elif [ "$(tipo_da_mensagem "$mensagem")" = "feat" ]; then
+    menor=$((menor + 1)); patch=0
+  else
+    patch=$((patch + 1))
+  fi
+  printf 'v%d.%d.%d\n' "$maior" "$menor" "$patch"
+}
+
+if [ -z "$MENSAGEM" ]; then
+  MENSAGEM="$(sugerir_mensagem)"
+  echo "Descrição sugerida: $MENSAGEM"
+fi
+
+TIPO="$(tipo_da_mensagem "$MENSAGEM")"
+if [ -z "$TIPO" ]; then
+  TIPO="$(sugerir_tipo_pela_descricao "$MENSAGEM")"
+  MENSAGEM="$TIPO: $MENSAGEM"
+  echo "Prefixo sugerido adicionado: $TIPO"
+elif ! printf '|%s|' "$TIPOS" | grep -q "|$TIPO|"; then
+  echo "ERRO: tipo '$TIPO' não reconhecido. Use: ${TIPOS//|/, }." >&2
+  exit 1
+fi
+
+if [ -z "$VERSAO" ]; then
+  VERSAO="$(proxima_versao "$MENSAGEM")"
+  echo "Versão sugerida: $VERSAO"
+fi
+
+if [[ ! "$VERSAO" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "ERRO: versão inválida '$VERSAO'. Use o formato v1.3.0." >&2
+  exit 1
+fi
+if git ls-remote --exit-code --tags origin "refs/tags/$VERSAO" >/dev/null 2>&1; then
+  echo "ERRO: a tag $VERSAO já existe no GitHub. Use outra versão (nunca reaproveite)." >&2
+  exit 1
+fi
+
+NOTA="RELEASE_NOTES_$VERSAO.md"
+if [ ! -f "$NOTA" ]; then
+  if [ ! -f .github/RELEASE_TEMPLATE.md ]; then
+    echo "ERRO: falta .github/RELEASE_TEMPLATE.md para criar $NOTA." >&2
+    exit 1
+  fi
+  rodar cp .github/RELEASE_TEMPLATE.md "$NOTA"
+  rodar sed -i "s|vX\.Y\.Z|$VERSAO|g; s|DD/MM/AAAA|$(date +%d/%m/%Y)|g" "$NOTA"
+  echo "Nota de release criada: $NOTA (preencha com as novidades antes de publicar)."
+fi
+
+echo ""
+echo "=== Publicação ==="
+echo "Descrição: $MENSAGEM"
+echo "Versão:    $VERSAO"
+echo "Notas:     $NOTA"
+
+echo ""
+echo "=== 1/5: estado local ==="
+git status --short
+
+TEM_MUDANCA=0
+if [ -n "$(git status --porcelain)" ]; then
+  TEM_MUDANCA=1
+fi
+
+echo ""
+echo "=== 2/5: commit ==="
+rodar git add -A
+if [ "$TEM_MUDANCA" -eq 1 ]; then
+  rodar git commit -m "$MENSAGEM"
+else
+  echo "(nada para commitar)"
+fi
+
+echo ""
+echo "=== 3/5: trazer alterações do GitHub (rebase) ==="
+if [ "$SIMULAR" -eq 1 ]; then
+  echo "SIMULAR: git pull --rebase origin $RAMO"
+elif ! git pull --rebase origin "$RAMO"; then
+  echo "" >&2
+  echo "Falha no rebase. Seu trabalho continua salvo localmente." >&2
+  echo "Para desfazer o rebase: git rebase --abort" >&2
+  exit 1
+fi
+
+echo ""
+echo "=== 4/5: enviar para origin/$RAMO (publica o site) ==="
+rodar git push origin "$RAMO"
+
+echo ""
+echo "=== 5/5: criar e enviar a tag $VERSAO (publica a release) ==="
+if git rev-parse -q --verify "refs/tags/$VERSAO" >/dev/null 2>&1; then
+  echo "A tag $VERSAO já existe localmente — vou apenas enviá-la."
+else
+  rodar git tag -a "$VERSAO" -m "$VERSAO"
+fi
+rodar git push origin "$VERSAO"
+echo "Release $VERSAO disparada. O feed releases.rss será atualizado sozinho."
+
+echo ""
+echo "OK: concluído."
