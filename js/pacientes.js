@@ -20,7 +20,7 @@ function pacientesRender() {
 
     // busca por nome do paciente ou nome do convênio
     if (termo) {
-      var texto = String(p.nome || '') + ' ' + (f ? f.nome : '');
+      var texto = String(p.nome || '') + ' ' + String(p.cpf || '') + ' ' + (f ? f.nome : '');
       if (normalizarTexto(texto).indexOf(termo) === -1) continue;
     }
     encontrados++;
@@ -39,7 +39,9 @@ function pacientesRender() {
 
     var tr = document.createElement('tr');
     tr.innerHTML =
-      '<td><strong>' + escapeHtml(p.nome) + '</strong></td>' +
+      '<td><strong>' + escapeHtml(p.nome) + '</strong>' +
+        (p.cpf ? '<div class="cell-sub">CPF ' + escapeHtml(formatarCpf(p.cpf)) + '</div>' : '') +
+        '</td>' +
       '<td>' + (f ? escapeHtml(f.nome) : '-') + '</td>' +
       '<td><span class="badge ' + tipoBadge + '">' + tipoTexto + '</span></td>' +
       '<td class="money">' + valorFormatado + '</td>' +
@@ -132,6 +134,13 @@ var pacientesModulo = {
       return false;
     }
 
+    var cpfInput = document.getElementById('pacCpf');
+    var cpf = String(cpfInput ? cpfInput.value : '').replace(/\D/g, '').slice(0, 11);
+    if (cpf && typeof cpfValido === 'function' && !cpfValido(cpf)) {
+      app.toast('CPF inválido. Confira os números ou deixe o campo vazio.');
+      return false;
+    }
+
     var fId = parseInt(fonteSelect.value);
     var f = null;
     for (var i = 0; i < fontes.length; i++) {
@@ -158,6 +167,7 @@ var pacientesModulo = {
       for (var i = 0; i < pacientes.length; i++) {
         if (pacientes[i].id === pacientesEditId) {
           pacientes[i].nome = nomeInput.value.trim();
+          pacientes[i].cpf = cpf;
           pacientes[i].fonteId = f.id;
           pacientes[i].valor = valor;
           break;
@@ -169,6 +179,7 @@ var pacientesModulo = {
       pacientes.push({
         id: novoId,
         nome: nomeInput.value.trim(),
+        cpf: cpf,
         fonteId: f.id,
         valor: valor
       });
@@ -194,6 +205,8 @@ var pacientesModulo = {
     pacientesEditId = id;
 
     document.getElementById('pacNome').value = p.nome;
+    var cpfCampo = document.getElementById('pacCpf');
+    if (cpfCampo) cpfCampo.value = typeof formatarCpf === 'function' ? formatarCpf(p.cpf) : (p.cpf || '');
 
     // garante que o select esteja preenchido
     preencherFontesSelects();

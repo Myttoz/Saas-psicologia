@@ -680,7 +680,7 @@ var Backend = {
     }
     return {
       app: 'saas-livia',
-      versao: 5,
+      versao: 6,
       fontes: fontes,
       pacientes: pacientes,
       lancamentos: lancamentos,

@@ -113,16 +113,26 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
   sem duplicar o que já existe.
 - **Confirmação pelo WhatsApp**: botão em cada agendado abre o WhatsApp com a
   mensagem pronta (sem API e sem custo). Se não abrir, a mensagem é copiada.
-- **Recibo em PDF**: botão "Recibo" nos atendimentos pagos (Painel Hoje,
-  Lançamentos e Situação Paciente). Na janela de impressão, escolha
-  "Salvar como PDF". O nome e o CPF são configuráveis em **Dados do recibo** na
-  sidebar; sem configuração, aparece "Psicóloga". O **CRP já vem impresso como
+- **CPF do paciente** no cadastro (opcional, conferido antes de salvar). Aparece
+  na ficha, entra na busca e é usado no texto do recibo.
+- **Recibo oficial da Receita Federal**: o botão "Recibo" nos atendimentos pagos
+  (Painel Hoje, Lançamentos e Situação Paciente) abre uma tela com o texto pronto
+  para copiar (nome, CPF, valor, serviço, data e CRP), atalho para o e-CAC e um
+  campo para guardar o **código de verificação**. Depois de gerar o PDF no app da
+  Receita, marque como **enviado**: o site monta a mensagem para o WhatsApp e
+  você anexa o PDF na mão. O botão mostra **Recibo**, **Recibo salvo** ou
+  **Recibo enviado**, e as duas ações entram na trilha de acesso.
+- **Comprovante simples** (plano B): o botão dentro da tela do recibo imprime um
+  comprovante caseiro com aviso de que **não tem validade oficial**. Use só se o
+  site da Receita estiver fora do ar.
+- **Dados do recibo** na sidebar: nome, CRP, CPF e assinatura que aparecem no
+  comprovante. Sem configuração, aparece "Psicóloga". O **CRP já vem impresso como
   `04/74163`** — não há mais campo em branco para preencher à mão. Também é
-  possível anexar uma **imagem da assinatura** (PNG/JPG): ela aparece no recibo
-  **junto com a linha para assinar** (a linha continua visível), é reduzida
-  automaticamente e fica salva só neste navegador. Abaixo do nome e do CRP vai a
-  logo como **marca d'água centralizada**. O botão "Remover assinatura" tira só a
-  imagem, mantendo a linha.
+  possível anexar uma **imagem da assinatura** (PNG/JPG): ela aparece no
+  comprovante **junto com a linha para assinar** (a linha continua visível), é
+  reduzida automaticamente e fica salva só neste navegador. Abaixo do nome e do
+  CRP vai a logo como **marca d'água centralizada**. O botão "Remover assinatura"
+  tira só a imagem, mantendo a linha.
 - **Exportar/Importar backup (JSON)** na sidebar — leva os dados entre máquinas,
   incluindo as evoluções e os dados do recibo (backups antigos continuam sendo
   aceitos).
@@ -220,7 +230,7 @@ leitura falha em vez de mostrar texto trocado.
   chave. Se esquecer, não há como decryptar as evoluções — nem você, nem nós.
   Anote-a em local seguro. (Isso não é a senha da conta Supabase, que pode ser
   redefinida no painel.)
-- O que não é evolução — por exemplo CPF e assinatura do recibo, nomes e
+- O que não é evolução — por exemplo CPF do paciente, nome, CRP, assinatura e
   valores — continua legível no JSON. O Supabase protege o acesso com login,
   RLS e MFA, mas não cifra esses campos para a própria profissional.
 - O sistema roda no navegador, sem servidor de aplicação. A proteção depende de
@@ -272,13 +282,29 @@ botão do card **Faltam confirmar**). O WhatsApp abre com o texto já digitado �
 basta escolher o contato e enviar. Se o WhatsApp não abrir, a mensagem é copiada
 para você colar. **Copiar mensagem** faz só isso, sem abrir o WhatsApp.
 
-**Recibo:** configure uma vez em **🧾 Dados do recibo** (sidebar). Depois clique
-em **Recibo** em qualquer atendimento pago. A janela de impressão do navegador
-abre: escolha **Salvar como PDF** e salve onde quiser. O recibo traz paciente,
-valor, forma de pagamento, referência ao atendimento, quitação, data e sua
-assinatura com nome, **CRP `04/74163`** e CPF, além da logo como marca d'água.
-Se você já tinha outro CRP salvo no navegador, abra **Dados do recibo** e ajuste
-para `04/74163`.
+**Recibo oficial (Receita Federal):** o recibo válido é o emitido pela Receita —
+ele tem código de verificação que o paciente ou o convênio confere no próprio
+site dela. O site **não substitui** esse documento; ele só ajuda você a chegar
+mais rápido nele:
+
+1. Cadastre o **CPF do paciente** na ficha (opcional, mas evita digitar de novo).
+2. Em um atendimento pago, clique em **Recibo** (Painel Hoje, Lançamentos ou
+   Situação Paciente).
+3. Confira o CPF, copie o texto pronto e gere o recibo no aplicativo/e-CAC da
+   Receita (botão **Abrir Receita Federal**).
+4. Volte ao site, informe o **código de verificação** e a data e clique em
+   **Salvar código**. O botão passa a dizer **Recibo salvo**.
+5. Envie o PDF pelo WhatsApp e clique em **Marcar enviado**. A mensagem já sai com
+   o código; o PDF você anexa na mão, porque o link do WhatsApp não envia arquivo.
+   O botão passa a dizer **Recibo enviado**.
+
+Se precisar de um papel rápido enquanto o site da Receita estiver fora do ar, use
+**Comprovante simples** na mesma tela. Ele sai com um aviso impresso de que não
+tem validade oficial — não é recibo.
+
+> Configure uma vez em **🧾 Dados do recibo** (sidebar) o nome, o CRP `04/74163`,
+> o CPF e, se quiser, a assinatura que aparecem no comprovante. Se você já tinha
+> outro CRP salvo no navegador, abra **Dados do recibo** e ajuste para `04/74163`.
 
 > O envio pelo WhatsApp é feito por você: o sistema apenas prepara o texto e
 > abre o aplicativo. Não há integração com API, custo nem envio automático.
@@ -337,10 +363,11 @@ internet. As alterações são sincronizadas com a nuvem quando há conexão.
    `usarBackend: true`. A chave `service_role` nunca foi usada.
 4. ✅ Nuvem como fonte da verdade: sem "Continuar sem conectar" e sem subida
    automática de dados locais.
-5. ✅ Evoluções cifradas (AES-GCM), backup versão 5, trilha no banco e CSP real.
+5. ✅ Evoluções cifradas (AES-GCM), backup versão 6, trilha no banco e CSP real.
 6. ✅ Site publicado em https://myttoz.github.io/Saas-psicologia/ e release
    automática por tag.
 7. ✅ Gestão Anual: anos limpos, troca de ano nos meses e exclusão protegida.
+8. ✅ Recibo oficial da Receita com CPF do paciente e código de verificação.
 
 > A chave anon é pública e pode ficar no site. Cada projeto Supabase tem as
 > próprias chaves: as do projeto de Finanças não servem aqui.
@@ -445,7 +472,7 @@ Nenhum por enquanto. A Gestão Anual foi concluída nesta versão.
 3. Entrar com cada conta e conferir que o código de 6 números é pedido no login.
 4. Fazer uma alteração pequena, salvar, dar F5 e conferir na outra máquina que a
    nuvem trouxe o dado. Conferir também a trilha na tabela `auditoria`.
-5. Testar **Importar backup** (pede senha e código), emitir um recibo e preparar
+5. Testar **Importar backup** (pede senha e código), preparar um recibo oficial e
    uma mensagem pelo WhatsApp.
 6. Rodar `subirpsi` (ou `publicar.ps1`) para fechar com commit + tag da versão.
 

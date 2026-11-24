@@ -253,6 +253,10 @@ var app = {
     if (pacNome) {
       pacNome.addEventListener('input', function() { app.formatarNome(this); });
     }
+    var pacCpf = document.getElementById('pacCpf');
+    if (pacCpf) {
+      pacCpf.addEventListener('input', function() { app.mascaraCpf(this); });
+    }
     var fonteValorFixo = document.getElementById('fonteValorFixo');
     if (fonteValorFixo) {
       fonteValorFixo.addEventListener('input', function() { app.mascaraValor(this); });
@@ -274,6 +278,16 @@ var app = {
     var partes = v.split(',');
     partes[0] = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     input.value = partes.join(',');
+  },
+
+  mascaraCpf: function(input) {
+    var digitos = input.value.replace(/\D/g, '').slice(0, 11);
+    var inicio = input.selectionStart;
+    input.value = typeof formatarCpf === 'function' ? formatarCpf(digitos) : digitos;
+    // só reposiciona o cursor quando a digitação vier do fim
+    if (inicio !== null && inicio >= input.value.length - 1) {
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+    }
   },
 
   formatarNome: function(input) {

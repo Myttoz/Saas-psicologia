@@ -18,7 +18,7 @@ var backupModulo = {
       (segurancaModulo.lerRegistroChave() || '') : '';
     return {
       app: 'saas-livia',
-      versao: 5,
+      versao: 6,
       exportadoEm: new Date().toISOString(),
       fontes: fontes,
       pacientes: pacientes,
@@ -131,7 +131,19 @@ var backupModulo = {
         var limpo = {};
         for (var chave in item) {
           if (!Object.prototype.hasOwnProperty.call(item, chave)) continue;
-          if (chave === 'assinatura') {
+          if (chave === 'recibo') {
+            // Objeto simples com whitelist: nada mais do recibo entra no backup/nuvem.
+            var r = item[chave] && typeof item[chave] === 'object' && !Array.isArray(item[chave])
+              ? item[chave] : {};
+            limpo[chave] = {
+              codigo: self._texto(r.codigo, 80),
+              cpf: self._texto(String(r.cpf || '').replace(/\D/g, ''), 11).slice(0, 11),
+              emitidoEm: self._dataIso(r.emitidoEm),
+              enviadoEm: self._dataIso(r.enviadoEm)
+            };
+          } else if (chave === 'cpf') {
+            limpo[chave] = self._texto(String(item[chave] || '').replace(/\D/g, ''), 11).slice(0, 11);
+          } else if (chave === 'assinatura') {
             limpo[chave] = self._assinaturaValida(item[chave]);
           } else if (chave === 'data') {
             var data = self._dataIso(item[chave]);
@@ -179,7 +191,7 @@ var backupModulo = {
     if (anoAtivoNormal === null) anoAtivoNormal = new Date().getFullYear();
     return {
       app: 'saas-livia',
-      versao: 5,
+      versao: 6,
       exportadoEm: this._texto(dados.exportadoEm, 40),
       salvoEm: this._texto(dados.salvoEm, 40),
       atualizadoEm: this._texto(dados.atualizadoEm, 40),

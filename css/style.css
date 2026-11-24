@@ -616,6 +616,20 @@ tr:hover td { background: #F5F8F5; }
 
 .money { font-weight: 800; white-space: nowrap; }
 
+/* ---------- Preparo do recibo oficial ---------- */
+.modal-recibo { max-width: 620px; }
+.recibo-resumo {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--primary-light);
+  padding: .75rem 1rem;
+  margin-bottom: 1rem;
+}
+.recibo-resumo-nome { font-weight: 800; color: var(--text); }
+.recibo-separador { border: 0; border-top: 1px solid var(--border); margin: 1.25rem 0 1rem; }
+#reciboStatus { margin-top: .5rem; font-weight: 700; color: var(--primary-dark); }
+#reciboTexto { resize: vertical; min-height: 110px; }
+
 /* ---------- Forms ---------- */
 .form-grid {
   display: grid;
@@ -1919,6 +1933,15 @@ svg { display: block; }
     max-height: 80px;
     max-width: 320px;
     margin: 0 auto .3rem;
+  }
+
+  .recibo-aviso {
+    margin-top: 1.5rem;
+    padding-top: .5rem;
+    border-top: 1px solid #999;
+    font-size: 8pt;
+    text-align: center;
+    color: #444;
   }
 
   /* Marca d'água: logo centralizada abaixo do nome/CRP da profissional */

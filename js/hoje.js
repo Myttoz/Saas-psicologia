@@ -264,7 +264,9 @@ var hojeModulo = {
     acoes += app.botaoAcao('Editar', 'lancamentosModulo.editar(' + idSeguro + ')', 'editar');
 
     if (l.status === 'pago') {
-      acoes += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + idSeguro + ')', 'editar');
+      var rotuloRecibo = (l.recibo && l.recibo.enviadoEm) ? 'Recibo enviado'
+        : ((l.recibo && l.recibo.codigo) ? 'Recibo salvo' : 'Recibo');
+      acoes += app.botaoAcao(rotuloRecibo, 'recibosModulo.abrir(' + idSeguro + ')', 'editar');
     }
 
     // atendimento realizado: atalho para escrever a evolução já com paciente e data

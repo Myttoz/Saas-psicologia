@@ -13,7 +13,10 @@ Feito para abrir no computador e no celular, com os dados guardados na nuvem.
 - ✅ **Painel do dia** com quem falta confirmar, quem deve e o valor a receber.
 - 👥 **Pacientes e convênios** cadastrados com busca e percentuais de repasse.
 - 💰 **Lançamentos e resumos** com o ganho e o repasse de cada atendimento.
-- 📄 **Recibo em PDF** com nome, CRP `04/74163`, assinatura e logo da profissional.
+- 🧾 **Recibo oficial da Receita Federal**: o site prepara o texto com o CPF do
+  paciente, guarda o código de verificação e monta a mensagem para envio. O PDF
+  é emitido pela Receita e anexado por você.
+- 📄 **Comprovante simples** (sem validade oficial) como plano B.
 - 📲 **Confirmação pelo WhatsApp** com mensagem pronta, sem custo nem API.
 - 📒 **Prontuário cifrado** — as evoluções são escritas com AES-GCM; a senha
   nunca fica salva em texto.

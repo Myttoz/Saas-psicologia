@@ -95,7 +95,9 @@ function lancamentosRender() {
       app.botaoAcao('Duplicar', 'lancamentosModulo.duplicar(' + Number(l.id) + ')', 'duplicar');
 
     if (l.status === 'pago') {
-      acoes += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + Number(l.id) + ')', 'editar');
+      var rotuloRecibo = (l.recibo && l.recibo.enviadoEm) ? 'Recibo enviado'
+        : ((l.recibo && l.recibo.codigo) ? 'Recibo salvo' : 'Recibo');
+      acoes += app.botaoAcao(rotuloRecibo, 'recibosModulo.abrir(' + Number(l.id) + ')', 'editar');
     }
 
     acoes += app.botaoAcao('Excluir', 'lancamentosModulo.excluir(' + Number(l.id) + ')', 'excluir', true);

@@ -421,6 +421,11 @@
         <input type="text" id="pacNome" class="form-control" placeholder="Ex: Pedro Silva" oninput="app.formatarNome(this)">
       </div>
       <div class="form-group">
+        <label class="form-label">CPF (usado no recibo)</label>
+        <input type="text" id="pacCpf" class="form-control" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" oninput="app.mascaraCpf(this)">
+        <div class="form-note">Opcional. Serve só para preparar o recibo da Receita Federal.</div>
+      </div>
+      <div class="form-group">
         <label class="form-label">Convênio</label>
         <select id="pacFonte" class="form-control"></select>
       </div>
@@ -658,6 +663,53 @@
   <div class="modal-footer">
     <button class="btn btn-outline" onclick="app.fecharModal('modalEvolucao')">Cancelar</button>
     <button type="button" class="btn btn-primary" onclick="prontuarioModulo.salvar()">Salvar evolução</button>
+  </div>
+</div>
+
+<!-- Modal: preparar recibo oficial (Receita Federal) -->
+<div class="modal modal-recibo" id="modalPrepararRecibo" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Preparar recibo</div>
+    <button class="modal-close" onclick="app.fecharModal('modalPrepararRecibo')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="alert-note">
+      <strong>O recibo válido é o da Receita Federal.</strong> Aqui nós só preparamos o texto
+      e guardamos o código de verificação. O comprovante deste site não tem validade oficial.
+    </div>
+    <div class="recibo-resumo" id="reciboResumo"></div>
+    <input type="hidden" id="reciboLancamentoId" value="">
+    <div class="form-group">
+      <label class="form-label">CPF do paciente</label>
+      <input type="text" id="reciboCpfPaciente" class="form-control" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" oninput="app.mascaraCpf(this)">
+      <div class="form-note">Confira antes de copiar. Se estiver vazio, preencha no cadastro do paciente.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Texto pronto para copiar</label>
+      <textarea id="reciboTexto" class="form-control" rows="5"></textarea>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn btn-outline" onclick="recibosModulo.atualizarTexto()">Atualizar texto</button>
+      <button type="button" class="btn btn-outline" onclick="recibosModulo.copiarPreparado()">📋 Copiar texto</button>
+      <button type="button" class="btn btn-outline" onclick="recibosModulo.abrirReceita()">🌐 Abrir Receita Federal</button>
+    </div>
+    <hr class="recibo-separador">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Código de verificação da Receita</label>
+        <input type="text" id="reciboCodigo" class="form-control" placeholder="Ex.: AB12CD34" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data da emissão</label>
+        <input type="date" id="reciboDataEmissao" class="form-control">
+      </div>
+    </div>
+    <div class="form-note" id="reciboStatus"></div>
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline" onclick="recibosModulo.imprimirSimples()" title="Comprovante caseiro, sem validade oficial">Comprovante simples</button>
+    <button type="button" class="btn btn-outline" onclick="recibosModulo.salvarCodigo()">Salvar código</button>
+    <button type="button" class="btn btn-primary" onclick="recibosModulo.marcarEnviado()">Marcar enviado</button>
   </div>
 </div>
 

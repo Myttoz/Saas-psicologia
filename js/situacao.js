@@ -43,7 +43,9 @@ var situacaoModulo = {
         : app.botaoAcao('Marcar como pago', 'situacaoModulo.marcarPago(' + Number(l.id) + ')', 'pago');
 
       if (l.status === 'pago') {
-        acao += app.botaoAcao('Recibo', 'recibosModulo.gerar(' + Number(l.id) + ')', 'editar');
+        var rotuloRecibo = (l.recibo && l.recibo.enviadoEm) ? 'Recibo enviado'
+          : ((l.recibo && l.recibo.codigo) ? 'Recibo salvo' : 'Recibo');
+        acao += app.botaoAcao(rotuloRecibo, 'recibosModulo.abrir(' + Number(l.id) + ')', 'editar');
       }
 
       var tr = document.createElement('tr');

@@ -143,6 +143,33 @@ function calcularSuaParte(fonteNome, valor) {
 }
 
 // ============================================================================
+// CPF — usado só para preparar o recibo da Receita Federal
+// Guardamos apenas os 11 números; a máscara é aplicada na tela.
+// ============================================================================
+
+function formatarCpf(valor) {
+  var d = String(valor || '').replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return d.slice(0, 3) + '.' + d.slice(3);
+  if (d.length <= 9) return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6);
+  return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6, 9) + '-' + d.slice(9);
+}
+
+function cpfValido(valor) {
+  var d = String(valor || '').replace(/\D/g, '');
+  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+  var i, soma = 0;
+  for (i = 0; i < 9; i++) soma += parseInt(d.charAt(i), 10) * (10 - i);
+  var resto = soma % 11;
+  var primeiro = resto < 2 ? 0 : 11 - resto;
+  soma = 0;
+  for (i = 0; i < 10; i++) soma += parseInt(d.charAt(i), 10) * (11 - i);
+  resto = soma % 11;
+  var segundo = resto < 2 ? 0 : 11 - resto;
+  return primeiro === parseInt(d.charAt(9), 10) && segundo === parseInt(d.charAt(10), 10);
+}
+
+// ============================================================================
 // API de dados (simulada em localStorage para uso local)
 // ============================================================================
 
