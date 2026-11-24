@@ -6,7 +6,26 @@
     <description>Versões e novidades do Gestão de Pacientes (SaaS by Myttoz).</description>
     <language>pt-BR</language>
     <atom:link href="https://myttoz.github.io/Saas-psicologia/releases.rss" rel="self" type="application/rss+xml" />
-    <lastBuildDate>Tue, 24 Nov 2026 10:57:15 GMT</lastBuildDate>
+    <lastBuildDate>Tue, 24 Nov 2026 13:09:15 GMT</lastBuildDate>
+<item>
+  <title>v1.5.0</title>
+  <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.5.0</link>
+  <guid isPermaLink="true">https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.5.0</guid>
+  <pubDate>Tue, 24 Nov 2026 13:08:51 GMT</pubDate>
+  <description><![CDATA[<h2>v1.5.0 — Testes automáticos no GitHub</h2>
+<p>Esta versão não muda o que você vê no site. Ela muda <strong>como a gente tem certeza</strong> de que o site está bem antes de cada publicação.</p>
+<p><strong>Data:</strong> 24/11/2026</p>
+<h2>✨ Novidades</h2>
+<ul><li><strong>17 baterias de teste dentro do projeto</strong>, na pasta <code>tests/</code>. Antes ficavam só no computador; agora viajam com o código e não se perdem.</li><li><strong>Conferência automática no GitHub</strong>: a cada publicação, o GitHub roda as baterias e verifica sintaxe, IDs da tela, login, backup, nuvem, WhatsApp, recibo, segurança e padrão de versões. Se algo quebrar, a conferência fica vermelha.</li><li><strong>Selo verde no <code>README.md</code></strong> mostrando se a última conferência passou.</li><li>Os atalhos <code>subirpsi</code> e <code>baixarpsi</code> agora moram em <code>scripts/</code>, dentro do projeto. Quem usa continua digitando <code>subirpsi</code> — o atalho só passou a chamar o arquivo versionado.</li></ul>
+<h2>🔧 Melhorias</h2>
+<ul><li>As baterias que usavam números fixos (quantas versões o feed tem, qual versão o atalho sugere) agora se adaptam às tags reais do repositório. Isso evita falsos alarmes depois de cada release.</li><li>O feed <code>releases.rss</code> e <code>releases.xml</code> foi atualizado com a <code>v1.4.0</code>.</li><li><code>MANUAL.md</code> ganhou o passo a passo &quot;Como saber se está tudo bem&quot;.</li></ul>
+<h2>🔒 Segurança</h2>
+<ul><li>Nenhuma mudança nas regras de acesso, MFA, cifra ou RLS. Os testes apenas conferem que elas continuam no lugar.</li></ul>
+<h2>🚀 Como conferir</h2>
+<p>1. Abra https://github.com/Myttoz/Saas-psicologia/actions 2. Procure <strong>Conferir testes</strong> na última publicação. 3. O resultado precisa estar verde. No computador, o comando é <code>node tests/rodar.js</code>.</p>
+<p>&gt; O site continua em https://myttoz.github.io/Saas-psicologia/. Não é preciso &gt; limpar cache nem refazer login por causa desta versão.</p>
+<p>SaaS by Myttoz</p>]]></description>
+</item>
 <item>
   <title>v1.4.0</title>
   <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.4.0</link>
