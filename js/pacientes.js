@@ -18,6 +18,24 @@ function textoConsentimento(valor) {
   return 'Aguardando';
 }
 
+// Ficha mais completa. Todos os campos são opcionais: paciente antigo, sem
+// esses campos, continua aparecendo normalmente.
+function nascimentoValido(valor) {
+  var s = String(valor === null || valor === undefined ? '' : valor).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+  var partes = s.split('-');
+  var a = parseInt(partes[0], 10), m = parseInt(partes[1], 10), d = parseInt(partes[2], 10);
+  if (a < 1900 || a > 2100) return '';
+  var teste = new Date(a, m - 1, d);
+  if (teste.getFullYear() !== a || teste.getMonth() !== m - 1 || teste.getDate() !== d) return '';
+  return teste.getTime() > Date.now() ? '' : s;
+}
+
+function textoNascimento(valor) {
+  var s = nascimentoValido(valor);
+  return s ? (typeof formatarData === 'function' ? formatarData(s) : s.split('-').reverse().join('/')) : '';
+}
+
 function pacientesRender() {
   var tbody = document.getElementById('tbodyPacientes');
   if (!tbody) return;
@@ -34,7 +52,11 @@ function pacientesRender() {
 
     // busca por nome do paciente ou nome do convênio
     if (termo) {
-      var texto = String(p.nome || '') + ' ' + String(p.cpf || '') + ' ' + (f ? f.nome : '');
+      var texto = String(p.nome || '') + ' ' + String(p.cpf || '') + ' ' + (f ? f.nome : '') +
+        ' ' + String(p.telefone || '') + ' ' +
+        (typeof formatarTelefone === 'function' ? formatarTelefone(p.telefone) : '') +
+        ' ' + String(p.responsavel || '') + ' ' + String(p.carteira || '') +
+        ' ' + String(p.nascimento || '');
       if (normalizarTexto(texto).indexOf(termo) === -1) continue;
     }
     encontrados++;
@@ -49,6 +71,13 @@ function pacientesRender() {
 
     var consentimento = normalizarConsentimento(p.consentimento);
 
+    var detalhes = [];
+    if (p.nascimento) detalhes.push('Nasc. ' + textoNascimento(p.nascimento));
+    if (p.telefone) detalhes.push('Tel ' + (typeof formatarTelefone === 'function'
+      ? formatarTelefone(p.telefone) : p.telefone));
+    if (p.responsavel) detalhes.push('Resp.: ' + p.responsavel);
+    if (p.carteira) detalhes.push('Carteira: ' + p.carteira);
+
     var acoes =
       app.botaoAcao('Editar', 'pacientesModulo.editar(' + Number(p.id) + ')', 'editar') +
       app.botaoAcao('Excluir', 'pacientesModulo.excluir(' + Number(p.id) + ')', 'excluir', true) +
@@ -58,6 +87,7 @@ function pacientesRender() {
     tr.innerHTML =
       '<td><strong>' + escapeHtml(p.nome) + '</strong>' +
         (p.cpf ? '<div class="cell-sub">CPF ' + escapeHtml(formatarCpf(p.cpf)) + '</div>' : '') +
+        (detalhes.length ? '<div class="cell-sub">' + escapeHtml(detalhes.join(' · ')) + '</div>' : '') +
         '<div class="cell-sub lgpd-' + consentimento + '">LGPD: ' +
           textoConsentimento(consentimento) + '</div>' +
         '</td>' +
@@ -124,6 +154,12 @@ var pacientesModulo = {
     var consentSel = document.getElementById('pacConsentimento');
     if (consentSel) consentSel.value = 'pendente';
 
+    // campos opcionais da ficha começam vazios
+    ['pacNascimento', 'pacTelefone', 'pacResponsavel', 'pacCarteira'].forEach(function(id) {
+      var campo = document.getElementById(id);
+      if (campo) campo.value = '';
+    });
+
     // popular select de convênios
     preencherFontesSelects();
 
@@ -168,6 +204,19 @@ var pacientesModulo = {
     var consentimento = normalizarConsentimento(consentInput ? consentInput.value : 'pendente');
     var consentimentoEm = consentimento === 'pendente' ? '' : hojeStr;
 
+    // Ficha completa — campos opcionais, guardados de forma limpa.
+    var nascInput = document.getElementById('pacNascimento');
+    var nascimento = nascimentoValido(nascInput ? nascInput.value : '');
+
+    var telInput = document.getElementById('pacTelefone');
+    var telefone = String(telInput ? telInput.value : '').replace(/\D/g, '').slice(0, 11);
+
+    var respInput = document.getElementById('pacResponsavel');
+    var responsavel = String(respInput ? respInput.value : '').trim().slice(0, 120);
+
+    var carteiraInput = document.getElementById('pacCarteira');
+    var carteira = String(carteiraInput ? carteiraInput.value : '').trim().slice(0, 120);
+
     var fId = parseInt(fonteSelect.value);
     var f = null;
     for (var i = 0; i < fontes.length; i++) {
@@ -202,6 +251,10 @@ var pacientesModulo = {
           pacientes[i].consentimentoEm = (consentimento === anterior)
             ? (pacientes[i].consentimentoEm || '')
             : consentimentoEm;
+          pacientes[i].nascimento = nascimento;
+          pacientes[i].telefone = telefone;
+          pacientes[i].responsavel = responsavel;
+          pacientes[i].carteira = carteira;
           break;
         }
       }
@@ -215,7 +268,11 @@ var pacientesModulo = {
         fonteId: f.id,
         valor: valor,
         consentimento: consentimento,
-        consentimentoEm: consentimentoEm
+        consentimentoEm: consentimentoEm,
+        nascimento: nascimento,
+        telefone: telefone,
+        responsavel: responsavel,
+        carteira: carteira
       });
     }
 
@@ -244,6 +301,16 @@ var pacientesModulo = {
 
     var consentCampo = document.getElementById('pacConsentimento');
     if (consentCampo) consentCampo.value = normalizarConsentimento(p.consentimento);
+
+    var nascCampo = document.getElementById('pacNascimento');
+    if (nascCampo) nascCampo.value = p.nascimento || '';
+    var telCampo = document.getElementById('pacTelefone');
+    if (telCampo) telCampo.value = typeof formatarTelefone === 'function'
+      ? formatarTelefone(p.telefone) : (p.telefone || '');
+    var respCampo = document.getElementById('pacResponsavel');
+    if (respCampo) respCampo.value = p.responsavel || '';
+    var carteiraCampo = document.getElementById('pacCarteira');
+    if (carteiraCampo) carteiraCampo.value = p.carteira || '';
 
     // garante que o select esteja preenchido
     preencherFontesSelects();

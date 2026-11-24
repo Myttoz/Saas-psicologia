@@ -119,6 +119,12 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
   autorizado ou recusado), aviso curto no site e botão **Apagar dados** que pede
   senha da conta e código do celular antes de remover cadastro, atendimentos e
   evoluções. A exclusão entra na trilha de acesso com o nome mascarado.
+- **Ficha do paciente mais completa**: nascimento, telefone, responsável e
+  carteira do convênio — todos opcionais. O telefone é guardado só com números,
+  aparece com máscara e entra na busca junto com responsável e carteira.
+- **Relatório mensal (CSV)**: em Resumos, baixa um arquivo com as partes RESUMO,
+  ENTRADAS (pagos), PENDÊNCIAS e FALTAS do mês escolhido. O contato de cada linha
+  vem da ficha do paciente.
 - **Recibo oficial da Receita Federal**: o botão "Recibo" nos atendimentos pagos
   (Painel Hoje, Lançamentos e Situação Paciente) abre uma tela com o texto pronto
   para copiar (nome, CPF, valor, serviço, data e CRP), atalho para o e-CAC e um
@@ -326,6 +332,44 @@ tem validade oficial — não é recibo.
 > Convênios sem percentual aparecem com ganho/repasse em branco e a linha
 > TOTAL avisa que está parcial.
 
+## Como exportar o relatório mensal
+
+1. Aba **Resumos**: escolha o mês desejado nos botões de mês.
+2. Clique em **⬇ Relatório mensal (CSV)**.
+3. Envie o arquivo `relatorio-AAAA-MM.csv` para quem precisar. Ele abre no Excel
+   com separador `;` e vírgula decimal, e traz, nesta ordem:
+
+   - **RESUMO**: quantidade de atendimentos no mês, entradas pagas, pendências,
+     faltas, cancelamentos, total recebido e total pendente;
+   - **ENTRADAS**: atendimentos marcados como **pago**;
+   - **PENDÊNCIAS**: atendimentos pendentes que não são falta nem cancelamento;
+   - **FALTAS**: atendimentos com presença **Faltou** — mesmo que o pagamento já
+     esteja marcado, a falta continua aparecendo aqui (são informações diferentes).
+
+Cada linha traz data, horário, paciente, contato, convênio, tipo, forma de
+pagamento, presença, observações e valor. O contato (telefone, responsável,
+carteira e CPF) é lido da ficha do paciente; quem não tem ficha cadastrada aparece
+com o contato em branco. Cancelamentos não entram em nenhum bloco de linhas — só
+na contagem do resumo.
+
+> Este relatório é só para conferência/encaminhamento. Ele **não substitui** o
+> CSV do contador, que continua com as 7 colunas de sempre.
+
+## Pacientes: ficha mais completa
+
+Na aba **Pacientes**, clique em **+ Novo paciente** ou em **Editar** para preencher:
+
+- **Data de nascimento**: opcional; aparece como `dd/mm/aaaa` na tabela.
+- **Telefone**: opcional; a máscara aparece sozinha e só os números ficam salvos.
+- **Responsável**: opcional; use quando outra pessoa acompanha o paciente.
+- **Carteira do convênio**: opcional; número do plano de saúde.
+
+Todos os campos novos aparecem embaixo do nome na tabela e entram na busca (ao
+lado de nome, CPF e convênio). Pacientes antigos, criados antes desta versão,
+continuam valendo — os campos em branco simplesmente não aparecem. O botão
+**Apagar dados** remove essas informações junto com o resto da ficha, sempre com
+senha da conta e código do celular.
+
 ## Backup automático e instalação no celular
 
 **Voltar atrás:** a sidebar mostra a data do último retrato automático. Se
@@ -495,13 +539,12 @@ campo de autorização) continuam sendo aceitos e aparecem como "Aguardando".
 
 ## Próximos blocos (a desenvolver)
 
-- **Ficha do paciente mais completa**: nascimento, telefone, responsável e
-  carteira do convênio.
-- **Relatório mensal** pronto para exportar, com entradas, pendências e faltas.
+Nenhum bloco de sistema está pendente. O que resta são as conferências no uso real
+da checklist abaixo (celulares, nuvem, recibo e Windows).
 
 ## Como saber se está tudo bem (testes automáticos)
 
-As 18 baterias de teste agora moram na pasta `tests/` do projeto, junto do código —
+As 20 baterias de teste agora moram na pasta `tests/` do projeto, junto do código —
 não ficam mais só no computador. A cada publicação, o GitHub abre a conferência
 **Conferir testes** e verifica: sintaxe dos arquivos, IDs da tela, login, backup,
 nuvem, WhatsApp, recibo, segurança e padrão de versões.
@@ -528,7 +571,8 @@ a forma de usar continua exatamente a mesma.
 4. Fazer uma alteração pequena, salvar, dar F5 e conferir na outra máquina que a
    nuvem trouxe o dado. Conferir também a trilha na tabela `auditoria`.
 5. Testar **Importar backup** (pede senha e código), preparar um recibo oficial e
-   uma mensagem pelo WhatsApp.
+   uma mensagem pelo WhatsApp. Preencher a ficha de um paciente de teste e baixar
+   o **Relatório mensal** para conferir o contato e os três blocos.
 6. Rodar `node tests/rodar.js` e conferir que todas as baterias passaram.
 7. Rodar `subirpsi` (ou `publicar.ps1`) para fechar com commit + tag da versão.
 8. Depois da publicação, conferir o ✅ de **Conferir testes** no GitHub Actions.
@@ -548,7 +592,7 @@ git status                  # o que mudou
 git diff                    # mudanças ainda não confirmadas
 git log --oneline           # histórico dos commits
 git tag -l                  # versões já marcadas
-node tests/rodar.js         # roda as 18 baterias de teste
+node tests/rodar.js         # roda as 20 baterias de teste
 ```
 
 > A pasta `Livia/` (documentos pessoais) e `backup-*.json` estão no

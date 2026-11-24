@@ -152,6 +152,13 @@ var backupModulo = {
               ? consentimento : 'pendente';
           } else if (chave === 'consentimentoEm') {
             limpo[chave] = self._dataIso(item[chave]) || '';
+          } else if (chave === 'nascimento') {
+            // Opcional: data inválida vira vazia, sem invalidar o backup.
+            limpo[chave] = self._dataIso(item[chave]) || '';
+          } else if (chave === 'telefone') {
+            limpo[chave] = self._texto(String(item[chave] || '').replace(/\D/g, ''), 11);
+          } else if (chave === 'responsavel' || chave === 'carteira') {
+            limpo[chave] = self._texto(item[chave], self.LIMITE_CURTO);
           } else if (chave === 'data') {
             var data = self._dataIso(item[chave]);
             if (!data) throw new Error('Data inválida em ' + nome + '.');

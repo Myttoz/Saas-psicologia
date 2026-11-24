@@ -257,6 +257,10 @@ var app = {
     if (pacCpf) {
       pacCpf.addEventListener('input', function() { app.mascaraCpf(this); });
     }
+    var pacTelefone = document.getElementById('pacTelefone');
+    if (pacTelefone) {
+      pacTelefone.addEventListener('input', function() { app.mascaraTelefone(this); });
+    }
     var fonteValorFixo = document.getElementById('fonteValorFixo');
     if (fonteValorFixo) {
       fonteValorFixo.addEventListener('input', function() { app.mascaraValor(this); });
@@ -285,6 +289,16 @@ var app = {
     var inicio = input.selectionStart;
     input.value = typeof formatarCpf === 'function' ? formatarCpf(digitos) : digitos;
     // só reposiciona o cursor quando a digitação vier do fim
+    if (inicio !== null && inicio >= input.value.length - 1) {
+      try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+    }
+  },
+
+  mascaraTelefone: function(input) {
+    var inicio = input.selectionStart;
+    input.value = typeof formatarTelefone === 'function'
+      ? formatarTelefone(input.value)
+      : String(input.value || '').replace(/\D/g, '').slice(0, 11);
     if (inicio !== null && inicio >= input.value.length - 1) {
       try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
     }

@@ -242,6 +242,117 @@ var resumosModulo = {
     this.baixarCsv('contador-' + mes + '.csv', linhas);
   },
 
+  // ---------- Relatório mensal (resumo + entradas + pendências + faltas) ----------
+
+  // O contato vem da ficha do paciente. O nome é casado sem acento e sem
+  // diferença de maiúscula/minúscula; paciente sem ficha aparece em branco.
+  contatoPaciente: function(nome) {
+    var alvo = normalizarTexto(nome);
+    if (!alvo) return '';
+    for (var i = 0; i < pacientes.length; i++) {
+      var p = pacientes[i];
+      if (normalizarTexto(p.nome) !== alvo) continue;
+      var partes = [];
+      if (p.telefone) {
+        partes.push('Tel ' + (typeof formatarTelefone === 'function'
+          ? formatarTelefone(p.telefone) : p.telefone));
+      }
+      if (p.responsavel) partes.push('Resp.: ' + p.responsavel);
+      if (p.carteira) partes.push('Carteira: ' + p.carteira);
+      if (p.cpf) {
+        partes.push('CPF ' + (typeof formatarCpf === 'function' ? formatarCpf(p.cpf) : p.cpf));
+      }
+      return partes.join(' | ');
+    }
+    return '';
+  },
+
+  presencaRotulo: function(l) {
+    var atual = l.presenca || 'agendado';
+    var info = (typeof lancPresencaInfo !== 'undefined') ? lancPresencaInfo[atual] : null;
+    return info ? info.rotulo : ({ faltou: 'Faltou', cancelou: 'Cancelou' }[atual] || 'Agendado');
+  },
+
+  linhaRelatorio: function(l) {
+    var f = obterFontePorId(l.fonteId);
+    var dataTxt = typeof formatarData === 'function' ? formatarData(l.data) : l.data;
+    return [
+      this.csvTexto(dataTxt),
+      this.csvTexto(l.horario || ''),
+      this.csvTexto(l.paciente || ''),
+      this.csvTexto(this.contatoPaciente(l.paciente)),
+      this.csvTexto(f ? f.nome : ''),
+      this.csvTexto(l.tipo === 'avaliacao' ? 'Avaliação' : 'Atendimento'),
+      this.csvTexto(this.formaPagamento(l.pagamento)),
+      this.csvTexto(this.presencaRotulo(l)),
+      this.csvTexto(l.obs || ''),
+      this.csvNumero(l.valor)
+    ].join(';');
+  },
+
+  exportarRelatorio: function() {
+    var lista = this.lancamentosDoMes();
+    if (lista.length === 0) {
+      app.toast('Não há atendimentos neste mês para exportar.');
+      return;
+    }
+
+    var mes = mesesModulo.mesAtual('resumos');
+    var entradas = [];
+    var pendencias = [];
+    var faltas = [];
+    var cancelamentos = 0;
+    var totalEntradas = 0;
+    var totalPendencias = 0;
+
+    for (var i = 0; i < lista.length; i++) {
+      var l = lista[i];
+      var valor = parseFloat(l.valor) || 0;
+      var presenca = l.presenca || 'agendado';
+
+      if (l.status === 'pago') {
+        entradas.push(l);
+        totalEntradas += valor;
+      }
+      // Falta e cancelamento não são dívida em aberto.
+      if (l.status === 'pendente' && presenca !== 'faltou' && presenca !== 'cancelou') {
+        pendencias.push(l);
+        totalPendencias += valor;
+      }
+      if (presenca === 'faltou') faltas.push(l);
+      if (presenca === 'cancelou') cancelamentos++;
+    }
+
+    var cabecalho = [
+      'Data', 'Horário', 'Paciente', 'Contato', 'Convênio', 'Tipo',
+      'Pagamento', 'Presença', 'Observações', 'Valor'
+    ].join(';');
+
+    var linhas = [
+      ['RELATORIO MENSAL', mes].join(';'),
+      'RESUMO',
+      ['Atendimentos no mês', String(lista.length)].join(';'),
+      ['Entradas (pagos)', String(entradas.length)].join(';'),
+      ['Pendências', String(pendencias.length)].join(';'),
+      ['Faltas', String(faltas.length)].join(';'),
+      ['Cancelamentos', String(cancelamentos)].join(';'),
+      ['Total recebido', this.csvNumero(totalEntradas)].join(';'),
+      ['Total pendente', this.csvNumero(totalPendencias)].join(';'),
+      '',
+      'ENTRADAS',
+      cabecalho
+    ];
+    for (var i = 0; i < entradas.length; i++) linhas.push(this.linhaRelatorio(entradas[i]));
+
+    linhas.push('', 'PENDÊNCIAS', cabecalho);
+    for (var i = 0; i < pendencias.length; i++) linhas.push(this.linhaRelatorio(pendencias[i]));
+
+    linhas.push('', 'FALTAS', cabecalho);
+    for (var i = 0; i < faltas.length; i++) linhas.push(this.linhaRelatorio(faltas[i]));
+
+    this.baixarCsv('relatorio-' + mes + '.csv', linhas);
+  },
+
   statCard: function(label, valor, classe) {
     return '<div class="stat-card">' +
       '<div class="stat-icon ' + escapeHtml(classe) + '">R$</div>' +

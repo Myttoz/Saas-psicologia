@@ -566,7 +566,11 @@ var lancamentosModulo = {
         fonteId: parseInt(fonte.value),
         valor: parseMoeda(valor.value),
         consentimento: 'pendente',
-        consentimentoEm: ''
+        consentimentoEm: '',
+        nascimento: '',
+        telefone: '',
+        responsavel: '',
+        carteira: ''
       });
       Store.salvar();
       app.toast('Novo paciente "' + nomePac + '" criado. Edite os dados na aba Pacientes.');

@@ -188,11 +188,12 @@
           <h1>Resumos</h1>
           <div class="header-actions">
             <button class="btn btn-outline btn-sm" onclick="resumosModulo.exportarContador()" title="Baixa um CSV enxuto com data, convênio, forma de pagamento, valor, ganho, repasse e observações">⬇ Enviar ao contador (CSV)</button>
+            <button class="btn btn-outline btn-sm" onclick="resumosModulo.exportarRelatorio()" title="Baixa um CSV com resumo, entradas pagas, pendências e faltas do mês escolhido">⬇ Relatório mensal (CSV)</button>
           </div>
         </div>
 
         <div class="month-tabs" id="mesesResumos"></div>
-        <p class="export-note">A exportação usa o mês selecionado acima. O arquivo abre no Excel (separador ponto e vírgula e vírgula decimal).</p>
+        <p class="export-note">As duas exportações usam o mês selecionado acima. Os arquivos abrem no Excel (separador ponto e vírgula e vírgula decimal).</p>
 
         <div class="stats" id="statsResumos"></div>
 
@@ -309,7 +310,7 @@
         </div>
 
         <div class="busca-linha">
-          <input type="search" id="pacBusca" class="form-control busca-campo" placeholder="Buscar por nome ou convênio..." oninput="pacientesModulo.buscar(this.value)">
+          <input type="search" id="pacBusca" class="form-control busca-campo" placeholder="Buscar por nome, CPF, telefone, responsável ou convênio..." oninput="pacientesModulo.buscar(this.value)">
           <button type="button" class="btn btn-outline btn-sm" onclick="pacientesModulo.limparBusca()">Limpar busca</button>
           <span class="busca-resumo" id="pacBuscaResumo"></span>
         </div>
@@ -428,6 +429,26 @@
         <label class="form-label">CPF (usado no recibo)</label>
         <input type="text" id="pacCpf" class="form-control" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" oninput="app.mascaraCpf(this)">
         <div class="form-note">Opcional. Serve só para preparar o recibo da Receita Federal.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data de nascimento</label>
+        <input type="date" id="pacNascimento" class="form-control">
+        <div class="form-note">Opcional. Aparece na ficha e ajuda a identificar o paciente.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Telefone</label>
+        <input type="text" id="pacTelefone" class="form-control" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000" oninput="app.mascaraTelefone(this)">
+        <div class="form-note">Opcional. Vai para o contato do relatório mensal.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Responsável</label>
+        <input type="text" id="pacResponsavel" class="form-control" placeholder="Ex: Maria Silva (mãe)">
+        <div class="form-note">Opcional. Responsável pelo paciente, quando houver.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Carteira do convênio</label>
+        <input type="text" id="pacCarteira" class="form-control" placeholder="Ex: 123456789">
+        <div class="form-note">Opcional. Número da carteira/usuário do plano de saúde.</div>
       </div>
       <div class="form-group">
         <label class="form-label">Autorização para guardar os dados (LGPD)</label>

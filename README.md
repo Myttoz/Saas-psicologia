@@ -13,7 +13,8 @@ Feito para abrir no computador e no celular, com os dados guardados na nuvem.
 - 📅 **Agenda semanal** com horários de 7h às 20h e criação rápida de sessões.
 - 🗓️ **Gestão Anual**: crie anos vazios, troque o ano em uso e exclua um ano só com senha e código.
 - ✅ **Painel do dia** com quem falta confirmar, quem deve e o valor a receber.
-- 👥 **Pacientes e convênios** cadastrados com busca e percentuais de repasse.
+- 👥 **Pacientes e convênios** cadastrados com busca e percentuais de repasse,
+  com ficha ampliada (nascimento, telefone, responsável e carteira).
 - 🔒 **Privacidade/LGPD**: autorização registrada por paciente e botão **Apagar dados** (com senha da conta e código do celular).
 - 💰 **Lançamentos e resumos** com o ganho e o repasse de cada atendimento.
 - 🧾 **Recibo oficial da Receita Federal**: o site prepara o texto com o CPF do
@@ -24,6 +25,7 @@ Feito para abrir no computador e no celular, com os dados guardados na nuvem.
 - 📒 **Prontuário cifrado** — as evoluções são escritas com AES-GCM; a senha
   nunca fica salva em texto.
 - 📊 **Exportação para o contador** com os dados do mês prontos em planilha.
+- 🗂️ **Relatório mensal em CSV** com resumo, entradas pagas, pendências e faltas.
 - 📴 **Funciona offline** depois de instalado no celular.
 
 ## Como entrar

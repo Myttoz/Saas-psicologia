@@ -155,6 +155,16 @@ function formatarCpf(valor) {
   return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6, 9) + '-' + d.slice(9);
 }
 
+// Telefone: guardamos só os números; a máscara é aplicada na tela e nos relatórios.
+function formatarTelefone(valor) {
+  var d = String(valor === null || valor === undefined ? '' : valor).replace(/\D/g, '').slice(0, 11);
+  if (!d) return '';
+  if (d.length <= 2) return '(' + d;
+  if (d.length <= 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+  if (d.length <= 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+  return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+}
+
 function cpfValido(valor) {
   var d = String(valor || '').replace(/\D/g, '');
   if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
