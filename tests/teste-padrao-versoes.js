@@ -32,6 +32,18 @@ check('Linux recusa tag repetida', /git ls-remote --exit-code --tags origin/.tes
 check('Linux mostra o estado antes de publicar', /=== 1\/5: estado local ===/.test(linux));
 check('baixarpsi agora só recomenda o nome do atalho', /Dica: subirpsi \(ele sugere/.test(baixar));
 
+// O GitHub roda os testes com outro usuário e outra pasta. O atalho precisa
+// encontrar o projeto por ele mesmo, não pelo endereço da casa da psicóloga.
+const os = require('os');
+const homeTemporaria = fs.mkdtempSync(require('path').join(os.tmpdir(), 'psi-home-'));
+const rPortatil = cp.spawnSync(raiz + 'scripts/subirpsi', ['docs: texto', 'v9.9.9', '--dry-run'], {
+  cwd: os.tmpdir(), encoding: 'utf8',
+  env: Object.assign({}, process.env, { HOME: homeTemporaria })
+});
+check('atalho funciona em outra máquina/pasta',
+  rPortatil.status === 0 && /Descrição: docs: texto/.test(rPortatil.stdout),
+  String(rPortatil.stderr || '').trim().split('\n')[0]);
+
 const ultima = cp.execSync('git tag --list "v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname',
   { cwd: raiz, encoding: 'utf8' }).trim().split('\n')[0].slice(1).split('.').map(Number);
 const proxPatch = 'v' + ultima[0] + '.' + ultima[1] + '.' + (ultima[2] + 1);

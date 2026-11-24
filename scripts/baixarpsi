@@ -3,7 +3,8 @@
 # Uso: baixarpsi [--dry-run]
 set -euo pipefail
 
-PROJETO="$HOME/Documentos/Pessoal/Saas Psicologa"
+# Encontra o projeto pelo próprio arquivo, sem depender do usuário/pasta.
+PROJETO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RAMO="main"
 SIMULAR=0
 

@@ -19,7 +19,9 @@
 #   subirpsi "..." v1.4.0 --dry-run            -> só mostra o que faria
 set -euo pipefail
 
-PROJETO="$HOME/Documentos/Pessoal/Saas Psicologa"
+# Encontra o projeto pelo próprio arquivo, sem depender do usuário/pasta.
+# Assim o atalho funciona em qualquer máquina (inclusive no GitHub).
+PROJETO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RAMO="main"
 TIPOS="feat|fix|security|docs|style|refactor|test|chore"
 
