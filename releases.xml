@@ -6,7 +6,25 @@
     <description>Versões e novidades do Gestão de Pacientes (SaaS by Myttoz).</description>
     <language>pt-BR</language>
     <atom:link href="https://myttoz.github.io/Saas-psicologia/releases.rss" rel="self" type="application/rss+xml" />
-    <lastBuildDate>Mon, 23 Nov 2026 19:51:39 GMT</lastBuildDate>
+    <lastBuildDate>Tue, 24 Nov 2026 10:57:15 GMT</lastBuildDate>
+<item>
+  <title>v1.4.0</title>
+  <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.4.0</link>
+  <guid isPermaLink="true">https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.4.0</guid>
+  <pubDate>Tue, 24 Nov 2026 10:57:01 GMT</pubDate>
+  <description><![CDATA[<h2>v1.4.0 — Recibo oficial e CPF do paciente</h2>
+<p>O recibo válido continua sendo o da Receita Federal. O site agora prepara o texto e guarda o histórico, sem tentar substituir o documento oficial.</p>
+<p><strong>Data:</strong> 23/11/2026</p>
+<h2>✨ Novidades</h2>
+<ul><li><strong>CPF do paciente</strong> no cadastro (opcional, com conferência dos números). Aparece na ficha e entra na busca.</li><li><strong>Preparar recibo</strong>: no atendimento pago, o botão <strong>Recibo</strong> abre uma tela com o texto pronto (nome, CPF, valor, serviço, data e seu CRP), botão para copiar e atalho para o e-CAC da Receita Federal.</li><li><strong>Código de verificação</strong> da Receita salvo por atendimento, com data de emissão e situação: salvo / enviado ao paciente.</li><li><strong>Marcar como enviado</strong> monta a mensagem para o WhatsApp já com o código de verificação. O PDF continua sendo anexado por você.</li><li>O botão do atendimento mostra o estado: <strong>Recibo</strong>, <strong>Recibo salvo</strong> ou <strong>Recibo enviado</strong>.</li></ul>
+<h2>🔧 Melhorias</h2>
+<ul><li>O antigo recibo impresso pelo site passa a se chamar <strong>Comprovante simples</strong> e traz um aviso de que não tem validade oficial. Ele fica só como plano B.</li><li>A exclusão de ano, o login e a Gestão Anual continuam como antes.</li></ul>
+<h2>🔒 Segurança</h2>
+<ul><li>O registro do código e o envio entram na trilha <code>auditoria</code>, sem guardar CPF nem texto clínico.</li><li>CPF é validado antes de salvar; o backup e a nuvem guardam só os números e campos conhecidos do recibo. Backup e nuvem passam para a versão 6; arquivos antigos continuam sendo aceitos.</li></ul>
+<h2>🚀 Como atualizar</h2>
+<p>1. Recarregue o site com <strong>Ctrl+F5</strong> (ou feche e abra o aplicativo no celular). 2. Em <strong>Pacientes</strong>, edite as fichas e preencha o CPF de quem já atende. 3. Em um atendimento pago, clique em <strong>Recibo</strong>, copie o texto, gere o recibo no app da Receita e volte para salvar o código.</p>
+<p>SaaS by Myttoz</p>]]></description>
+</item>
 <item>
   <title>v1.3.0</title>
   <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.3.0</link>
