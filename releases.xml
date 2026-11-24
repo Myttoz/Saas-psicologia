@@ -6,7 +6,24 @@
     <description>Versões e novidades do Gestão de Pacientes (SaaS by Myttoz).</description>
     <language>pt-BR</language>
     <atom:link href="https://myttoz.github.io/Saas-psicologia/releases.rss" rel="self" type="application/rss+xml" />
-    <lastBuildDate>Tue, 24 Nov 2026 13:09:15 GMT</lastBuildDate>
+    <lastBuildDate>Tue, 24 Nov 2026 13:17:58 GMT</lastBuildDate>
+<item>
+  <title>v1.5.1</title>
+  <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.5.1</link>
+  <guid isPermaLink="true">https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.5.1</guid>
+  <pubDate>Tue, 24 Nov 2026 13:17:42 GMT</pubDate>
+  <description><![CDATA[<h2>v1.5.1 — Correção da conferência automática</h2>
+<p><strong>Data:</strong> 24/11/2026</p>
+<p>Esta versão <strong>não muda nada no site</strong>. Ela corrige só a conferência automática do GitHub, que tinha ficado vermelha na <code>v1.5.0</code>.</p>
+<h2>O que aconteceu</h2>
+<p>Os testes passaram no computador, mas falharam no GitHub. O motivo: os atalhos <code>subirpsi</code> e <code>baixarpsi</code> procuravam o projeto pelo endereço <code>/home/infra/Documentos/Pessoal/Saas Psicologa</code>. No GitHub, esse endereço não existe — cada máquina tem a própria pasta — então a bateria de versões falhava.</p>
+<h2>A correção</h2>
+<ul><li>Os atalhos agora encontram o projeto <strong>por eles mesmos</strong>, a partir da pasta onde estão. Funcionam no seu computador, em outro computador e no GitHub.</li><li>Foi acrescentado um teste que simula outra máquina/outro usuário. Assim esse problema não volta a passar despercebido.</li><li>O site, o login, a nuvem, o recibo e a segurança continuam exatamente iguais.</li></ul>
+<h2>Como conferir</h2>
+<p>1. Abra https://github.com/Myttoz/Saas-psicologia/actions 2. A última conferência <strong>Conferir testes</strong> precisa estar verde. 3. No computador: <code>node tests/rodar.js</code> → 17 baterias passando.</p>
+<p>&gt; Não é preciso limpar cache, refazer login ou mudar a forma de usar <code>subirpsi</code>. &gt; O comando continua o mesmo.</p>
+<p>SaaS by Myttoz</p>]]></description>
+</item>
 <item>
   <title>v1.5.0</title>
   <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.5.0</link>
