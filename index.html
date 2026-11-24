@@ -431,6 +431,11 @@
         <div class="form-note">Opcional. Serve só para preparar o recibo da Receita Federal.</div>
       </div>
       <div class="form-group">
+        <label class="form-label">E-mail (para o portal do paciente)</label>
+        <input type="email" id="pacEmail" class="form-control" placeholder="ana@exemplo.com">
+        <div class="form-note">Opcional. Só preencha se quiser convidar este paciente para o portal. É pelo e-mail que ele recebe o link de acesso.</div>
+      </div>
+      <div class="form-group">
         <label class="form-label">Data de nascimento</label>
         <input type="date" id="pacNascimento" class="form-control">
         <div class="form-note">Opcional. Aparece na ficha e ajuda a identificar o paciente.</div>
@@ -921,6 +926,34 @@
 <!-- Toast -->
 <div class="toast" id="toast">Operação realizada</div>
 
+<!-- Modal: Convidar paciente para o portal -->
+<div class="modal" id="modalPortalConvite" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Convidar para o portal</div>
+    <button class="modal-close" onclick="app.fecharModal('modalPortalConvite')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-note" style="margin-bottom:1rem;">
+      O site envia um link por e-mail para o paciente criar a senha e entrar no portal.
+      Você não precisa abrir o Supabase. O link é de uso único e expira.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Paciente</label>
+      <input type="text" id="portalConviteNome" class="form-control" disabled>
+    </div>
+    <div class="form-group">
+      <label class="form-label">E-mail do paciente</label>
+      <input type="email" id="portalConviteEmail" class="form-control" placeholder="paciente@exemplo.com">
+      <div class="form-note">Confira o e-mail antes de enviar. Ele precisa ser o e-mail que o paciente acessa.</div>
+    </div>
+    <div id="portalConviteStatus" class="form-note" style="margin-top:.5rem;"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="app.fecharModal('modalPortalConvite')">Fechar</button>
+    <button class="btn btn-primary" id="portalConviteBtn" onclick="pacientesModulo.enviarConvitePortal()">Enviar convite</button>
+  </div>
+</div>
+
 <!-- Input oculto para importar backup -->
 <input type="file" id="backupFileInput" accept=".json,application/json" style="display:none;" onchange="backupModulo.processarArquivo(this)">
 
@@ -929,6 +962,7 @@
 <script src="js/data.js"></script>
 <script src="js/anos.js"></script>
 <script src="js/backend.js"></script>
+<script src="js/portal.js"></script>
 <script src="js/meses.js"></script>
 <script src="js/hoje.js"></script>
 <script src="js/seguranca.js"></script>

@@ -157,6 +157,8 @@ var backupModulo = {
             limpo[chave] = self._dataIso(item[chave]) || '';
           } else if (chave === 'telefone') {
             limpo[chave] = self._texto(String(item[chave] || '').replace(/\D/g, ''), 11);
+          } else if (chave === 'email') {
+            limpo[chave] = self._texto(item[chave], self.LIMITE_CURTO).trim().toLowerCase();
           } else if (chave === 'responsavel' || chave === 'carteira') {
             limpo[chave] = self._texto(item[chave], self.LIMITE_CURTO);
           } else if (chave === 'data') {

@@ -220,7 +220,7 @@ async function main() {
   check('guia alerta sobre service_role', guia.includes('service_role'));
 
   const workflow = fs.readFileSync(raiz + '.github/workflows/deploy.yml', 'utf8');
-  check('workflow publica no GitHub Pages', workflow.includes('actions/deploy-pages@v4'));
+  check('workflow publica no GitHub Pages', workflow.includes('actions/deploy-pages@v5'));
   check('workflow publica só arquivos do site', workflow.includes('cp -r css js assets _site/'));
   check('workflow não publica pasta pessoal', !workflow.includes('cp -r Livia'));
 

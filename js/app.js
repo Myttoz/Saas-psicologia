@@ -168,7 +168,8 @@ var app = {
                 '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>',
       pago: '<polyline points="20 6 9 17 4 12"></polyline>',
       pendente: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>' +
-                '<polyline points="3 3 3 8 8 8"></polyline>'
+                '<polyline points="3 3 3 8 8 8"></polyline>',
+      convidar: '<path d="M4 4h16v16H4z"></path><polyline points="22,6 12,13 2,6"></polyline>'
     };
     return '<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" ' +
            'stroke-linecap="round" stroke-linejoin="round" fill="none">' +

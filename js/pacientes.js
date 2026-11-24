@@ -81,7 +81,8 @@ function pacientesRender() {
     var acoes =
       app.botaoAcao('Editar', 'pacientesModulo.editar(' + Number(p.id) + ')', 'editar') +
       app.botaoAcao('Excluir', 'pacientesModulo.excluir(' + Number(p.id) + ')', 'excluir', true) +
-      app.botaoAcao('Apagar dados', 'pacientesModulo.apagarDados(' + Number(p.id) + ')', 'excluir', true);
+      app.botaoAcao('Apagar dados', 'pacientesModulo.apagarDados(' + Number(p.id) + ')', 'excluir', true) +
+      app.botaoAcao('Convidar portal', 'pacientesModulo.convidarPortal(' + Number(p.id) + ')', 'convidar');
 
     var tr = document.createElement('tr');
     tr.innerHTML =
@@ -217,6 +218,13 @@ var pacientesModulo = {
     var carteiraInput = document.getElementById('pacCarteira');
     var carteira = String(carteiraInput ? carteiraInput.value : '').trim().slice(0, 120);
 
+    var emailInput = document.getElementById('pacEmail');
+    var email = String(emailInput ? emailInput.value : '').trim().toLowerCase();
+    if (email && typeof Portal !== 'undefined' && Portal.validarEmail && !Portal.validarEmail(email)) {
+      app.toast('E-mail inválido. Confira o endereço ou deixe em branco.');
+      return false;
+    }
+
     var fId = parseInt(fonteSelect.value);
     var f = null;
     for (var i = 0; i < fontes.length; i++) {
@@ -255,6 +263,7 @@ var pacientesModulo = {
           pacientes[i].telefone = telefone;
           pacientes[i].responsavel = responsavel;
           pacientes[i].carteira = carteira;
+          pacientes[i].email = email;
           break;
         }
       }
@@ -272,7 +281,8 @@ var pacientesModulo = {
         nascimento: nascimento,
         telefone: telefone,
         responsavel: responsavel,
-        carteira: carteira
+        carteira: carteira,
+        email: email
       });
     }
 
@@ -311,6 +321,8 @@ var pacientesModulo = {
     if (respCampo) respCampo.value = p.responsavel || '';
     var carteiraCampo = document.getElementById('pacCarteira');
     if (carteiraCampo) carteiraCampo.value = p.carteira || '';
+    var emailCampo = document.getElementById('pacEmail');
+    if (emailCampo) emailCampo.value = p.email || '';
 
     // garante que o select esteja preenchido
     preencherFontesSelects();
@@ -458,6 +470,210 @@ var pacientesModulo = {
     } else {
       conferirEvolucoes();
     }
+  },
+
+  // ---------- Portal do paciente (convite por link mágico) ----------
+
+  _portalPacienteId: null,
+
+  _pacientePorId: function(id) {
+    for (var i = 0; i < pacientes.length; i++) {
+      if (pacientes[i].id === id) return pacientes[i];
+    }
+    return null;
+  },
+
+  _portalMsg: function(texto, erro) {
+    var el = document.getElementById('portalConviteStatus');
+    if (!el) return;
+    el.textContent = texto || '';
+    el.style.color = erro ? '#C16A4A' : 'var(--text-muted)';
+  },
+
+  convidarPortal: function(id) {
+    var self = this;
+    var p = this._pacientePorId(id);
+    if (!p) return;
+    if (!Backend || !Backend.configurado() || !Backend.conectado()) {
+      app.toast('Entre na sua conta para convidar o paciente.');
+      return;
+    }
+    this._portalPacienteId = id;
+    var nome = document.getElementById('portalConviteNome');
+    if (nome) nome.value = p.nome || '';
+    var email = document.getElementById('portalConviteEmail');
+    if (email) email.value = p.email || '';
+    var btn = document.getElementById('portalConviteBtn');
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar convite'; }
+    this._portalMsg('Verificando convite...');
+    app.abrirModal('modalPortalConvite');
+    this._carregarStatusPortal(p).catch(function(erro) {
+      self._portalMsg(erro.message || 'Não foi possível verificar o convite.', true);
+    });
+  },
+
+  _carregarStatusPortal: function(paciente) {
+    var self = this;
+    var usuario = Backend.usuario();
+    if (!usuario || !usuario.id) return Promise.resolve();
+    var base = Backend.base();
+    var headers = Backend.headers(true);
+    var urlPac = base + '/rest/v1/portal_pacientes?select=id,email&profissional_id=eq.' +
+      encodeURIComponent(usuario.id) + '&paciente_id=eq.' + encodeURIComponent(String(paciente.id)) + '&limit=1';
+    return fetch(urlPac, { headers: headers }).then(function(r) { return Backend._resposta(r); })
+      .then(function(linhas) {
+        var vinculo = linhas && linhas[0];
+        if (!vinculo) {
+          self._portalMsg('Ainda não há convite para este paciente.');
+          return;
+        }
+        var idPortal = vinculo.id;
+        var urlAcesso = base + '/rest/v1/portal_acessos?select=criado_em&paciente_portal_id=eq.' +
+          encodeURIComponent(idPortal) + '&limit=1';
+        var urlConvite = base + '/rest/v1/portal_convites?select=criado_em,aceito_em,expira_em,email&paciente_portal_id=eq.' +
+          encodeURIComponent(idPortal) + '&order=criado_em.desc&limit=1';
+        return Promise.all([
+          fetch(urlAcesso, { headers: headers }).then(function(r) { return Backend._resposta(r); }),
+          fetch(urlConvite, { headers: headers }).then(function(r) { return Backend._resposta(r); })
+        ]).then(function(res) {
+          var acesso = res[0] && res[0][0];
+          var convite = res[1] && res[1][0];
+          var btn = document.getElementById('portalConviteBtn');
+          if (acesso) {
+            if (btn) btn.textContent = 'Reenviar convite';
+            self._portalMsg('Convite aceito. O paciente já tem acesso ao portal. Você pode reenviar se ele precisar de novo link.');
+            return;
+          }
+          if (convite && !convite.aceito_em) {
+            if (btn) btn.textContent = 'Reenviar convite';
+            self._portalMsg('Convite enviado para ' + (convite.email || 'o e-mail informado') + '. Aguardando o paciente aceitar.');
+            return;
+          }
+          self._portalMsg('Vínculo criado, mas sem convite pendente. Você pode enviar o convite.');
+        });
+      });
+  },
+
+  enviarConvitePortal: function() {
+    var self = this;
+    var p = this._pacientePorId(this._portalPacienteId);
+    if (!p) { app.toast('Paciente não encontrado.'); return; }
+    if (!Backend || !Backend.configurado() || !Backend.conectado()) {
+      app.toast('Entre na sua conta para enviar o convite.');
+      return;
+    }
+    var emailInput = document.getElementById('portalConviteEmail');
+    var email = String(emailInput ? emailInput.value : '').trim().toLowerCase();
+    if (!email || typeof Portal === 'undefined' || !Portal.validarEmail(email)) {
+      this._portalMsg('Informe um e-mail válido.', true);
+      return;
+    }
+
+    // guarda o e-mail no cadastro do paciente
+    if (p.email !== email) {
+      p.email = email;
+      Store.salvar();
+      pacientesRender();
+    }
+
+    var btn = document.getElementById('portalConviteBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+    this._portalMsg('Enviando convite...');
+
+    var usuario = Backend.usuario();
+    var base = Backend.base();
+    var headers = Backend.headers(true);
+    var pacientePortalId = null;
+
+    // 1) cria/encontra vínculo portal_pacientes
+    var urlBusca = base + '/rest/v1/portal_pacientes?select=id&profissional_id=eq.' +
+      encodeURIComponent(usuario.id) + '&paciente_id=eq.' + encodeURIComponent(String(p.id)) + '&limit=1';
+    fetch(urlBusca, { headers: headers })
+      .then(function(r) { return Backend._resposta(r); })
+      .then(function(linhas) {
+        if (linhas && linhas[0] && linhas[0].id) return linhas[0].id;
+        var hIns = Backend.headers(true);
+        hIns['Prefer'] = 'return=representation';
+        return fetch(base + '/rest/v1/portal_pacientes', {
+          method: 'POST',
+          headers: hIns,
+          body: JSON.stringify({
+            profissional_id: usuario.id,
+            paciente_id: String(p.id),
+            nome: String(p.nome || '').slice(0, 300),
+            email: email
+          })
+        }).then(function(r) { return Backend._resposta(r); }).then(function(rows) {
+          return rows && rows[0] ? rows[0].id : null;
+        });
+      })
+      .then(function(idPortal) {
+        pacientePortalId = idPortal;
+        if (!pacientePortalId) throw new Error('Não foi possível criar o vínculo do paciente no portal.');
+        // atualiza nome/email do vínculo
+        return fetch(base + '/rest/v1/portal_pacientes?id=eq.' + encodeURIComponent(pacientePortalId), {
+          method: 'PATCH',
+          headers: Backend.headers(true),
+          body: JSON.stringify({ nome: String(p.nome || '').slice(0, 300), email: email, atualizado_em: new Date().toISOString() })
+        }).then(function(r) { if (!r.ok) throw new Error('Não foi possível atualizar o vínculo.'); });
+      })
+      .then(function() {
+        // 2) registra convite
+        var hConv = Backend.headers(true);
+        hConv['Prefer'] = 'return=minimal';
+        return fetch(base + '/rest/v1/portal_convites', {
+          method: 'POST',
+          headers: hConv,
+          body: JSON.stringify({
+            profissional_id: usuario.id,
+            paciente_portal_id: pacientePortalId,
+            email: email
+          })
+        }).then(function(r) {
+          if (!r.ok) throw new Error('Não foi possível registrar o convite. Verifique se o SQL do portal foi aplicado no Supabase.');
+        });
+      })
+      .then(function() {
+        // 3) envia link mágico por e-mail (anon, sem mexer na sessão da psicóloga)
+        var redirectTo = (typeof Portal !== 'undefined' && Portal.urlDeRetorno)
+          ? Portal.urlDeRetorno(window.location.origin)
+          : (window.location.origin + '/portal.html');
+        return fetch(base + '/auth/v1/otp', {
+          method: 'POST',
+          headers: {
+            'apikey': CONFIG.supabaseAnonKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: email,
+            create_user: true,
+            data: { portal: true, paciente_portal_id: pacientePortalId },
+            redirect_to: redirectTo
+          })
+        }).then(function(r) {
+          return r.json().catch(function() { return {}; }).then(function(dados) {
+            if (!r.ok) {
+              var msg = (dados && (dados.msg || dados.message || dados.error_description)) || 'Não foi possível enviar o e-mail.';
+              throw new Error(msg);
+            }
+            return dados;
+          });
+        });
+      })
+      .then(function() {
+        if (btn) { btn.disabled = false; btn.textContent = 'Reenviar convite'; }
+        self._portalMsg('Convite enviado para ' + email + '. Peça ao paciente para abrir o e-mail e criar a senha.');
+        app.toast('Convite enviado para o portal.');
+        if (typeof segurancaModulo !== 'undefined') segurancaModulo.registrar('Convite do portal enviado', p.nome ? p.nome.slice(0, 3) + '***' : '');
+      })
+      .catch(function(erro) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Reenviar convite'; }
+        var msg = erro && erro.message ? erro.message : 'Não foi possível enviar o convite.';
+        if (/portal_pacientes|portal_convites|relation .* does not exist|404/i.test(msg)) {
+          msg = 'As tabelas do portal ainda não existem no Supabase. Abra o SQL Editor e rode o arquivo supabase/schema.sql.';
+        }
+        self._portalMsg(msg, true);
+      });
   }
 
 };
