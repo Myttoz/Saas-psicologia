@@ -6,7 +6,24 @@
     <description>Versões e novidades do Gestão de Pacientes (SaaS by Myttoz).</description>
     <language>pt-BR</language>
     <atom:link href="https://myttoz.github.io/Saas-psicologia/releases.rss" rel="self" type="application/rss+xml" />
-    <lastBuildDate>Tue, 24 Nov 2026 13:47:40 GMT</lastBuildDate>
+    <lastBuildDate>Tue, 24 Nov 2026 14:22:27 GMT</lastBuildDate>
+<item>
+  <title>v1.7.0</title>
+  <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.7.0</link>
+  <guid isPermaLink="true">https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.7.0</guid>
+  <pubDate>Tue, 24 Nov 2026 14:22:14 GMT</pubDate>
+  <description><![CDATA[<h2>v1.7.0 — Ficha completa e relatório mensal</h2>
+<p><strong>Data:</strong> 24/11/2026</p>
+<p>Esta versão fecha os dois blocos opcionais que estavam no manual: a ficha do paciente ficou mais completa e o site passou a baixar um relatório mensal.</p>
+<h2>✨ Novidades</h2>
+<ul><li><strong>Ficha do paciente mais completa</strong>: agora é possível registrar nascimento, telefone, responsável e carteira do convênio. Todos os campos são opcionais. O telefone é guardado só com números, aparece com máscara <code>(11) 99999-8888</code> e entra na busca junto com responsável e carteira. Os detalhes aparecem embaixo do nome na tabela de pacientes.</li><li><strong>Relatório mensal (CSV)</strong>: em <strong>Resumos</strong>, o botão <strong>⬇ Relatório mensal (CSV)</strong> baixa <code>relatorio-AAAA-MM.csv</code> com quatro partes: <strong>RESUMO</strong> (quantidades e totais), <strong>ENTRADAS</strong> (pagos), <strong>PENDÊNCIAS</strong> (pendentes que não são falta nem cancelamento) e <strong>FALTAS</strong> (presença *Faltou*). Cada linha traz data, horário, paciente, contato, convênio, tipo, pagamento, presença, observações e valor. O contato vem da ficha de cada paciente, casado pelo nome sem acento.</li></ul>
+<h2>🔧 Compatibilidade</h2>
+<ul><li>Backup continua na <strong>versão 6</strong> e o cache do celular continua em <code>saatendimentos-v6</code>: os campos novos são opcionais e não obrigam limpar nada. Pacientes de backups antigos aparecem com os campos em branco.</li><li>O CSV do contador <strong>não mudou</strong> — continua com as mesmas 7 colunas e o nome <code>contador-AAAA-MM.csv</code>. O relatório é um arquivo separado.</li><li>Nenhuma mudança em login, MFA, RLS, AES-GCM, chave anon, WhatsApp, recibo da Receita Federal, CRP <code>04/74163</code>, cores ou logo.</li><li>Duas baterias novas: <code>tests/teste-ficha-completa.js</code> e <code>tests/teste-relatorio-mensal.js</code> (20 baterias no total).</li></ul>
+<h2>🚀 Como conferir</h2>
+<p>1. Abra https://myttoz.github.io/Saas-psicologia/ 2. Em <strong>Pacientes</strong>, edite alguém e preencha os campos novos. Depois busque pelo telefone ou pelo responsável. 3. Em <strong>Resumos</strong>, escolha um mês com atendimentos e clique em <strong>⬇ Relatório mensal (CSV)</strong>. Confira se o contato do paciente apareceu. 4. O selo <strong>Conferir testes</strong> no GitHub precisa estar verde.</p>
+<p>&gt; O manual (<code>MANUAL.md</code>) explica os dois blocos passo a passo.</p>
+<p>SaaS by Myttoz</p>]]></description>
+</item>
 <item>
   <title>v1.6.0</title>
   <link>https://github.com/Myttoz/Saas-psicologia/releases/tag/v1.6.0</link>
