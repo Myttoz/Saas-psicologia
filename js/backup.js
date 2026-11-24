@@ -145,6 +145,13 @@ var backupModulo = {
             limpo[chave] = self._texto(String(item[chave] || '').replace(/\D/g, ''), 11).slice(0, 11);
           } else if (chave === 'assinatura') {
             limpo[chave] = self._assinaturaValida(item[chave]);
+          } else if (chave === 'consentimento') {
+            // LGPD: só três estados são aceitos; qualquer outro vira "pendente".
+            var consentimento = self._texto(item[chave], 20);
+            limpo[chave] = /^(pendente|aceito|recusado)$/.test(consentimento)
+              ? consentimento : 'pendente';
+          } else if (chave === 'consentimentoEm') {
+            limpo[chave] = self._dataIso(item[chave]) || '';
           } else if (chave === 'data') {
             var data = self._dataIso(item[chave]);
             if (!data) throw new Error('Data inválida em ' + nome + '.');

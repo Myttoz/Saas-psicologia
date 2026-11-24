@@ -4,6 +4,20 @@
 
 var pacientesEditId = null; // id do paciente sendo editado, null = novo
 
+// LGPD: a autorização fica guardada com o paciente. Backups antigos não tinham
+// esse campo e continuam valendo como "aguardando".
+function normalizarConsentimento(valor) {
+  var v = String(valor === null || valor === undefined ? '' : valor).trim().toLowerCase();
+  return (v === 'aceito' || v === 'recusado') ? v : 'pendente';
+}
+
+function textoConsentimento(valor) {
+  var v = normalizarConsentimento(valor);
+  if (v === 'aceito') return 'Autorizado';
+  if (v === 'recusado') return 'Não autorizado';
+  return 'Aguardando';
+}
+
 function pacientesRender() {
   var tbody = document.getElementById('tbodyPacientes');
   if (!tbody) return;
@@ -33,14 +47,19 @@ function pacientesRender() {
       ? formatarMoeda(valorTexto)
       : '—';
 
+    var consentimento = normalizarConsentimento(p.consentimento);
+
     var acoes =
       app.botaoAcao('Editar', 'pacientesModulo.editar(' + Number(p.id) + ')', 'editar') +
-      app.botaoAcao('Excluir', 'pacientesModulo.excluir(' + Number(p.id) + ')', 'excluir', true);
+      app.botaoAcao('Excluir', 'pacientesModulo.excluir(' + Number(p.id) + ')', 'excluir', true) +
+      app.botaoAcao('Apagar dados', 'pacientesModulo.apagarDados(' + Number(p.id) + ')', 'excluir', true);
 
     var tr = document.createElement('tr');
     tr.innerHTML =
       '<td><strong>' + escapeHtml(p.nome) + '</strong>' +
         (p.cpf ? '<div class="cell-sub">CPF ' + escapeHtml(formatarCpf(p.cpf)) + '</div>' : '') +
+        '<div class="cell-sub lgpd-' + consentimento + '">LGPD: ' +
+          textoConsentimento(consentimento) + '</div>' +
         '</td>' +
       '<td>' + (f ? escapeHtml(f.nome) : '-') + '</td>' +
       '<td><span class="badge ' + tipoBadge + '">' + tipoTexto + '</span></td>' +
@@ -101,6 +120,10 @@ var pacientesModulo = {
 
     pacientesEditId = null;
 
+    // novo paciente começa sem autorização registrada
+    var consentSel = document.getElementById('pacConsentimento');
+    if (consentSel) consentSel.value = 'pendente';
+
     // popular select de convênios
     preencherFontesSelects();
 
@@ -141,6 +164,10 @@ var pacientesModulo = {
       return false;
     }
 
+    var consentInput = document.getElementById('pacConsentimento');
+    var consentimento = normalizarConsentimento(consentInput ? consentInput.value : 'pendente');
+    var consentimentoEm = consentimento === 'pendente' ? '' : hojeStr;
+
     var fId = parseInt(fonteSelect.value);
     var f = null;
     for (var i = 0; i < fontes.length; i++) {
@@ -166,10 +193,15 @@ var pacientesModulo = {
       // edição de paciente existente
       for (var i = 0; i < pacientes.length; i++) {
         if (pacientes[i].id === pacientesEditId) {
+          var anterior = normalizarConsentimento(pacientes[i].consentimento);
           pacientes[i].nome = nomeInput.value.trim();
           pacientes[i].cpf = cpf;
           pacientes[i].fonteId = f.id;
           pacientes[i].valor = valor;
+          pacientes[i].consentimento = consentimento;
+          pacientes[i].consentimentoEm = (consentimento === anterior)
+            ? (pacientes[i].consentimentoEm || '')
+            : consentimentoEm;
           break;
         }
       }
@@ -181,7 +213,9 @@ var pacientesModulo = {
         nome: nomeInput.value.trim(),
         cpf: cpf,
         fonteId: f.id,
-        valor: valor
+        valor: valor,
+        consentimento: consentimento,
+        consentimentoEm: consentimentoEm
       });
     }
 
@@ -207,6 +241,9 @@ var pacientesModulo = {
     document.getElementById('pacNome').value = p.nome;
     var cpfCampo = document.getElementById('pacCpf');
     if (cpfCampo) cpfCampo.value = typeof formatarCpf === 'function' ? formatarCpf(p.cpf) : (p.cpf || '');
+
+    var consentCampo = document.getElementById('pacConsentimento');
+    if (consentCampo) consentCampo.value = normalizarConsentimento(p.consentimento);
 
     // garante que o select esteja preenchido
     preencherFontesSelects();
@@ -242,6 +279,118 @@ var pacientesModulo = {
     Store.salvar();
     pacientesRender();
     app.toast('Paciente excluído.');
+  },
+
+  // Apaga de verdade: cadastro, atendimentos, evoluções e sessão em andamento.
+  // Pede senha da conta + código do celular antes de mudar qualquer dado.
+  apagarDados: function(id) {
+    var paciente = null;
+    for (var i = 0; i < pacientes.length; i++) {
+      if (pacientes[i].id === id) { paciente = pacientes[i]; break; }
+    }
+    if (!paciente) return;
+
+    var nome = String(paciente.nome || '').trim();
+    var alvo = normalizarTexto(nome);
+    if (!alvo) return;
+
+    var atendimentos = 0;
+    for (var i = 0; i < lancamentos.length; i++) {
+      if (normalizarTexto(lancamentos[i].paciente) === alvo) atendimentos++;
+    }
+
+    var aviso = 'Apagar TODOS os dados de ' + nome + '?\n\n' +
+      '- cadastro do paciente\n' +
+      '- ' + atendimentos + ' atendimento(s)\n' +
+      '- evoluções do prontuário deste paciente\n\n' +
+      'Depois pedirei a senha da sua conta e o código do celular. ' +
+      'Backups já exportados e a trilha de acesso ficam guardados.';
+    if (!confirm(aviso)) return;
+
+    var digitado = prompt('Para confirmar, digite o nome completo do paciente:');
+    if (normalizarTexto(digitado || '') !== alvo) {
+      app.toast('Nome diferente. Nada foi apagado.');
+      return;
+    }
+
+    if (typeof segurancaModulo !== 'undefined' && segurancaModulo.estaDesbloqueado &&
+        !segurancaModulo.estaDesbloqueado()) {
+      app.toast('Desbloqueie o prontuário antes de apagar os dados.');
+      return;
+    }
+
+    function conferirEvolucoes() {
+      var evRestantes = [];
+      var evApagadas = 0;
+      var ilegiveis = 0;
+
+      for (var i = 0; i < evolucoes.length; i++) {
+        var ev = evolucoes[i];
+        var texto = (typeof prontuarioModulo !== 'undefined' && prontuarioModulo.plain)
+          ? prontuarioModulo.plain(ev)
+          : (ev.cifrado ? null : ev);
+
+        if (ev.cifrado && !texto) {
+          ilegiveis++;
+          evRestantes.push(ev);
+        } else if (texto && normalizarTexto(texto.paciente) === alvo) {
+          evApagadas++;
+        } else {
+          evRestantes.push(ev);
+        }
+      }
+
+      if (ilegiveis > 0) {
+        app.toast('Não foi possível ler ' + ilegiveis + ' evolução(ões). Desbloqueie o prontuário e tente de novo.');
+        return;
+      }
+
+      var executar = function() {
+        var lRestantes = [];
+        var idsLancamentos = [];
+        for (var i = 0; i < lancamentos.length; i++) {
+          if (normalizarTexto(lancamentos[i].paciente) === alvo) {
+            idsLancamentos.push(lancamentos[i].id);
+          } else {
+            lRestantes.push(lancamentos[i]);
+          }
+        }
+
+        pacientes = pacientes.filter(function(item) { return item.id !== id; });
+        lancamentos = lRestantes;
+        evolucoes = evRestantes;
+
+        if (typeof hojeModulo !== 'undefined' && hojeModulo.sessao &&
+            idsLancamentos.indexOf(hojeModulo.sessao.id) !== -1) {
+          hojeModulo.sessao = null;
+          if (hojeModulo.salvarSessao) hojeModulo.salvarSessao();
+        }
+        if (typeof prontuarioModulo !== 'undefined' && prontuarioModulo.limparCache) {
+          prontuarioModulo.limparCache();
+        }
+
+        Store.salvar();
+        if (typeof segurancaModulo !== 'undefined' && segurancaModulo.registrar) {
+          segurancaModulo.registrar('Dados do paciente apagados',
+            nome.slice(0, 3) + '*** (' + atendimentos + ' atendimentos, ' +
+            evApagadas + ' evoluções)');
+        }
+        pacientesRender();
+        app.toast('Dados de ' + nome + ' apagados.');
+      };
+
+      if (typeof backupModulo !== 'undefined' && backupModulo._reautenticar) {
+        backupModulo._reautenticar(executar);
+      } else {
+        executar();
+      }
+    }
+
+    if (typeof prontuarioModulo !== 'undefined' && prontuarioModulo.garantirCache) {
+      prontuarioModulo.garantirCache().then(conferirEvolucoes);
+    } else {
+      conferirEvolucoes();
+    }
   }
 
 };

@@ -14,6 +14,7 @@ Feito para abrir no computador e no celular, com os dados guardados na nuvem.
 - 🗓️ **Gestão Anual**: crie anos vazios, troque o ano em uso e exclua um ano só com senha e código.
 - ✅ **Painel do dia** com quem falta confirmar, quem deve e o valor a receber.
 - 👥 **Pacientes e convênios** cadastrados com busca e percentuais de repasse.
+- 🔒 **Privacidade/LGPD**: autorização registrada por paciente e botão **Apagar dados** (com senha da conta e código do celular).
 - 💰 **Lançamentos e resumos** com o ganho e o repasse de cada atendimento.
 - 🧾 **Recibo oficial da Receita Federal**: o site prepara o texto com o CPF do
   paciente, guarda o código de verificação e monta a mensagem para envio. O PDF
@@ -42,7 +43,9 @@ e o código do aplicativo antes de aceitar.
 
 ## Privacidade
 
-Cada conta vê somente os próprios dados. As evoluções do prontuário são
+Cada conta vê somente os próprios dados. A autorização de cada paciente fica
+registrada na ficha, e qualquer paciente pode ter os dados apagados pelo botão
+**Apagar dados** (com senha da conta e código do celular). As evoluções do prontuário são
 cifradas com uma chave que existe só na memória enquanto o prontuário está
 aberto; sem a senha, ninguém consegue lê-las — nem você. Guarde sua senha em
 local seguro, porque não há recuperação. O envio de mensagens pelo WhatsApp é

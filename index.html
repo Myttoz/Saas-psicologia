@@ -315,7 +315,11 @@
         </div>
 
         <div class="card">
-          <p style="font-size:.88rem; color:var(--text-muted); margin-bottom:1rem;">Cadastre os pacientes vinculando a um convênio.</p>
+          <p style="font-size:.88rem; color:var(--text-muted); margin-bottom:1rem;">
+            Cadastre os pacientes vinculando a um convênio e registre a autorização
+            de cada um para guardar os dados. Quem não autorizou pode ter os dados
+            apagados pelo botão <strong>Apagar dados</strong>.
+          </p>
           <div class="table-wrap">
             <table>
               <thead>
@@ -424,6 +428,15 @@
         <label class="form-label">CPF (usado no recibo)</label>
         <input type="text" id="pacCpf" class="form-control" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" oninput="app.mascaraCpf(this)">
         <div class="form-note">Opcional. Serve só para preparar o recibo da Receita Federal.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Autorização para guardar os dados (LGPD)</label>
+        <select id="pacConsentimento" class="form-control">
+          <option value="pendente">Aguardando autorização</option>
+          <option value="aceito">Autorizado pelo paciente</option>
+          <option value="recusado">Não autorizado</option>
+        </select>
+        <div class="form-note">Registre aqui a autorização recebida. Se não houver, deixe "Aguardando".</div>
       </div>
       <div class="form-group">
         <label class="form-label">Convênio</label>
@@ -789,6 +802,7 @@
       <button type="submit" class="btn-login-entrar">Entrar</button>
     </form>
     <p class="login-nota">Somente contas criadas pela profissional no Supabase podem entrar.</p>
+    <p class="login-nota">Seus dados ficam só na sua conta. Você pode apagar os dados de um paciente a qualquer momento.</p>
   </div>
   <div class="login-rodape">SaaS by Myttoz</div>
 </div>

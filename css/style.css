@@ -519,6 +519,10 @@ th, td {
   font-weight: 600;
 }
 
+.lgpd-pendente { color: var(--accent); }
+.lgpd-aceito { color: var(--success); }
+.lgpd-recusado { color: var(--danger); }
+
 th {
   background: #F5F8F5;
   font-weight: 800;

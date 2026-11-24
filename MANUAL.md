@@ -115,6 +115,10 @@ Enquanto o convênio estiver sem percentual, os campos de ganho e repasse mostra
   mensagem pronta (sem API e sem custo). Se não abrir, a mensagem é copiada.
 - **CPF do paciente** no cadastro (opcional, conferido antes de salvar). Aparece
   na ficha, entra na busca e é usado no texto do recibo.
+- **Privacidade/LGPD**: autorização registrada por paciente (aguardando,
+  autorizado ou recusado), aviso curto no site e botão **Apagar dados** que pede
+  senha da conta e código do celular antes de remover cadastro, atendimentos e
+  evoluções. A exclusão entra na trilha de acesso com o nome mascarado.
 - **Recibo oficial da Receita Federal**: o botão "Recibo" nos atendimentos pagos
   (Painel Hoje, Lançamentos e Situação Paciente) abre uma tela com o texto pronto
   para copiar (nome, CPF, valor, serviço, data e CRP), atalho para o e-CAC e um
@@ -460,17 +464,44 @@ No menu lateral, clique em **Anos**.
 Todas essas ações entram na trilha de acesso. Anos que já têm dados aparecem na
 lista mesmo quando o backup é antigo e ainda não guardava a lista de anos.
 
+## Privacidade e LGPD (como usar)
+
+A tela de entrada avisa, em poucas palavras, que os dados ficam só na sua conta e
+podem ser apagados. Na lista de pacientes há um aviso parecido.
+
+No cadastro de cada paciente, o campo **Autorização para guardar os dados (LGPD)**
+tem três opções: **Aguardando autorização** (padrão), **Autorizado pelo paciente**
+e **Não autorizado**. Ao registrar uma autorização ou recusa, o site guarda também
+a data da mudança. A situação aparece embaixo do nome na tabela. Pacientes criados
+pelo próprio atendimento entram como "Aguardando" — ajuste na ficha depois.
+
+Para apagar tudo de um paciente, use o botão **Apagar dados** na tabela. O site:
+
+1. mostra quantos atendimentos e evoluções serão removidos;
+2. pede para você digitar o nome completo do paciente;
+3. pede a senha da sua conta e o código de 6 números do celular;
+4. apaga o cadastro, os atendimentos, as evoluções do prontuário e encerra uma
+   sessão com cronômetro que esteja aberta;
+5. grava na trilha de acesso que a exclusão aconteceu — com o nome mascarado.
+
+Se o nome digitado não conferir, se você cancelar ou se o prontuário estiver
+bloqueado, **nada é apagado**. Evoluções cifradas só podem ser removidas com o
+prontuário desbloqueado.
+
+Backups que você já exportou e o histórico da trilha de acesso **não são apagados**
+por este botão — são registros antigos, mantidos por segurança. A nuvem é
+atualizada logo depois, como em qualquer outra alteração. Backups antigos (sem o
+campo de autorização) continuam sendo aceitos e aparecem como "Aguardando".
+
 ## Próximos blocos (a desenvolver)
 
-- **Privacidade / LGPD**: aviso curto no site, consentimento por paciente e
-  botão para apagar dados com senha e código.
 - **Ficha do paciente mais completa**: nascimento, telefone, responsável e
   carteira do convênio.
 - **Relatório mensal** pronto para exportar, com entradas, pendências e faltas.
 
 ## Como saber se está tudo bem (testes automáticos)
 
-As 17 baterias de teste agora moram na pasta `tests/` do projeto, junto do código —
+As 18 baterias de teste agora moram na pasta `tests/` do projeto, junto do código —
 não ficam mais só no computador. A cada publicação, o GitHub abre a conferência
 **Conferir testes** e verifica: sintaxe dos arquivos, IDs da tela, login, backup,
 nuvem, WhatsApp, recibo, segurança e padrão de versões.
@@ -517,7 +548,7 @@ git status                  # o que mudou
 git diff                    # mudanças ainda não confirmadas
 git log --oneline           # histórico dos commits
 git tag -l                  # versões já marcadas
-node tests/rodar.js         # roda as 17 baterias de teste
+node tests/rodar.js         # roda as 18 baterias de teste
 ```
 
 > A pasta `Livia/` (documentos pessoais) e `backup-*.json` estão no
