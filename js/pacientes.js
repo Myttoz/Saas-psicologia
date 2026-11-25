@@ -655,7 +655,9 @@ var pacientesModulo = {
         var redirectTo = (typeof Portal !== 'undefined' && Portal.urlDeRetorno)
           ? Portal.urlDeRetorno(window.location.href)
           : (window.location.href.replace(/[^/]*$/, '') + 'portal.html');
-        return fetch(base + '/auth/v1/otp', {
+        // O Supabase lê o retorno como parâmetro da URL (é o que as bibliotecas
+        // oficiais fazem); manter também no corpo garante compatibilidade.
+        return fetch(base + '/auth/v1/otp?redirect_to=' + encodeURIComponent(redirectTo), {
           method: 'POST',
           headers: {
             'apikey': CONFIG.supabaseAnonKey,

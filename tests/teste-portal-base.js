@@ -81,6 +81,12 @@ check('retorno aponta para portal.html',
 check('retorno remove o nome do arquivo da página',
   Portal.urlDeRetorno('https://myttoz.github.io/Saas-psicologia/index.html') ===
   'https://myttoz.github.io/Saas-psicologia/portal.html');
+
+const pacJs = fs.readFileSync(path.join(__dirname, '..', 'js', 'pacientes.js'), 'utf8');
+check('convite envia redirect_to na URL da requisição',
+  pacJs.includes('/auth/v1/otp?redirect_to='));
+check('convite usa a URL completa da página (não só o origin)',
+  pacJs.includes('Portal.urlDeRetorno(window.location.href)'));
 check('e-mail inválido é recusado', Portal.validarEmail('ana@') === false);
 
 console.log('\n' + (falhas === 0
