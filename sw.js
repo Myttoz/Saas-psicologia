@@ -4,12 +4,13 @@
 // Abrindo o index.html direto do computador (file://), o navegador ignora este arquivo.
 // ============================================================================
 
-var CACHE = 'saatendimentos-v7';
+var CACHE = 'saatendimentos-v8';
 var PREFIXO = 'saatendimentos-';
 
 var ARQUIVOS = [
   './',
   './index.html',
+  './portal.html',
   './manifest.webmanifest',
   './css/style.css',
   './assets/logo.jpeg',
@@ -21,6 +22,7 @@ var ARQUIVOS = [
   './js/anos.js',
   './js/backend.js',
   './js/portal.js',
+  './js/portal-app.js',
   './js/meses.js',
   './js/hoje.js',
   './js/seguranca.js',

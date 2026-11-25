@@ -919,6 +919,27 @@
   </div>
 </div>
 
+<!-- Modal: Recados do portal -->
+<div class="modal" id="modalPortalRecados" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Recados do portal</div>
+    <button class="modal-close" onclick="app.fecharModal('modalPortalRecados')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-note" id="portalRecadosPaciente" style="margin-bottom:.75rem;"></div>
+    <div id="portalRecadosProfLista" style="max-height:280px; overflow:auto; margin-bottom:12px;"></div>
+    <div class="form-group">
+      <label class="form-label" for="portalRecadoProfTexto">Novo recado para o paciente</label>
+      <textarea id="portalRecadoProfTexto" class="form-control" rows="3" placeholder="Escreva um recado..."></textarea>
+    </div>
+    <div id="portalRecadosProfStatus" class="form-note"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="app.fecharModal('modalPortalRecados')">Fechar</button>
+    <button class="btn btn-primary" type="button" onclick="pacientesModulo.enviarRecadoPortal()">Enviar recado</button>
+  </div>
+</div>
+
 <!-- Modal: Convidar paciente para o portal -->
 <div class="modal" id="modalPortalConvite" onclick="event.stopPropagation()">
   <div class="modal-header">

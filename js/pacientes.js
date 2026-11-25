@@ -82,7 +82,8 @@ function pacientesRender() {
       app.botaoAcao('Editar', 'pacientesModulo.editar(' + Number(p.id) + ')', 'editar') +
       app.botaoAcao('Excluir', 'pacientesModulo.excluir(' + Number(p.id) + ')', 'excluir', true) +
       app.botaoAcao('Apagar dados', 'pacientesModulo.apagarDados(' + Number(p.id) + ')', 'excluir', true) +
-      app.botaoAcao('Convidar portal', 'pacientesModulo.convidarPortal(' + Number(p.id) + ')', 'convidar');
+      app.botaoAcao('Convidar portal', 'pacientesModulo.convidarPortal(' + Number(p.id) + ')', 'convidar') +
+      app.botaoAcao('Recados', 'pacientesModulo.abrirRecadosPortal(' + Number(p.id) + ')', 'convidar');
 
     var tr = document.createElement('tr');
     tr.innerHTML =
@@ -678,6 +679,109 @@ var pacientesModulo = {
         }
         self._portalMsg(msg, true);
       });
+  },
+
+  // ---------- Recados do portal (lado da psicóloga) ----------
+  _portalRecadosPacienteId: null,
+  _portalRecadosPortalId: null,
+
+  abrirRecadosPortal: function(id) {
+    var p = this._pacientePorId(id);
+    if (!p) return;
+    if (!Backend || !Backend.configurado() || !Backend.conectado()) {
+      app.toast('Entre na sua conta para ver os recados.');
+      return;
+    }
+    this._portalRecadosPacienteId = id;
+    this._portalRecadosPortalId = null;
+    var info = document.getElementById('portalRecadosPaciente');
+    if (info) info.textContent = 'Paciente: ' + (p.nome || '');
+    var lista = document.getElementById('portalRecadosProfLista');
+    if (lista) lista.innerHTML = '<div class="portal-muted">Carregando...</div>';
+    var status = document.getElementById('portalRecadosProfStatus');
+    if (status) status.textContent = '';
+    var campo = document.getElementById('portalRecadoProfTexto');
+    if (campo) campo.value = '';
+    app.abrirModal('modalPortalRecados');
+    this._carregarRecadosPortal(p);
+  },
+
+  _buscarPortalId: function(paciente) {
+    var usuario = Backend.usuario();
+    if (!usuario || !usuario.id) return Promise.resolve(null);
+    var url = Backend.base() + '/rest/v1/portal_pacientes?select=id&profissional_id=eq.' +
+      encodeURIComponent(usuario.id) + '&paciente_id=eq.' + encodeURIComponent(String(paciente.id)) + '&limit=1';
+    return fetch(url, { headers: Backend.headers(true) })
+      .then(function(r) { return Backend._resposta(r); })
+      .then(function(linhas) { return (linhas && linhas[0] && linhas[0].id) || null; });
+  },
+
+  _carregarRecadosPortal: function(paciente) {
+    var self = this;
+    this._buscarPortalId(paciente).then(function(portalId) {
+      self._portalRecadosPortalId = portalId;
+      var lista = document.getElementById('portalRecadosProfLista');
+      if (!portalId) {
+        if (lista) lista.innerHTML = '<div class="portal-muted">Este paciente ainda não tem portal. Envie um convite primeiro.</div>';
+        return;
+      }
+      var url = Backend.base() + '/rest/v1/portal_recados?select=id,autor,texto,criado_em&paciente_portal_id=eq.' +
+        encodeURIComponent(portalId) + '&order=criado_em.asc&limit=200';
+      return fetch(url, { headers: Backend.headers(true) })
+        .then(function(r) { return Backend._resposta(r); })
+        .then(function(recados) { self._renderRecadosProf(recados || []); });
+    }).catch(function(err) {
+      var lista = document.getElementById('portalRecadosProfLista');
+      if (lista) lista.innerHTML = '<div class="portal-muted">Não foi possível carregar os recados.</div>';
+      var status = document.getElementById('portalRecadosProfStatus');
+      if (status) { status.textContent = err.message || 'Erro ao carregar.'; status.style.color = '#C16A4A'; }
+    });
+  },
+
+  _renderRecadosProf: function(recados) {
+    var lista = document.getElementById('portalRecadosProfLista');
+    if (!lista) return;
+    if (!recados.length) { lista.innerHTML = '<div class="portal-muted">Nenhum recado ainda. Envie o primeiro recado para iniciar a conversa.</div>'; return; }
+    var html = '';
+    for (var i = 0; i < recados.length; i++) {
+      var r = recados[i];
+      var autor = r.autor === 'paciente' ? 'Paciente' : 'Você';
+      var cor = r.autor === 'paciente' ? '#F3F8F5' : '#fff';
+      var borda = r.autor === 'paciente' ? '#D7E5DD' : '#E5EAE6';
+      var quando = '';
+      try { quando = new Date(r.criado_em).toLocaleDateString('pt-BR') + ' ' + new Date(r.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}); } catch(e) {}
+      html += '<div style="border:1px solid ' + borda + ';background:' + cor + ';border-radius:10px;padding:10px;margin-bottom:8px;">' +
+        '<div style="font-size:.78rem;color:#6B7C72;margin-bottom:4px;">' + escapeHtml(autor) + ' · ' + escapeHtml(quando) + '</div>' +
+        '<div style="white-space:pre-wrap;">' + escapeHtml(r.texto || '') + '</div></div>';
+    }
+    lista.innerHTML = html;
+    lista.scrollTop = lista.scrollHeight;
+  },
+
+  enviarRecadoPortal: function() {
+    var self = this;
+    var texto = ((document.getElementById('portalRecadoProfTexto') || {}).value || '').trim();
+    var status = document.getElementById('portalRecadosProfStatus');
+    if (!texto) { if (status) { status.textContent = 'Escreva um recado.'; status.style.color = '#C16A4A'; } return; }
+    if (!this._portalRecadosPortalId) { if (status) { status.textContent = 'Envie um convite ao paciente primeiro.'; status.style.color = '#C16A4A'; } return; }
+    if (status) { status.textContent = 'Enviando...'; status.style.color = '#6B7C72'; }
+    fetch(Backend.base() + '/rest/v1/portal_recados', {
+      method: 'POST',
+      headers: Backend.headers(true),
+      body: JSON.stringify({
+        paciente_portal_id: this._portalRecadosPortalId,
+        autor: 'profissional',
+        texto: texto.slice(0, 2000)
+      })
+    }).then(function(r) { return Backend._resposta(r); }).then(function() {
+      var campo = document.getElementById('portalRecadoProfTexto');
+      if (campo) campo.value = '';
+      if (status) { status.textContent = 'Recado enviado.'; status.style.color = '#2F5D46'; }
+      var p = self._pacientePorId(self._portalRecadosPacienteId);
+      if (p) self._carregarRecadosPortal(p);
+    }).catch(function(err) {
+      if (status) { status.textContent = err.message || 'Não foi possível enviar.'; status.style.color = '#C16A4A'; }
+    });
   }
 
 };

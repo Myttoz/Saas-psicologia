@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#F7F6F2">
+  <title>Portal do Paciente</title>
+  <link rel="icon" type="image/jpeg" href="assets/logo.jpeg">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { background: var(--bg, #F7F6F2); margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #2E3A33; }
+    .portal-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+    .portal-card { background: #fff; border: 1px solid #E3E7E3; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+    .portal-logo { width: 72px; height: 72px; border-radius: 16px; object-fit: cover; display: block; margin: 0 auto 12px; }
+    .portal-title { text-align: center; margin: 0 0 4px; font-size: 1.5rem; }
+    .portal-sub { text-align: center; color: #6B7C72; margin: 0 0 20px; font-size: .95rem; }
+    .portal-msg { padding: 10px 12px; border-radius: 10px; font-size: .92rem; margin: 10px 0; display: none; }
+    .portal-msg.erro { display: block; background: #FFF3F0; color: #9A3E22; border: 1px solid #F0C9BC; }
+    .portal-msg.ok { display: block; background: #F1F7F4; color: #2F5D46; border: 1px solid #CFE0D7; }
+    .portal-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .portal-actions .btn { flex: 1; min-width: 140px; }
+    .portal-recado { border: 1px solid #E5EAE6; border-radius: 12px; padding: 12px; margin-bottom: 10px; background: #FBFCFB; }
+    .portal-recado.profissional { background: #F3F8F5; border-color: #D7E5DD; }
+    .portal-recado .meta { font-size: .8rem; color: #6B7C72; margin-bottom: 4px; }
+    .portal-recado .texto { white-space: pre-wrap; line-height: 1.45; }
+    .portal-topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .portal-topo h2 { margin: 0; font-size: 1.1rem; }
+    .portal-muted { color: #6B7C72; font-size: .9rem; }
+    .portal-lista-vazia { color: #6B7C72; font-size: .92rem; padding: 12px 0; }
+    .portal-tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .75rem; background: #EDF3EF; color: #446555; }
+    .portal-hidden { display: none !important; }
+    .portal-field-note { font-size: .82rem; color: #6B7C72; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="portal-wrap">
+    <div class="portal-card" id="portalCardAuth">
+      <img src="assets/logo.jpeg" alt="Logo" class="portal-logo">
+      <h1 class="portal-title">Portal do Paciente</h1>
+      <p class="portal-sub" id="portalAuthSub">Acesse seus recados e informações.</p>
+
+      <div id="portalMsg" class="portal-msg"></div>
+
+      <!-- Login normal -->
+      <div id="portalViewLogin">
+        <div class="form-group">
+          <label class="form-label" for="portalEmail">E-mail</label>
+          <input type="email" id="portalEmail" class="form-control" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="portalSenha">Senha</label>
+          <input type="password" id="portalSenha" class="form-control" autocomplete="current-password">
+        </div>
+        <div class="portal-actions">
+          <button class="btn btn-primary" type="button" onclick="PortalApp.entrar()">Entrar</button>
+        </div>
+        <p class="portal-field-note">Primeiro acesso? Use o link que você recebeu por e-mail para criar sua senha.</p>
+      </div>
+
+      <!-- Criar senha (após link mágico) -->
+      <div id="portalViewSenha" class="portal-hidden">
+        <p class="portal-muted" style="margin-top:0;">Crie uma senha forte para acessar o portal nas próximas vezes. O link do e-mail é só para o primeiro acesso.</p>
+        <div class="form-group">
+          <label class="form-label" for="portalNovaSenha">Nova senha</label>
+          <input type="password" id="portalNovaSenha" class="form-control" autocomplete="new-password" oninput="PortalApp.atualizarForca()">
+          <div class="portal-field-note" id="portalForca">Use 12+ caracteres, com letra, número e símbolo.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="portalNovaSenha2">Confirmar senha</label>
+          <input type="password" id="portalNovaSenha2" class="form-control" autocomplete="new-password">
+        </div>
+        <div class="portal-actions">
+          <button class="btn btn-outline" type="button" onclick="PortalApp.sugerirSenha()">Sugerir senha</button>
+          <button class="btn btn-primary" type="button" onclick="PortalApp.salvarSenha()">Salvar senha e entrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Área logada -->
+    <div id="portalAreaLogada" class="portal-hidden">
+      <div class="portal-card">
+        <div class="portal-topo">
+          <div>
+            <h2 id="portalBoasVindas">Olá</h2>
+            <div class="portal-muted" id="portalNomeProfissional"></div>
+          </div>
+          <button class="btn btn-outline btn-sm" type="button" onclick="PortalApp.sair()">Sair</button>
+        </div>
+        <div id="portalMsgLogado" class="portal-msg"></div>
+      </div>
+
+      <div class="portal-card">
+        <div class="portal-topo">
+          <h2>Recados</h2>
+          <span class="portal-tag" id="portalRecadosTag">0</span>
+        </div>
+        <p class="portal-muted" style="margin-top:0;">Mensagens entre você e sua psicóloga. Se for urgente, entre em contato pelos canais de emergência.</p>
+        <div id="portalRecadosLista" class="portal-lista-vazia">Nenhum recado ainda.</div>
+        <div class="form-group" style="margin-top:14px;">
+          <label class="form-label" for="portalRecadoTexto">Responder</label>
+          <textarea id="portalRecadoTexto" class="form-control" rows="3" placeholder="Escreva sua resposta..."></textarea>
+          <div class="portal-field-note">Você pode responder aos recados da psicóloga. Para iniciar um assunto novo, aguarde o contato dela.</div>
+        </div>
+        <div class="portal-actions">
+          <button class="btn btn-primary" type="button" onclick="PortalApp.enviarRecado()">Enviar resposta</button>
+        </div>
+      </div>
+
+      <div class="portal-card">
+        <div class="portal-topo">
+          <h2>Próximas sessões</h2>
+          <span class="portal-tag">em breve</span>
+        </div>
+        <p class="portal-muted" style="margin:0;">As próximas sessões aparecerão aqui no próximo bloco de atualização.</p>
+      </div>
+
+      <div class="portal-card">
+        <div class="portal-topo">
+          <h2>Recibos</h2>
+          <span class="portal-tag">em breve</span>
+        </div>
+        <p class="portal-muted" style="margin:0;">Os recibos anexados pela psicóloga aparecerão aqui no próximo bloco de atualização.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/portal.js"></script>
+  <script src="js/portal-app.js"></script>
+</body>
+</html>
