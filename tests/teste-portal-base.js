@@ -48,6 +48,10 @@ check('todas as políticas são para authenticated', !/create policy[^\n]*to pub
 check('política do vínculo vem depois da tabela de acessos',
   sql.indexOf('create policy "Paciente lê o próprio vínculo"') >
   sql.indexOf('create table if not exists public.portal_acessos'));
+check('helper evita recursão RLS', sql.indexOf('function public.portal_eh_profissional') > -1);
+check('portal_acessos não consulta portal_pacientes direto nas políticas',
+  !/create policy "Profissional lê acessos dos seus pacientes"[\s\S]*?portal_pacientes[\s\S]*?create policy "Profissional revoga acesso"/.test(sql) &&
+  sql.indexOf('public.portal_eh_profissional(paciente_portal_id)') > -1);
 
 console.log('\n[3] Convite sem chave administrativa');
 check('função de aceite existe', secao.indexOf('function public.portal_aceitar_convite()') > -1);

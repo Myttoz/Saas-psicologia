@@ -278,6 +278,22 @@ comment on table public.portal_acessos is
 create index if not exists portal_acessos_paciente_idx
   on public.portal_acessos (paciente_portal_id);
 
+-- Helper security definer: evita recursão de RLS entre portal_pacientes e portal_acessos.
+create or replace function public.portal_eh_profissional(ppid uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.portal_pacientes
+    where id = ppid and profissional_id = auth.uid()
+  );
+$$;
+
+revoke all on function public.portal_eh_profissional(uuid) from public, anon;
+grant execute on function public.portal_eh_profissional(uuid) to authenticated;
+
 alter table public.portal_acessos enable row level security;
 
 drop policy if exists "Paciente lê o próprio acesso" on public.portal_acessos;
@@ -291,23 +307,11 @@ create policy "Paciente lê o próprio acesso"
 
 create policy "Profissional lê acessos dos seus pacientes"
   on public.portal_acessos for select to authenticated
-  using (
-    exists (
-      select 1 from public.portal_pacientes p
-      where p.id = portal_acessos.paciente_portal_id
-        and p.profissional_id = auth.uid()
-    )
-  );
+  using (public.portal_eh_profissional(paciente_portal_id));
 
 create policy "Profissional revoga acesso"
   on public.portal_acessos for delete to authenticated
-  using (
-    exists (
-      select 1 from public.portal_pacientes p
-      where p.id = portal_acessos.paciente_portal_id
-        and p.profissional_id = auth.uid()
-    )
-  );
+  using (public.portal_eh_profissional(paciente_portal_id));
 
 create policy "Exige segundo fator quando ativado"
   on public.portal_acessos as restrictive to authenticated
