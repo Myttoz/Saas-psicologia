@@ -919,14 +919,6 @@
   </div>
 </div>
 
-</div><!-- fim overlay -->
-
-<!-- Área usada somente na impressão do recibo -->
-<div id="areaImpressao"></div>
-
-<!-- Toast -->
-<div class="toast" id="toast">Operação realizada</div>
-
 <!-- Modal: Convidar paciente para o portal -->
 <div class="modal" id="modalPortalConvite" onclick="event.stopPropagation()">
   <div class="modal-header">
@@ -954,6 +946,14 @@
     <button class="btn btn-primary" id="portalConviteBtn" onclick="pacientesModulo.enviarConvitePortal()">Enviar convite</button>
   </div>
 </div>
+
+</div><!-- fim overlay -->
+
+<!-- Área usada somente na impressão do recibo -->
+<div id="areaImpressao"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast">Operação realizada</div>
 
 <!-- Input oculto para importar backup -->
 <input type="file" id="backupFileInput" accept=".json,application/json" style="display:none;" onchange="backupModulo.processarArquivo(this)">

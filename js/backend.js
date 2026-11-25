@@ -269,7 +269,8 @@ var Backend = {
 
   ativarMfa: function() {
     var self = this;
-    if (this._modoMfa !== 'convite') return;
+    if (this._modoMfa !== 'convite' && this._modoMfa !== 'gerenciar') return;
+    this._modoMfa = 'convite';
     var nomeFator = this._mfaNome || 'App de autenticação';
     var headers = this.headersComToken(this.token());
     this._post('/auth/v1/factors', headers, {
@@ -355,14 +356,14 @@ var Backend = {
     try { localStorage.removeItem(this.CHAVE_MFA_RECUSADO); } catch (e) {}
 
     var jaTem = this._fatoresVerificados(this.usuario()).length > 0;
-    this._modoMfa = 'convite';
+    this._modoMfa = jaTem ? 'gerenciar' : 'convite';
     this._mfaEnroll = null;
     this._mfaNome = jaTem ? 'App de autenticação (reserva)' : 'App de autenticação';
     this._mfaOrigemPermanent = true;
 
     var intro = document.getElementById('mfaIntro');
     if (intro) intro.textContent = jaTem
-      ? 'Você já tem um código ativo. Pode gerar um código de reserva em outro celular/app. Se desativar, o código atual será removido do Supabase e, ao ativar de novo, você vai precisar escanear um QR novo no Google Authenticator.'
+      ? 'A verificação em duas etapas já está ativa nesta conta. O código de reserva é opcional — você pode gerar depois, quando quiser. Se desativar, o QR atual deixa de funcionar e, ao ativar de novo, será preciso escanear um QR novo.'
       : 'Vamos proteger esta conta com um código que muda a cada 30 segundos. Use um aplicativo autenticador no celular (Google Authenticator, Authy, Microsoft Authenticator ou similar).';
     var qr = document.getElementById('mfaQr');
     if (qr) qr.style.display = 'none';
@@ -371,10 +372,10 @@ var Backend = {
     var grupo = document.getElementById('grupoMfaCodigo');
     if (grupo) grupo.style.display = 'none';
     var botao = document.getElementById('mfaBotao');
-    if (botao) botao.textContent = jaTem ? 'Gerar código de reserva' : 'Gerar QR code';
+    if (botao) botao.textContent = jaTem ? 'Fechar' : 'Gerar QR code';
     var secundario = document.getElementById('mfaSecundario');
     if (secundario) {
-      secundario.textContent = 'Fechar';
+      secundario.textContent = jaTem ? 'Gerar código de reserva (opcional)' : 'Fechar';
       secundario.style.display = '';
     }
     var desativar = document.getElementById('mfaDesativar');
@@ -383,15 +384,19 @@ var Backend = {
     app.abrirModal('modalMfa');
   },
 
-  // Um botão só: gera o QR no modo convite e confirma o código no modo enroll.
+  // Botão principal: gera QR/confirma código; no modo gerenciar, fecha.
   clicarMfa: function() {
     if (this._modoMfa === 'enroll') return this.confirmarMfa();
     if (this._modoMfa === 'convite') return this.ativarMfa();
+    if (this._modoMfa === 'gerenciar') return this.fecharMfa();
   },
 
-  // "Agora não" vale só para o convite automático. Pelo botão permanente,
-  // fechar não grava a recusa.
+  // Botão secundário: no convite automático recusa; no gerenciar gera reserva (opcional).
   mfaSecundario: function() {
+    if (this._modoMfa === 'gerenciar') {
+      this._modoMfa = 'convite';
+      return this.ativarMfa();
+    }
     if (this._mfaOrigemPermanent) this.fecharMfa();
     else this.recusarMfa();
   },

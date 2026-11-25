@@ -133,13 +133,15 @@ async function main() {
   const precisa = await Backend.verificarMfa(sessaoAtual);
   check('sessão aal2 não pede outro código', precisa === false);
 
-  // 4. Com um fator ativo, o botão serve para cadastrar o reserva.
+  // 4. Com um fator ativo, o modal gerencia: fechar, reserva opcional e desativar.
   Backend.abrirAtivacaoMfa();
   check('abriu mesmo com fator ativo', els.modalMfa.classList.contains('show-modal'));
   check('nome do fator é de reserva', Backend._mfaNome === 'App de autenticação (reserva)');
-  check('botão mostra "Gerar código de reserva"', els.mfaBotao.textContent === 'Gerar código de reserva');
+  check('botão principal fecha', els.mfaBotao.textContent === 'Fechar');
+  check('botão secundário oferece reserva opcional', /Gerar código de reserva/i.test(els.mfaSecundario.textContent));
+  check('botão desativar visível', els.mfaDesativar.style.display !== 'none');
   check('intro fala em reserva', /reserva/i.test(els.mfaIntro.textContent));
-  Backend.mfaSecundario();
+  Backend.clicarMfa(); // Fechar
   check('fechar não grava recusa', localStorage.getItem('saas_mfa_recusado') === null);
 
   // 5. O convite automático continua respeitando "Agora não".
