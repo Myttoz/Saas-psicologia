@@ -500,12 +500,15 @@ var pacientesModulo = {
       return;
     }
     this._portalPacienteId = id;
+    this._portalPacientePortalId = null;
     var nome = document.getElementById('portalConviteNome');
     if (nome) nome.value = p.nome || '';
     var email = document.getElementById('portalConviteEmail');
     if (email) email.value = p.email || '';
     var btn = document.getElementById('portalConviteBtn');
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar convite'; }
+    var btnRevogar = document.getElementById('portalRevogarBtn');
+    if (btnRevogar) btnRevogar.style.display = 'none';
     this._portalMsg('Verificando convite...');
     app.abrirModal('modalPortalConvite');
     this._carregarStatusPortal(p).catch(function(erro) {
@@ -524,11 +527,15 @@ var pacientesModulo = {
     return fetch(urlPac, { headers: headers }).then(function(r) { return Backend._resposta(r); })
       .then(function(linhas) {
         var vinculo = linhas && linhas[0];
+        var btnRevogar = document.getElementById('portalRevogarBtn');
         if (!vinculo) {
-          self._portalMsg('Ainda não há convite para este paciente.');
+          self._portalPacientePortalId = null;
+          if (btnRevogar) btnRevogar.style.display = 'none';
+          self._portalMsg('Status: sem convite. Envie um convite para liberar o portal.');
           return;
         }
         var idPortal = vinculo.id;
+        self._portalPacientePortalId = idPortal;
         var urlAcesso = base + '/rest/v1/portal_acessos?select=criado_em&paciente_portal_id=eq.' +
           encodeURIComponent(idPortal) + '&limit=1';
         var urlConvite = base + '/rest/v1/portal_convites?select=criado_em,aceito_em,expira_em,email&paciente_portal_id=eq.' +
@@ -540,17 +547,23 @@ var pacientesModulo = {
           var acesso = res[0] && res[0][0];
           var convite = res[1] && res[1][0];
           var btn = document.getElementById('portalConviteBtn');
+          if (btnRevogar) btnRevogar.style.display = acesso ? '' : 'none';
           if (acesso) {
-            if (btn) btn.textContent = 'Reenviar convite';
-            self._portalMsg('Convite aceito. O paciente já tem acesso ao portal. Você pode reenviar se ele precisar de novo link.');
+            if (btn) btn.textContent = 'Reenviar acesso';
+            self._portalMsg('Status: acesso ativo. O paciente já entrou no portal. Você pode reenviar acesso ou revogar.');
             return;
           }
           if (convite && !convite.aceito_em) {
+            var expirou = convite.expira_em && new Date(convite.expira_em).getTime() < Date.now();
             if (btn) btn.textContent = 'Reenviar convite';
-            self._portalMsg('Convite enviado para ' + (convite.email || 'o e-mail informado') + '. Aguardando o paciente aceitar.');
+            if (expirou) {
+              self._portalMsg('Status: convite expirado (' + (convite.email || 'e-mail') + '). Envie um novo convite.');
+            } else {
+              self._portalMsg('Status: convite enviado para ' + (convite.email || 'o e-mail informado') + '. Aguardando aceite.');
+            }
             return;
           }
-          self._portalMsg('Vínculo criado, mas sem convite pendente. Você pode enviar o convite.');
+          self._portalMsg('Status: sem convite pendente. Você pode enviar o convite.');
         });
       });
   },
@@ -680,6 +693,29 @@ var pacientesModulo = {
         }
         self._portalMsg(msg, true);
       });
+  },
+
+  revogarAcessoPortal: function() {
+    var self = this;
+    var p = this._pacientePorId(this._portalPacienteId);
+    if (!p || !this._portalPacientePortalId) { this._portalMsg('Nenhum acesso ativo para revogar.', true); return; }
+    if (!confirm('Revogar o acesso de ' + (p.nome || 'este paciente') + ' ao portal?\n\nO paciente não vai mais conseguir entrar, mas os dados clínicos continuam no seu sistema. Você pode enviar um novo convite depois.')) return;
+    var btnRevogar = document.getElementById('portalRevogarBtn');
+    if (btnRevogar) btnRevogar.disabled = true;
+    this._portalMsg('Revogando acesso...', 'ok');
+    fetch(Backend.base() + '/rest/v1/portal_acessos?paciente_portal_id=eq.' + encodeURIComponent(this._portalPacientePortalId), {
+      method: 'DELETE',
+      headers: Backend.headers(true)
+    }).then(function(r) {
+      if (!r.ok) throw new Error('Não foi possível revogar o acesso.');
+      if (btnRevogar) { btnRevogar.disabled = false; btnRevogar.style.display = 'none'; }
+      self._portalMsg('Acesso revogado. O paciente não consegue mais entrar no portal.');
+      app.toast('Acesso do portal revogado.');
+      if (typeof segurancaModulo !== 'undefined') segurancaModulo.registrar('Acesso do portal revogado', p.nome ? p.nome.slice(0, 3) + '***' : '');
+    }).catch(function(err) {
+      if (btnRevogar) btnRevogar.disabled = false;
+      self._portalMsg(err.message || 'Não foi possível revogar o acesso.', true);
+    });
   },
 
   // ---------- Recados do portal (lado da psicóloga) ----------
