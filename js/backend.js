@@ -436,46 +436,65 @@ var Backend = {
     this.fecharMfa();
     this.reautenticar(function() {
       // Após reautenticar, a sessão está em aal2. Busca fatores atualizados.
-      fetch(self.base() + '/auth/v1/factors', { headers: self.headers(true) })
-        .then(function(r) { return r.json().catch(function() { return []; }); })
-        .then(function(lista) {
-          var fatoresAtuais = [];
-          if (Array.isArray(lista)) fatoresAtuais = lista;
-          else if (lista && Array.isArray(lista.all)) fatoresAtuais = lista.all;
-          else if (lista && Array.isArray(lista.totp)) fatoresAtuais = lista.totp;
-          fatoresAtuais = fatoresAtuais.filter(function(f) { return f && f.status === 'verified'; });
-          if (!fatoresAtuais.length) {
-            app.toast('Nenhum fator ativo encontrado.');
+      function extrairFatores(obj) {
+        var lista = [];
+        if (Array.isArray(obj)) lista = obj;
+        else if (obj && Array.isArray(obj.all)) lista = obj.all;
+        else if (obj && Array.isArray(obj.totp)) lista = obj.totp.concat(Array.isArray(obj.phone) ? obj.phone : []);
+        else if (obj && Array.isArray(obj.factors)) lista = obj.factors;
+        return lista.filter(function(f) { return f && f.status === 'verified' && f.id; });
+      }
+
+      function buscarFatores() {
+        return fetch(self.base() + '/auth/v1/factors', { headers: self.headers(true) })
+          .then(function(r) { return r.json().catch(function() { return null; }).then(function(d) { return { ok: r.ok, d: d }; }); })
+          .then(function(res) {
+            var fatores = res.ok ? extrairFatores(res.d) : [];
+            if (fatores.length) return fatores;
+            // Fallback: pega fatores do usuário atualizado
+            return fetch(self.base() + '/auth/v1/user', { headers: self.headers(true) })
+              .then(function(r) { return r.json().catch(function() { return null; }); })
+              .then(function(user) {
+                if (user && user.id) {
+                  try { sessionStorage.setItem(self.CHAVE_USUARIO, JSON.stringify(user)); } catch (e) {}
+                }
+                return extrairFatores(user);
+              });
+          });
+      }
+
+      buscarFatores().then(function(fatoresAtuais) {
+        if (!fatoresAtuais.length) {
+          app.toast('Nenhum fator ativo encontrado. Se o código ainda for pedido, tente sair e entrar de novo.');
+          return;
+        }
+        var i = 0;
+        function proximo() {
+          if (i >= fatoresAtuais.length) {
+            var u = self.usuario() || {};
+            u.factors = [];
+            try { sessionStorage.setItem(self.CHAVE_USUARIO, JSON.stringify(u)); } catch (e) {}
+            app.toast('Verificação em duas etapas desativada.');
+            if (typeof segurancaModulo !== 'undefined') segurancaModulo.registrar('Verificação em duas etapas desativada');
             return;
           }
-          // Desativa todos os fatores verificados (TOTP). Sequencial para evitar problemas.
-          var i = 0;
-          function proximo() {
-            if (i >= fatoresAtuais.length) {
-              // atualiza usuário local
-              var u = self.usuario() || {};
-              u.factors = [];
-              try { sessionStorage.setItem(self.CHAVE_USUARIO, JSON.stringify(u)); } catch (e) {}
-              app.toast('Verificação em duas etapas desativada.');
-              if (typeof segurancaModulo !== 'undefined') segurancaModulo.registrar('Verificação em duas etapas desativada');
-              return;
-            }
-            var f = fatoresAtuais[i++];
-            fetch(self.base() + '/auth/v1/factors/' + encodeURIComponent(f.id), {
-              method: 'DELETE',
-              headers: self.headers(true)
-            }).then(function(r) {
-              if (!r.ok) throw new Error('Não foi possível desativar o fator.');
-              proximo();
-            }).catch(function(err) {
-              app.toast(err.message || 'Não foi possível desativar a verificação.');
+          var f = fatoresAtuais[i++];
+          fetch(self.base() + '/auth/v1/factors/' + encodeURIComponent(f.id), {
+            method: 'DELETE',
+            headers: self.headers(true)
+          }).then(function(r) {
+            if (!r.ok) return r.json().catch(function() { return {}; }).then(function(d) {
+              throw new Error(d.message || d.msg || 'Não foi possível desativar o fator.');
             });
-          }
-          proximo();
-        })
-        .catch(function() {
-          app.toast('Não foi possível desativar a verificação em duas etapas.');
-        });
+            proximo();
+          }).catch(function(err) {
+            app.toast(err.message || 'Não foi possível desativar a verificação.');
+          });
+        }
+        proximo();
+      }).catch(function(err) {
+        app.toast(err && err.message ? err.message : 'Não foi possível desativar a verificação em duas etapas.');
+      });
     });
   },
 
