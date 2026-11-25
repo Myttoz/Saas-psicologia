@@ -158,7 +158,7 @@ var PortalApp = {
       // Se já foi aceito antes, tenta seguir buscando o acesso.
       return self._buscarAcesso().then(function() {
         if (self._pacientePortalId) return self._pacientePortalId;
-        throw err;
+        throw new Error('Seu acesso ainda não foi liberado. Peça à sua psicóloga para enviar um novo convite pelo sistema.');
       });
     });
   },

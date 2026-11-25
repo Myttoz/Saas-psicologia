@@ -652,7 +652,8 @@ var pacientesModulo = {
             email: email,
             create_user: true,
             data: { portal: true, paciente_portal_id: pacientePortalId },
-            redirect_to: redirectTo
+            redirect_to: redirectTo,
+            options: { email_redirect_to: redirectTo }
           })
         }).then(function(r) {
           return r.json().catch(function() { return {}; }).then(function(dados) {
