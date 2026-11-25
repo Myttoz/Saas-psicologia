@@ -4,7 +4,7 @@
 // Abrindo o index.html direto do computador (file://), o navegador ignora este arquivo.
 // ============================================================================
 
-var CACHE = 'saatendimentos-v8';
+var CACHE = 'saatendimentos-v9';
 var PREFIXO = 'saatendimentos-';
 
 var ARQUIVOS = [
@@ -75,15 +75,15 @@ self.addEventListener('fetch', function(event) {
   if (url.origin !== self.location.origin) return; // WhatsApp, gov.br, etc.
 
   if (req.mode === 'navigate') {
-    // Página: tenta a rede primeiro; sem internet, abre o index salvo
+    var destino = url.pathname.indexOf('portal.html') !== -1 ? './portal.html' : './index.html';
     event.respondWith(
       fetch(req).then(function(resposta) {
         var copia = resposta.clone();
-        caches.open(CACHE).then(function(cache) { cache.put('./index.html', copia); });
+        caches.open(CACHE).then(function(cache) { cache.put(destino, copia); });
         return resposta;
       }).catch(function() {
-        return caches.match('./index.html').then(function(cacheada) {
-          return cacheada || Response.error();
+        return caches.match(destino).then(function(cacheada) {
+          return cacheada || caches.match('./index.html') || Response.error();
         });
       })
     );
