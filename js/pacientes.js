@@ -630,7 +630,10 @@ var pacientesModulo = {
             email: email
           })
         }).then(function(r) {
-          if (!r.ok) throw new Error('Não foi possível registrar o convite. Verifique se o SQL do portal foi aplicado no Supabase.');
+          if (r.ok) return;
+          return r.json().catch(function() { return {}; }).then(function(d) {
+            throw new Error(d.message || d.hint || d.details || 'Não foi possível registrar o convite.');
+          });
         });
       })
       .then(function() {
@@ -669,8 +672,9 @@ var pacientesModulo = {
       .catch(function(erro) {
         if (btn) { btn.disabled = false; btn.textContent = 'Reenviar convite'; }
         var msg = erro && erro.message ? erro.message : 'Não foi possível enviar o convite.';
-        if (/portal_pacientes|portal_convites|relation .* does not exist|404/i.test(msg)) {
-          msg = 'As tabelas do portal ainda não existem no Supabase. Abra o SQL Editor e rode o arquivo supabase/schema.sql.';
+        try { console.error('Erro convite portal:', erro); } catch (e) {}
+        if (/relation .* does not exist|schema cache|Could not find the table/i.test(msg)) {
+          msg = 'As tabelas do portal ainda não existem no Supabase (ou o cache do Supabase ainda não atualizou). Abra o SQL Editor, rode o supabase/schema.sql e tente de novo em 1 minuto.';
         }
         self._portalMsg(msg, true);
       });
