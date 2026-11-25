@@ -234,7 +234,7 @@ const esperar = () => new Promise(resolve => process.nextTick(resolve));
   check('whitelist aceita os campos novos',
     backupJs.includes("chave === 'consentimento'") &&
     backupJs.includes("chave === 'consentimentoEm'"));
-  check('cache do celular foi atualizado', sw.includes('saatendimentos-v6'));
+  check('cache do celular foi atualizado', sw.includes('saatendimentos-v7'));
   check('manual explica a exclusão', manual.includes('Apagar dados') && manual.includes('LGPD'));
 
   console.log(falhas === 0 ? '\nTODOS OS TESTES PASSARAM' : '\nFALHAS: ' + falhas);

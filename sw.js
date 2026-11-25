@@ -4,7 +4,7 @@
 // Abrindo o index.html direto do computador (file://), o navegador ignora este arquivo.
 // ============================================================================
 
-var CACHE = 'saatendimentos-v6';
+var CACHE = 'saatendimentos-v7';
 var PREFIXO = 'saatendimentos-';
 
 var ARQUIVOS = [
@@ -20,6 +20,7 @@ var ARQUIVOS = [
   './js/data.js',
   './js/anos.js',
   './js/backend.js',
+  './js/portal.js',
   './js/meses.js',
   './js/hoje.js',
   './js/seguranca.js',

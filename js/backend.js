@@ -261,6 +261,8 @@ var Backend = {
       secundario.textContent = 'Agora não';
       secundario.style.display = '';
     }
+    var desativar = document.getElementById('mfaDesativar');
+    if (desativar) desativar.style.display = 'none';
     this.mensagemMfa('');
     app.abrirModal('modalMfa');
   },
@@ -360,7 +362,7 @@ var Backend = {
 
     var intro = document.getElementById('mfaIntro');
     if (intro) intro.textContent = jaTem
-      ? 'Você já tem um código ativo. Para cadastrar um aplicativo de reserva, use outro celular ou outro app, escaneie o QR code e guarde o segredo em local seguro.'
+      ? 'Você já tem um código ativo. Pode gerar um código de reserva em outro celular/app. Se desativar, o código atual será removido do Supabase e, ao ativar de novo, você vai precisar escanear um QR novo no Google Authenticator.'
       : 'Vamos proteger esta conta com um código que muda a cada 30 segundos. Use um aplicativo autenticador no celular (Google Authenticator, Authy, Microsoft Authenticator ou similar).';
     var qr = document.getElementById('mfaQr');
     if (qr) qr.style.display = 'none';
@@ -375,6 +377,8 @@ var Backend = {
       secundario.textContent = 'Fechar';
       secundario.style.display = '';
     }
+    var desativar = document.getElementById('mfaDesativar');
+    if (desativar) desativar.style.display = jaTem ? '' : 'none';
     this.mensagemMfa('');
     app.abrirModal('modalMfa');
   },
@@ -409,7 +413,65 @@ var Backend = {
     this._mfaOrigemPermanent = false;
     var campo = document.getElementById('mfaCodigo');
     if (campo) campo.value = '';
+    var desativar = document.getElementById('mfaDesativar');
+    if (desativar) desativar.style.display = 'none';
     app.fecharModal('modalMfa');
+  },
+
+  desativarMfa: function() {
+    var self = this;
+    if (!this.configurado() || !this.conectado()) return;
+    var fatores = this._fatoresVerificados(this.usuario());
+    if (!fatores.length) {
+      app.toast('Nenhuma verificação em duas etapas ativa.');
+      return;
+    }
+    if (!confirm('Desativar a verificação em duas etapas desta conta?\n\nVocê vai precisar da senha da conta e do código atual. Ao desativar, o QR atual deixa de funcionar. Quando ativar de novo, será gerado um QR novo.')) return;
+
+    this.fecharMfa();
+    this.reautenticar(function() {
+      // Após reautenticar, a sessão está em aal2. Busca fatores atualizados.
+      fetch(self.base() + '/auth/v1/factors', { headers: self.headers(true) })
+        .then(function(r) { return r.json().catch(function() { return []; }); })
+        .then(function(lista) {
+          var fatoresAtuais = [];
+          if (Array.isArray(lista)) fatoresAtuais = lista;
+          else if (lista && Array.isArray(lista.all)) fatoresAtuais = lista.all;
+          else if (lista && Array.isArray(lista.totp)) fatoresAtuais = lista.totp;
+          fatoresAtuais = fatoresAtuais.filter(function(f) { return f && f.status === 'verified'; });
+          if (!fatoresAtuais.length) {
+            app.toast('Nenhum fator ativo encontrado.');
+            return;
+          }
+          // Desativa todos os fatores verificados (TOTP). Sequencial para evitar problemas.
+          var i = 0;
+          function proximo() {
+            if (i >= fatoresAtuais.length) {
+              // atualiza usuário local
+              var u = self.usuario() || {};
+              u.factors = [];
+              try { sessionStorage.setItem(self.CHAVE_USUARIO, JSON.stringify(u)); } catch (e) {}
+              app.toast('Verificação em duas etapas desativada.');
+              if (typeof segurancaModulo !== 'undefined') segurancaModulo.registrar('Verificação em duas etapas desativada');
+              return;
+            }
+            var f = fatoresAtuais[i++];
+            fetch(self.base() + '/auth/v1/factors/' + encodeURIComponent(f.id), {
+              method: 'DELETE',
+              headers: self.headers(true)
+            }).then(function(r) {
+              if (!r.ok) throw new Error('Não foi possível desativar o fator.');
+              proximo();
+            }).catch(function(err) {
+              app.toast(err.message || 'Não foi possível desativar a verificação.');
+            });
+          }
+          proximo();
+        })
+        .catch(function() {
+          app.toast('Não foi possível desativar a verificação em duas etapas.');
+        });
+    });
   },
 
   // ---------- login ----------
