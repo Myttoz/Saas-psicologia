@@ -90,9 +90,13 @@ var Portal = {
     };
   },
 
-  urlDeRetorno: function(origin) {
-    return String(origin === undefined || origin === null ? '' : origin)
-      .replace(/\/+$/, '') + '/portal.html';
+  // Monta a URL do portal a partir de qualquer endereço da página
+  // (origin puro perde o caminho /Saas-psicologia, por isso usamos a URL completa).
+  urlDeRetorno: function(base) {
+    var s = String(base === undefined || base === null ? '' : base)
+      .split('#')[0].split('?')[0]
+      .replace(/[^/]*$/, ''); // remove nome do arquivo (index.html, portal.html...)
+    return s.replace(/\/+$/, '') + '/portal.html';
   },
 
   validarEmail: function(email) {

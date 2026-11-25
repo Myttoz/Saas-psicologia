@@ -78,6 +78,9 @@ check('erro do link é aproveitado',
 check('retorno aponta para portal.html',
   Portal.urlDeRetorno('https://myttoz.github.io/Saas-psicologia/') ===
   'https://myttoz.github.io/Saas-psicologia/portal.html');
+check('retorno remove o nome do arquivo da página',
+  Portal.urlDeRetorno('https://myttoz.github.io/Saas-psicologia/index.html') ===
+  'https://myttoz.github.io/Saas-psicologia/portal.html');
 check('e-mail inválido é recusado', Portal.validarEmail('ana@') === false);
 
 console.log('\n' + (falhas === 0

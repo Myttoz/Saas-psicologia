@@ -653,8 +653,8 @@ var pacientesModulo = {
       .then(function() {
         // 3) envia link mágico por e-mail (anon, sem mexer na sessão da psicóloga)
         var redirectTo = (typeof Portal !== 'undefined' && Portal.urlDeRetorno)
-          ? Portal.urlDeRetorno(window.location.origin)
-          : (window.location.origin + '/portal.html');
+          ? Portal.urlDeRetorno(window.location.href)
+          : (window.location.href.replace(/[^/]*$/, '') + 'portal.html');
         return fetch(base + '/auth/v1/otp', {
           method: 'POST',
           headers: {
