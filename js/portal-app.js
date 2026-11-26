@@ -67,6 +67,37 @@ var PortalApp = {
     if (el) el.classList.toggle('portal-hidden', !mostrar);
   },
 
+  // Sidebar/topbar só aparecem quando o paciente está logado.
+  _mostrarShell: function(logado) {
+    this._mostrar('portalSidebar', logado);
+    this._mostrar('portalTopbar', logado);
+    if (!logado && window.innerWidth <= 768) {
+      var sb = document.getElementById('portalSidebar');
+      if (sb) sb.classList.remove('mobile-open');
+    }
+  },
+
+  toggleSidebar: function() {
+    var sb = document.getElementById('portalSidebar');
+    if (sb) sb.classList.toggle('mobile-open');
+  },
+
+  // Abas da esquerda: Recados, Próximas sessões, Recibos.
+  trocarAba: function(id) {
+    var abas = ['recados', 'sessoes', 'recibos'];
+    var titulos = { recados: 'Recados', sessoes: 'Próximas sessões', recibos: 'Recibos' };
+    for (var i = 0; i < abas.length; i++) {
+      var pagina = document.getElementById('page-' + abas[i]);
+      if (pagina) pagina.classList.toggle('active', abas[i] === id);
+      var nav = document.getElementById('navPortal' + abas[i].charAt(0).toUpperCase() + abas[i].slice(1));
+      if (nav) nav.classList.toggle('active', abas[i] === id);
+    }
+    var titulo = document.getElementById('portalPageTitle');
+    if (titulo) titulo.textContent = titulos[id] || 'Portal';
+    var sb = document.getElementById('portalSidebar');
+    if (sb && window.innerWidth <= 768) sb.classList.remove('mobile-open');
+  },
+
   _resposta: function(r) {
     return r.json().catch(function() { return {}; }).then(function(d) {
       if (!r.ok) {
@@ -84,6 +115,7 @@ var PortalApp = {
     this._mostrar('portalAreaLogada', false);
     this._mostrar('portalViewSenha', false);
     this._mostrar('portalViewLogin', true);
+    this._mostrarShell(false);
 
     // Preenche o e-mail salvo neste aparelho (paciente não precisa decorar).
     try {
@@ -261,6 +293,8 @@ var PortalApp = {
     this._msg('', '');
     this._mostrar('portalCardAuth', false);
     this._mostrar('portalAreaLogada', true);
+    this._mostrarShell(true);
+    this.trocarAba('recados');
     return this._buscarAcesso().then(function() {
       return self._carregarPerfil();
     }).then(function() {
@@ -363,6 +397,7 @@ var PortalApp = {
     this._mostrar('portalCardAuth', true);
     this._mostrar('portalViewSenha', false);
     this._mostrar('portalViewLogin', true);
+    this._mostrarShell(false);
     document.getElementById('portalAuthSub').textContent = 'Acesse seus recados e informações.';
     this._msg('Você saiu do portal.', 'ok');
   }

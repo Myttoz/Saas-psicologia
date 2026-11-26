@@ -8,124 +8,257 @@
   <link rel="icon" type="image/jpeg" href="assets/logo.jpeg">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    body { background: var(--bg, #F7F6F2); margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #2E3A33; }
-    .portal-wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
-    .portal-card { background: #fff; border: 1px solid #E3E7E3; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
-    .portal-logo { width: 72px; height: 72px; border-radius: 16px; object-fit: cover; display: block; margin: 0 auto 12px; }
-    .portal-title { text-align: center; margin: 0 0 4px; font-size: 1.5rem; }
-    .portal-sub { text-align: center; color: #6B7C72; margin: 0 0 20px; font-size: .95rem; }
-    .portal-msg { padding: 10px 12px; border-radius: 10px; font-size: .92rem; margin: 10px 0; display: none; }
+    body { background: var(--bg, #F7F6F2); margin: 0; font-family: var(--font, system-ui, sans-serif); color: var(--text, #2E3A33); }
+
+    /* ---------- Cartão de acesso ---------- */
+    .portal-auth-wrap {
+      min-height: calc(100vh - 2rem);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .portal-card-auth {
+      background: var(--surface, #fff);
+      border: 1px solid var(--border, #DDE5DE);
+      border-radius: var(--radius-lg, 18px);
+      padding: 26px 24px;
+      width: 100%;
+      max-width: 430px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+    }
+    .portal-card-auth::before {
+      content: '';
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 5px;
+      background: linear-gradient(90deg, var(--primary, #7A9E8F), var(--accent, #C16A4A));
+    }
+    .portal-brand-auth { text-align: center; margin-bottom: 18px; }
+    .portal-logo { width: 74px; height: 74px; border-radius: 18px; object-fit: cover; display: block; margin: 0 auto 10px; border: 1px solid var(--border, #DDE5DE); }
+    .portal-brand-nome { font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em; }
+    .portal-brand-sub { font-size: .7rem; font-weight: 700; color: var(--accent, #C16A4A); letter-spacing: .04em; text-transform: uppercase; }
+    .portal-title { text-align: center; margin: 0 0 4px; font-size: 1.45rem; font-weight: 900; letter-spacing: -.02em; }
+    .portal-sub { text-align: center; color: var(--text-muted, #7A8680); margin: 0 0 18px; font-size: .93rem; }
+    .portal-msg { padding: 10px 12px; border-radius: 10px; font-size: .9rem; margin: 10px 0; display: none; line-height: 1.4; }
     .portal-msg.erro { display: block; background: #FFF3F0; color: #9A3E22; border: 1px solid #F0C9BC; }
-    .portal-msg.ok { display: block; background: #F1F7F4; color: #2F5D46; border: 1px solid #CFE0D7; }
+    .portal-msg.ok { display: block; background: var(--primary-light, #EAF3EC); color: var(--primary-dark, #5C7A6B); border: 1px solid #CFE0D7; }
     .portal-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
     .portal-actions .btn { flex: 1; min-width: 140px; }
-    .portal-recado { border: 1px solid #E5EAE6; border-radius: 12px; padding: 12px; margin-bottom: 10px; background: #FBFCFB; }
-    .portal-recado.profissional { background: #F3F8F5; border-color: #D7E5DD; }
-    .portal-recado .meta { font-size: .8rem; color: #6B7C72; margin-bottom: 4px; }
-    .portal-recado .texto { white-space: pre-wrap; line-height: 1.45; }
+    .portal-muted { color: var(--text-muted, #7A8680); font-size: .9rem; }
+    .portal-field-note { font-size: .82rem; color: var(--text-muted, #7A8680); margin-top: 6px; line-height: 1.45; }
+
+    /* ---------- Sidebar do portal ---------- */
+    .portal-brand-rodape { padding: .6rem .75rem 0; font-size: .68rem; color: var(--text-muted, #7A8680); text-align: center; opacity: .75; }
+    .portal-footer-row { display: flex; align-items: center; gap: .5rem; }
+    .portal-footer-row .btn { flex: 1; }
+    .portal-footer-credit { font-size: .7rem; color: var(--text-muted, #7A8680); letter-spacing: .04em; opacity: .7; white-space: nowrap; }
+
+    /* ---------- Área logada ---------- */
     .portal-topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
     .portal-topo h2 { margin: 0; font-size: 1.1rem; }
-    .portal-muted { color: #6B7C72; font-size: .9rem; }
-    .portal-lista-vazia { color: #6B7C72; font-size: .92rem; padding: 12px 0; }
-    .portal-tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .75rem; background: #EDF3EF; color: #446555; }
+    .portal-tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .75rem; font-weight: 700; background: var(--primary-light, #EAF3EC); color: var(--primary-dark, #5C7A6B); border: 1px solid #CFE0D7; }
+    .portal-tag.em-breve { background: var(--accent-light, #F6E9E3); color: var(--accent, #C16A4A); border-color: #EED9CF; }
+    .portal-lista-vazia { color: var(--text-muted, #7A8680); font-size: .92rem; padding: 12px 0; }
+
+    .portal-recado { border: 1px solid var(--border, #DDE5DE); border-radius: 14px 14px 14px 4px; padding: 12px 14px; margin-bottom: 10px; background: var(--accent-light, #F6E9E3); margin-left: 12%; }
+    .portal-recado.profissional { background: var(--primary-light, #EAF3EC); border-color: #CFE0D7; border-radius: 14px 14px 4px 14px; margin-left: 0; margin-right: 12%; }
+    .portal-recado .meta { font-size: .78rem; font-weight: 700; color: var(--text-muted, #7A8680); margin-bottom: 4px; }
+    .portal-recado .texto { white-space: pre-wrap; line-height: 1.45; }
+
+    .portal-vazio { text-align: center; padding: 26px 12px; color: var(--text-muted, #7A8680); font-size: .92rem; }
+    .portal-vazio .icone {
+      width: 52px; height: 52px; margin: 0 auto 10px;
+      display: grid; place-items: center; border-radius: 50%;
+      background: var(--primary-light, #EAF3EC); color: var(--primary, #7A9E8F);
+    }
+    .portal-vazio .icone svg { width: 24px; height: 24px; stroke: currentColor; }
+
     .portal-hidden { display: none !important; }
-    .portal-field-note { font-size: .82rem; color: #6B7C72; margin-top: 6px; }
+
+    @media (max-width: 768px) {
+      .portal-recado { margin-left: 6%; }
+      .portal-recado.profissional { margin-right: 6%; }
+      .portal-auth-wrap { min-height: auto; padding: .5rem 0 2rem; }
+    }
   </style>
 </head>
 <body>
-  <div class="portal-wrap">
-    <div class="portal-card" id="portalCardAuth">
-      <img src="assets/logo.jpeg" alt="Logo" class="portal-logo">
-      <h1 class="portal-title">Portal do Paciente</h1>
-      <p class="portal-sub" id="portalAuthSub">Acesse seus recados e informações.</p>
-
-      <div id="portalMsg" class="portal-msg"></div>
-
-      <!-- Login normal -->
-      <div id="portalViewLogin">
-        <div class="form-group">
-          <label class="form-label" for="portalEmail">E-mail</label>
-          <input type="email" id="portalEmail" class="form-control" autocomplete="username">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="portalSenha">Senha</label>
-          <input type="password" id="portalSenha" class="form-control" autocomplete="current-password">
-        </div>
-        <div class="portal-actions">
-          <button class="btn btn-primary" type="button" onclick="PortalApp.entrar()">Entrar</button>
-        </div>
-        <p class="portal-field-note">Use o <strong>e-mail em que você recebeu o convite</strong> e a senha que criou. Já criou a senha? É só entrar com esses dois. Esqueceu a senha? Peça à sua psicóloga para reenviar o acesso.</p>
-      </div>
-
-      <!-- Criar senha (após link mágico) -->
-      <div id="portalViewSenha" class="portal-hidden">
-        <p class="portal-muted" style="margin-top:0;">Crie uma senha forte para acessar o portal nas próximas vezes. O link do e-mail é só para o primeiro acesso.</p>
-        <div class="form-group">
-          <label class="form-label" for="portalNovaSenha">Nova senha</label>
-          <input type="password" id="portalNovaSenha" class="form-control" autocomplete="new-password" oninput="PortalApp.atualizarForca()">
-          <div class="portal-field-note" id="portalForca">Use 12+ caracteres, com letra, número e símbolo.</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="portalNovaSenha2">Confirmar senha</label>
-          <input type="password" id="portalNovaSenha2" class="form-control" autocomplete="new-password">
-        </div>
-        <div class="portal-actions">
-          <button class="btn btn-outline" type="button" onclick="PortalApp.sugerirSenha()">Sugerir senha</button>
-          <button class="btn btn-primary" type="button" onclick="PortalApp.salvarSenha()">Salvar senha e entrar</button>
-        </div>
+<div class="app">
+  <!-- Topbar mobile -->
+  <header class="topbar" id="portalTopbar">
+    <button class="menu-btn" onclick="PortalApp.toggleSidebar()" aria-label="Abrir menu">
+      <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+    <div class="page-title" id="portalPageTitle">Recados</div>
+    <div class="user">
+      <div class="user-avatar">P</div>
+      <div class="user-info">
+        <div class="user-name">Paciente</div>
+        <div class="user-role">Portal</div>
       </div>
     </div>
+  </header>
 
-    <!-- Área logada -->
-    <div id="portalAreaLogada" class="portal-hidden">
-      <div class="portal-card">
-        <div class="portal-topo">
-          <div>
-            <h2 id="portalBoasVindas">Olá</h2>
-            <div class="portal-muted" id="portalNomeProfissional"></div>
+  <div class="app-body">
+    <!-- Sidebar -->
+    <aside class="sidebar portal-hidden" id="portalSidebar">
+      <div class="brand">
+        <img class="brand-logo" src="assets/logo.jpeg" alt="Logo">
+        <div class="brand-text">
+          <div class="brand-nome">Lívia Ferreira</div>
+          <div class="brand-sub">Psicóloga</div>
+          <div class="brand-sub">Portal do paciente</div>
+        </div>
+      </div>
+      <div class="nav">
+        <div class="nav-section">Menu</div>
+        <div class="nav-item active" id="navPortalRecados" onclick="PortalApp.trocarAba('recados')">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          Recados
+        </div>
+        <div class="nav-item" id="navPortalSessoes" onclick="PortalApp.trocarAba('sessoes')">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          Próximas sessões
+        </div>
+        <div class="nav-item" id="navPortalRecibos" onclick="PortalApp.trocarAba('recibos')">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          Recibos
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <div class="portal-footer-row">
+          <button class="btn btn-outline" type="button" onclick="PortalApp.sair()">Sair</button>
+          <div class="portal-footer-credit">SaaS by Myttoz</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Conteúdo -->
+    <main class="main">
+
+      <!-- Acesso -->
+      <div id="portalCardAuth">
+        <div class="portal-auth-wrap">
+          <div class="portal-card-auth">
+            <div class="portal-brand-auth">
+              <img src="assets/logo.jpeg" alt="Logo" class="portal-logo">
+              <div class="portal-brand-nome">Lívia Ferreira</div>
+              <div class="portal-brand-sub">Psicóloga</div>
+            </div>
+            <h1 class="portal-title">Portal do Paciente</h1>
+            <p class="portal-sub" id="portalAuthSub">Acesse seus recados e informações.</p>
+
+            <div id="portalMsg" class="portal-msg"></div>
+
+            <!-- Login normal -->
+            <div id="portalViewLogin">
+              <div class="form-group">
+                <label class="form-label" for="portalEmail">E-mail</label>
+                <input type="email" id="portalEmail" class="form-control" autocomplete="username">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="portalSenha">Senha</label>
+                <input type="password" id="portalSenha" class="form-control" autocomplete="current-password">
+              </div>
+              <div class="portal-actions">
+                <button class="btn btn-primary" type="button" onclick="PortalApp.entrar()">Entrar</button>
+              </div>
+              <p class="portal-field-note">Use o <strong>e-mail em que você recebeu o convite</strong> e a senha que criou. Já criou a senha? É só entrar com esses dois. Esqueceu a senha? Peça à sua psicóloga para reenviar o acesso.</p>
+            </div>
+
+            <!-- Criar senha (após link mágico) -->
+            <div id="portalViewSenha" class="portal-hidden">
+              <p class="portal-muted" style="margin-top:0;">Crie uma senha forte para acessar o portal nas próximas vezes. O link do e-mail é só para o primeiro acesso.</p>
+              <div class="form-group">
+                <label class="form-label" for="portalNovaSenha">Nova senha</label>
+                <input type="password" id="portalNovaSenha" class="form-control" autocomplete="new-password" oninput="PortalApp.atualizarForca()">
+                <div class="portal-field-note" id="portalForca">Use 12+ caracteres, com letra, número e símbolo.</div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="portalNovaSenha2">Confirmar senha</label>
+                <input type="password" id="portalNovaSenha2" class="form-control" autocomplete="new-password">
+              </div>
+              <div class="portal-actions">
+                <button class="btn btn-outline" type="button" onclick="PortalApp.sugerirSenha()">Sugerir senha</button>
+                <button class="btn btn-primary" type="button" onclick="PortalApp.salvarSenha()">Salvar senha e entrar</button>
+              </div>
+            </div>
           </div>
-          <button class="btn btn-outline btn-sm" type="button" onclick="PortalApp.sair()">Sair</button>
+        </div>
+      </div>
+
+      <!-- Área logada -->
+      <div id="portalAreaLogada" class="portal-hidden">
+        <div class="page-header">
+          <div>
+            <h1 id="portalBoasVindas">Olá</h1>
+            <div class="page-subtitle">Bem-vindo(a) ao seu portal. Se for urgente, entre em contato pelos canais de emergência.</div>
+          </div>
         </div>
         <div id="portalMsgLogado" class="portal-msg"></div>
+
+        <!-- Aba: Recados -->
+        <div class="page active" id="page-recados">
+          <div class="portal-card">
+            <div class="portal-topo">
+              <h2>Recados</h2>
+              <span class="portal-tag" id="portalRecadosTag">0</span>
+            </div>
+            <p class="portal-muted" style="margin-top:0;">Mensagens entre você e sua psicóloga.</p>
+            <div id="portalRecadosLista" class="portal-lista-vazia">Nenhum recado ainda.</div>
+            <div class="form-group" style="margin-top:14px;">
+              <label class="form-label" for="portalRecadoTexto">Responder</label>
+              <textarea id="portalRecadoTexto" class="form-control" rows="3" placeholder="Escreva sua resposta..."></textarea>
+              <div class="portal-field-note">Você pode responder aos recados da psicóloga. Para iniciar um assunto novo, aguarde o contato dela.</div>
+            </div>
+            <div class="portal-actions">
+              <button class="btn btn-primary" type="button" onclick="PortalApp.enviarRecado()">Enviar resposta</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aba: Próximas sessões -->
+        <div class="page" id="page-sessoes">
+          <div class="portal-card">
+            <div class="portal-topo">
+              <h2>Próximas sessões</h2>
+              <span class="portal-tag em-breve">em breve</span>
+            </div>
+            <div class="portal-vazio">
+              <div class="icone">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+              </div>
+              As próximas sessões aparecerão aqui no próximo bloco de atualização.
+            </div>
+          </div>
+        </div>
+
+        <!-- Aba: Recibos -->
+        <div class="page" id="page-recibos">
+          <div class="portal-card">
+            <div class="portal-topo">
+              <h2>Recibos</h2>
+              <span class="portal-tag em-breve">em breve</span>
+            </div>
+            <div class="portal-vazio">
+              <div class="icone">
+                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              </div>
+              Os recibos anexados pela psicóloga aparecerão aqui no próximo bloco de atualização.
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="portal-card">
-        <div class="portal-topo">
-          <h2>Recados</h2>
-          <span class="portal-tag" id="portalRecadosTag">0</span>
-        </div>
-        <p class="portal-muted" style="margin-top:0;">Mensagens entre você e sua psicóloga. Se for urgente, entre em contato pelos canais de emergência.</p>
-        <div id="portalRecadosLista" class="portal-lista-vazia">Nenhum recado ainda.</div>
-        <div class="form-group" style="margin-top:14px;">
-          <label class="form-label" for="portalRecadoTexto">Responder</label>
-          <textarea id="portalRecadoTexto" class="form-control" rows="3" placeholder="Escreva sua resposta..."></textarea>
-          <div class="portal-field-note">Você pode responder aos recados da psicóloga. Para iniciar um assunto novo, aguarde o contato dela.</div>
-        </div>
-        <div class="portal-actions">
-          <button class="btn btn-primary" type="button" onclick="PortalApp.enviarRecado()">Enviar resposta</button>
-        </div>
-      </div>
-
-      <div class="portal-card">
-        <div class="portal-topo">
-          <h2>Próximas sessões</h2>
-          <span class="portal-tag">em breve</span>
-        </div>
-        <p class="portal-muted" style="margin:0;">As próximas sessões aparecerão aqui no próximo bloco de atualização.</p>
-      </div>
-
-      <div class="portal-card">
-        <div class="portal-topo">
-          <h2>Recibos</h2>
-          <span class="portal-tag">em breve</span>
-        </div>
-        <p class="portal-muted" style="margin:0;">Os recibos anexados pela psicóloga aparecerão aqui no próximo bloco de atualização.</p>
-      </div>
-    </div>
+    </main>
   </div>
+</div>
 
-  <script src="js/config.js"></script>
-  <script src="js/portal.js"></script>
-  <script src="js/portal-app.js"></script>
+<script src="js/config.js"></script>
+<script src="js/portal.js"></script>
+<script src="js/portal-app.js"></script>
 </body>
 </html>
