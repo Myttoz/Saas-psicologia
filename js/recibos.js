@@ -462,7 +462,7 @@ var recibosModulo = {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      app.toast('PDF com assinatura baixado. Anexe o arquivo no WhatsApp.');
+      app.toast('PDF com assinatura baixado. Abra a conversa da paciente no WhatsApp e anexe o arquivo.');
     }).catch(function() {
       app.toast('Não foi possível gerar o PDF. Use "Comprovante simples".');
     });
@@ -553,7 +553,8 @@ var recibosModulo = {
       }
       ctx.strokeStyle = '#DDDDDD';
       ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(M, y + 18); ctx.lineTo(W - M, y + 18); ctx.stroke();
+      var limiteLinha = y + (quebradas.length - 1) * 38 + 18;
+      ctx.beginPath(); ctx.moveTo(M, limiteLinha); ctx.lineTo(W - M, limiteLinha); ctx.stroke();
       ctx.strokeStyle = '#000000';
       y += 40 + quebradas.length * 38;
     }

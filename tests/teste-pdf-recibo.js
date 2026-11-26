@@ -12,14 +12,18 @@ function check(nome, cond, extra) {
 }
 
 const textos = [];
+const textosComY = [];
+const linhasDesenhadas = [];
 const imagens = [];
 const dataUrls = [];
+let ultimoY = 0;
 const ctx = {
   fillStyle: '', strokeStyle: '', font: '', textAlign: '', textBaseline: '',
   lineWidth: 1, globalAlpha: 1,
-  fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {},
-  save() {}, restore() {},
-  fillText(t) { textos.push(String(t)); },
+  fillRect() {}, beginPath() {}, stroke() {}, save() {}, restore() {},
+  moveTo(x, y) { ultimoY = y; },
+  lineTo(x, y) { linhasDesenhadas.push({ inicio: ultimoY, fim: y }); },
+  fillText(t, x, y) { textos.push(String(t)); textosComY.push([String(t), y]); },
   measureText(t) { return { width: String(t).length * 14 }; },
   drawImage(img) { imagens.push(img); }
 };
@@ -125,6 +129,19 @@ check('aviso de validade aparece', textos.some(t => t.includes('sem validade ofi
 check('assinatura organizacional aparece', textos.includes('SaaS by Myttoz'));
 check('marca e assinatura foram desenhadas', imagens.length === 2, imagens.length);
 check('PDF usa Arial em A4 a 150 dpi', canvas.width === 1240 && canvas.height === 1754);
+
+// o valor de "Referente a" pode quebrar em duas linhas: o separador não pode
+// passar por cima da segunda linha
+const yRef = textosComY.filter(t => t[0].includes('realizado em')).map(t => t[1])[0];
+const yDoBloco = textosComY
+  .filter(t => t[1] >= yRef && t[1] <= yRef + 80)
+  .map(t => t[1])
+  .filter((y, i, todos) => todos.indexOf(y) === i);
+const separadores = linhasDesenhadas.filter(l => l.inicio === l.fim).map(l => l.inicio);
+check('separador não corta o texto quebrado',
+  yDoBloco.length === 2 &&
+  !separadores.some(y => y > Math.min.apply(null, yDoBloco) && y < Math.max.apply(null, yDoBloco)),
+  yDoBloco.join(' / '));
 
 // ===========================================================================
 // 4. Estrutura do arquivo PDF
