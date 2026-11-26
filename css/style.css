@@ -1562,6 +1562,32 @@ svg { display: block; }
 
 .btn-whatsapp:hover { background: #E3F2EA; }
 
+/* Selo de resposta não lida do portal */
+.selo-nova-resposta {
+  display: none;
+  margin-left: .4rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent-light, #F6E9E3);
+  color: var(--accent, #C16A4A);
+  border: 1px solid #EED9CF;
+  font-size: .68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.selo-nova-resposta-inline {
+  display: inline-block;
+  margin-left: .5rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-light, #F6E9E3);
+  color: var(--accent, #C16A4A);
+  border: 1px solid #EED9CF;
+  font-size: .68rem;
+  font-weight: 800;
+}
+
 .confirmar-lista,
 .quem-deve-lista {
   display: flex;

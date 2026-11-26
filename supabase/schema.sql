@@ -364,6 +364,7 @@ drop policy if exists "Profissional escreve recado" on public.portal_recados;
 drop policy if exists "Paciente lê recados" on public.portal_recados;
 drop policy if exists "Paciente responde recado" on public.portal_recados;
 drop policy if exists "Marca recado como lido" on public.portal_recados;
+drop policy if exists "Profissional marca recado como lido" on public.portal_recados;
 drop policy if exists "Exige segundo fator quando ativado" on public.portal_recados;
 
 create policy "Profissional lê recados"
@@ -422,6 +423,24 @@ create policy "Marca recado como lido"
       select 1 from public.portal_acessos a
       where a.user_id = auth.uid()
         and a.paciente_portal_id = portal_recados.paciente_portal_id
+    )
+  );
+
+-- A psicóloga também precisa poder marcar a resposta da paciente como lida.
+create policy "Profissional marca recado como lido"
+  on public.portal_recados for update to authenticated
+  using (
+    exists (
+      select 1 from public.portal_pacientes p
+      where p.id = portal_recados.paciente_portal_id
+        and p.profissional_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.portal_pacientes p
+      where p.id = portal_recados.paciente_portal_id
+        and p.profissional_id = auth.uid()
     )
   );
 

@@ -98,7 +98,8 @@ function pacientesRender() {
       '<td>' + (f ? escapeHtml(f.nome) : '-') + '</td>' +
       '<td><span class="badge ' + tipoBadge + '">' + tipoTexto + '</span></td>' +
       '<td class="money">' + valorFormatado + '</td>' +
-      '<td style="white-space:nowrap;">' + acoes + '</td>';
+      '<td style="white-space:nowrap;">' + acoes +
+        '<span class="selo-nova-resposta" id="seloRecados-' + Number(p.id) + '"></span></td>';
 
     tbody.appendChild(tr);
   }
@@ -117,6 +118,16 @@ function pacientesRender() {
       resumo.textContent = pacientes.length + (pacientes.length === 1 ? ' cadastrado' : ' cadastrados');
     }
   }
+
+  // Selo "Nova resposta": atualiza a lista quando a nuvem está ligada.
+  try {
+    if (typeof fetch === 'function' && typeof Backend !== 'undefined' &&
+        Backend.configurado && Backend.configurado() &&
+        Backend.conectado && Backend.conectado() &&
+        typeof pacientesModulo !== 'undefined') {
+      pacientesModulo.atualizarSelosNaoLidos();
+    }
+  } catch (e) {}
 }
 
 // mostra ou esconde o campo de valor conforme o convênio selecionado
@@ -722,6 +733,71 @@ var pacientesModulo = {
     });
   },
 
+  // ---------- Selo "Nova resposta" ----------
+  _naoLidos: {},
+
+  atualizarSelosNaoLidos: function() {
+    var self = this;
+    var usuario = Backend.usuario();
+    if (!usuario || !usuario.id) return Promise.resolve();
+    var base = Backend.base();
+    var headers = Backend.headers(true);
+    var urlPac = base + '/rest/v1/portal_pacientes?select=id,paciente_id&profissional_id=eq.' +
+      encodeURIComponent(usuario.id) + '&limit=200';
+    return fetch(urlPac, { headers: headers })
+      .then(function(r) { return Backend._resposta(r); })
+      .then(function(vinculos) {
+        var porPortal = {};
+        for (var i = 0; i < vinculos.length; i++) {
+          porPortal[String(vinculos[i].id)] = String(vinculos[i].paciente_id);
+        }
+        var urlNaoLidos = base + '/rest/v1/portal_recados?select=paciente_portal_id,id' +
+          '&autor=eq.paciente&lido_em=is.null&limit=500';
+        return fetch(urlNaoLidos, { headers: headers })
+          .then(function(r) { return Backend._resposta(r); })
+          .then(function(linhas) {
+            var contagens = {};
+            for (var j = 0; j < linhas.length; j++) {
+              var idLocal = porPortal[String(linhas[j].paciente_portal_id)];
+              if (idLocal) contagens[idLocal] = (contagens[idLocal] || 0) + 1;
+            }
+            self._naoLidos = contagens;
+            self._pintarSelos();
+          });
+      }).catch(function() {});
+  },
+
+  _pintarSelos: function() {
+    for (var i = 0; i < pacientes.length; i++) {
+      var el = document.getElementById('seloRecados-' + Number(pacientes[i].id));
+      if (!el) continue;
+      var n = this._naoLidos[String(pacientes[i].id)] || 0;
+      el.textContent = n ? ('Nova resposta' + (n > 1 ? ' (' + n + ')' : '')) : '';
+      el.style.display = n ? 'inline-block' : 'none';
+    }
+  },
+
+  _marcarRecadosLidos: function(ids) {
+    if (!ids.length) return Promise.resolve();
+    var self = this;
+    var base = Backend.base();
+    var agora = new Date().toISOString();
+    var promessas = [];
+    for (var i = 0; i < ids.length; i++) {
+      promessas.push(
+        fetch(base + '/rest/v1/portal_recados?id=eq.' + encodeURIComponent(ids[i]), {
+          method: 'PATCH',
+          headers: Backend.headers(true),
+          body: JSON.stringify({ lido_em: agora })
+        }).then(function(r) { return Backend._resposta(r); })
+      );
+    }
+    return Promise.all(promessas).then(function() {
+      // o selo da lista some assim que a conversa é aberta
+      self.atualizarSelosNaoLidos();
+    }).catch(function() {});
+  },
+
   // ---------- Recados do portal (lado da psicóloga) ----------
   _portalRecadosPacienteId: null,
   _portalRecadosPortalId: null,
@@ -766,11 +842,23 @@ var pacientesModulo = {
         if (lista) lista.innerHTML = '<div class="portal-muted">Este paciente ainda não tem portal. Envie um convite primeiro.</div>';
         return;
       }
-      var url = Backend.base() + '/rest/v1/portal_recados?select=id,autor,texto,criado_em&paciente_portal_id=eq.' +
+      var url = Backend.base() + '/rest/v1/portal_recados?select=id,autor,texto,criado_em,lido_em&paciente_portal_id=eq.' +
         encodeURIComponent(portalId) + '&order=criado_em.asc&limit=200';
       return fetch(url, { headers: Backend.headers(true) })
         .then(function(r) { return Backend._resposta(r); })
-        .then(function(recados) { self._renderRecadosProf(recados || []); });
+        .then(function(recados) {
+          self._renderRecadosProf(recados || []);
+          var naoLidos = [];
+          for (var j = 0; j < (recados || []).length; j++) {
+            if (recados[j].autor === 'paciente' && !recados[j].lido_em) naoLidos.push(recados[j].id);
+          }
+          if (!naoLidos.length) return null;
+          // Abrir a conversa já conta como leitura.
+          return self._marcarRecadosLidos(naoLidos).then(function() {
+            var p = self._pacientePorId(self._portalRecadosPacienteId);
+            if (p) return self._carregarRecadosPortal(p);
+          });
+        });
     }).catch(function(err) {
       var lista = document.getElementById('portalRecadosProfLista');
       if (lista) lista.innerHTML = '<div class="portal-muted">Não foi possível carregar os recados.</div>';
@@ -791,8 +879,11 @@ var pacientesModulo = {
       var borda = r.autor === 'paciente' ? '#D7E5DD' : '#E5EAE6';
       var quando = '';
       try { quando = new Date(r.criado_em).toLocaleDateString('pt-BR') + ' ' + new Date(r.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}); } catch(e) {}
+      var selo = (r.autor === 'paciente' && !r.lido_em)
+        ? '<span class="selo-nova-resposta-inline">Nova resposta</span>' : '';
       html += '<div style="border:1px solid ' + borda + ';background:' + cor + ';border-radius:10px;padding:10px;margin-bottom:8px;">' +
-        '<div style="font-size:.78rem;color:#6B7C72;margin-bottom:4px;">' + escapeHtml(autor) + ' · ' + escapeHtml(quando) + '</div>' +
+        '<div style="font-size:.78rem;color:#6B7C72;margin-bottom:4px;">' +
+          escapeHtml(autor) + ' · ' + escapeHtml(quando) + selo + '</div>' +
         '<div style="white-space:pre-wrap;">' + escapeHtml(r.texto || '') + '</div></div>';
     }
     lista.innerHTML = html;
