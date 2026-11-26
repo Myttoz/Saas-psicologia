@@ -432,6 +432,291 @@ var recibosModulo = {
         img.onerror = pronto;
       }
     }
+  },
+
+  // ---------- PDF para download (sem bibliotecas) ----------
+
+  // Gera um arquivo PDF do comprovante já com a assinatura cadastrada,
+  // a marca da profissional e a identificação do sistema no rodapé.
+  baixarPdf: function(id) {
+    var l = this.buscar(id === undefined ? this._idAtual() : id);
+    if (!l) return;
+
+    var self = this;
+    var assinatura = this.assinaturaValida((dadosProfissional || {}).assinatura);
+
+    this._carregarImagem('assets/logo.jpeg').then(function(logo) {
+      return self._carregarImagem(assinatura).then(function(imgAssinatura) {
+        return { logo: logo, assinatura: imgAssinatura };
+      });
+    }).then(function(imagens) {
+      var canvas = self._desenharComprovante(l, imagens.logo, imagens.assinatura);
+      var pdf = self._pdfDeCanvas(canvas);
+      var blob = new Blob([pdf], { type: 'application/pdf' });
+      var url = URL.createObjectURL(blob);
+
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = self._nomePdf(l);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      app.toast('PDF com assinatura baixado. Anexe o arquivo no WhatsApp.');
+    }).catch(function() {
+      app.toast('Não foi possível gerar o PDF. Use "Comprovante simples".');
+    });
+  },
+
+  _carregarImagem: function(src) {
+    if (!src) return Promise.resolve(null);
+    return new Promise(function(resolve) {
+      try {
+        var img = new Image();
+        img.onload = function() { resolve(img); };
+        img.onerror = function() { resolve(null); };
+        img.src = src;
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  },
+
+  // Quebra o texto em linhas que caibam na largura disponível.
+  _quebrarTexto: function(ctx, texto, maxLargura) {
+    var palavras = String(texto || '').split(/\s+/);
+    var linhas = [];
+    var atual = '';
+    for (var i = 0; i < palavras.length; i++) {
+      var teste = atual ? atual + ' ' + palavras[i] : palavras[i];
+      if (ctx.measureText(teste).width > maxLargura && atual) {
+        linhas.push(atual);
+        atual = palavras[i];
+      } else {
+        atual = teste;
+      }
+    }
+    if (atual) linhas.push(atual);
+    return linhas;
+  },
+
+  // Desenha o comprovante em uma imagem A4 (150 dpi).
+  _desenharComprovante: function(l, logo, assinatura) {
+    var W = 1240, H = 1754, M = 120;
+    var canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    var ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#000000';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+
+    // topo
+    ctx.font = 'bold 46px Arial, Helvetica, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('COMPROVANTE SIMPLES', M, 165);
+    ctx.font = 'bold 28px Arial, Helvetica, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('Ref. ' + String(l.id), W - M, 163);
+    ctx.beginPath(); ctx.moveTo(M, 195); ctx.lineTo(W - M, 195); ctx.stroke();
+
+    var dp = dadosProfissional || {};
+    var nome = dp.nome || 'Psicóloga';
+    var crp = 'CRP ' + (dp.crp || CRP_PADRAO);
+    var cpf = dp.cpf ? 'CPF: ' + dp.cpf : '';
+    var tipo = l.tipo === 'avaliacao' ? 'Avaliação psicológica' : 'Atendimento psicológico';
+    var referencia = tipo + ' realizado em ' + formatarData(l.data) +
+      (l.horario ? ' às ' + l.horario : '');
+
+    var linhas = [
+      ['Recebi de', String(l.paciente || '')],
+      ['Valor', formatarMoeda(l.valor)],
+      ['Forma de pagamento', this.formaPagamento(l.pagamento)],
+      ['Referente a', referencia]
+    ];
+
+    var y = 275;
+    for (var i = 0; i < linhas.length; i++) {
+      ctx.font = '28px Arial, Helvetica, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#555555';
+      ctx.fillText(linhas[i][0], M, y);
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 29px Arial, Helvetica, sans-serif';
+      var quebradas = this._quebrarTexto(ctx, linhas[i][1], W - M - M - 330);
+      for (var j = 0; j < quebradas.length; j++) {
+        ctx.fillText(quebradas[j], M + 330, y + j * 38);
+      }
+      ctx.strokeStyle = '#DDDDDD';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(M, y + 18); ctx.lineTo(W - M, y + 18); ctx.stroke();
+      ctx.strokeStyle = '#000000';
+      y += 40 + quebradas.length * 38;
+    }
+
+    // quitação
+    y += 26;
+    ctx.font = '28px Arial, Helvetica, sans-serif';
+    ctx.textAlign = 'left';
+    var paragrafo = this._quebrarTexto(ctx,
+      'Recebido na data abaixo, em moeda corrente deste país, pelo serviço prestado acima, dou quitação.',
+      W - 2 * M);
+    for (var p = 0; p < paragrafo.length; p++) {
+      ctx.fillText(paragrafo[p], M, y + p * 40);
+    }
+    y += paragrafo.length * 40 + 40;
+
+    // data de emissão
+    ctx.textAlign = 'right';
+    ctx.fillText('Emitido em ' + formatarData(hojeStr), W - M, y);
+    y += 45;
+
+    // assinatura: imagem cadastrada sobre a linha, como no comprovante impresso
+    ctx.textAlign = 'center';
+    if (assinatura) {
+      var maxW = 460, maxH = 130;
+      var escala = Math.min(1, maxW / (assinatura.width || maxW), maxH / (assinatura.height || maxH));
+      var aw = (assinatura.width || maxW) * escala;
+      var ah = (assinatura.height || maxH) * escala;
+      ctx.drawImage(assinatura, (W - aw) / 2, y, aw, ah);
+      y += ah + 18;
+    }
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - 280, y + 40);
+    ctx.lineTo(W / 2 + 280, y + 40);
+    ctx.stroke();
+    y += 95;
+
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 32px Arial, Helvetica, sans-serif';
+    ctx.fillText(nome, W / 2, y);
+    y += 45;
+    ctx.font = '27px Arial, Helvetica, sans-serif';
+    ctx.fillText(crp, W / 2, y);
+    if (cpf) {
+      y += 40;
+      ctx.fillText(cpf, W / 2, y);
+    }
+
+    // marca da profissional em transparência
+    if (logo) {
+      var lmaxW = 280, lmaxH = 240;
+      var lescala = Math.min(1, lmaxW / (logo.width || lmaxW), lmaxH / (logo.height || lmaxH));
+      var lw = (logo.width || lmaxW) * lescala;
+      var lh = (logo.height || lmaxH) * lescala;
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.drawImage(logo, (W - lw) / 2, 1290, lw, lh);
+      ctx.restore();
+    }
+
+    // rodapé
+    ctx.strokeStyle = '#AAAAAA';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(M, 1540); ctx.lineTo(W - M, 1540); ctx.stroke();
+    ctx.fillStyle = '#444444';
+    ctx.textAlign = 'center';
+    ctx.font = '23px Arial, Helvetica, sans-serif';
+    ctx.fillText('Comprovante simples, sem validade oficial. O recibo válido é emitido pela Receita Federal.', W / 2, 1590);
+    ctx.font = '22px Arial, Helvetica, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('SaaS by Myttoz', W - M, H - 70);
+
+    return canvas;
+  },
+
+  _nomePdf: function(l) {
+    var nome = String(l.paciente || '').trim().toLowerCase()
+      .replace(/[^a-z0-9à-ú]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'paciente';
+    return 'comprovante-' + nome + '-' + String(l.id) + '.pdf';
+  },
+
+  _asciiBytes: function(texto) {
+    var s = String(texto);
+    var out = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0xFF;
+    return out;
+  },
+
+  _base64ParaBytes: function(base64) {
+    var binario = '';
+    try {
+      if (typeof atob === 'function') binario = atob(base64);
+    } catch (e) {}
+    if (!binario && typeof Buffer !== 'undefined') {
+      try { binario = Buffer.from(base64, 'base64').toString('binary'); } catch (e) {}
+    }
+    var out = new Uint8Array(binario.length);
+    for (var i = 0; i < binario.length; i++) out[i] = binario.charCodeAt(i) & 0xFF;
+    return out;
+  },
+
+  // Monta um PDF de uma página com a imagem do comprovante (JPEG embutido).
+  _pdfDeCanvas: function(canvas) {
+    var self = this;
+    var dataUrl = String(canvas.toDataURL('image/jpeg', 0.92));
+    var jpeg = this._base64ParaBytes(dataUrl.split(',')[1] || '');
+    var W = canvas.width || 1240;
+    var H = canvas.height || 1754;
+    var largura = 595.28, altura = 841.89;
+
+    var pedacos = [];
+    var tamanho = 0;
+    var offsets = [0];
+
+    function escrever(texto) {
+      var bytes = self._asciiBytes(texto);
+      pedacos.push(bytes);
+      tamanho += bytes.length;
+    }
+    function objeto(num, conteudo) {
+      offsets[num] = tamanho;
+      escrever(num + ' 0 obj\n' + conteudo + '\nendobj\n');
+    }
+
+    escrever('%PDF-1.4\n');
+    pedacos.push(new Uint8Array([0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]));
+    tamanho += 6;
+
+    objeto(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    objeto(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+    objeto(3, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + largura + ' ' + altura +
+      '] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>');
+
+    offsets[4] = tamanho;
+    escrever('4 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + W + ' /Height ' + H +
+      ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpeg.length +
+      ' >>\nstream\n');
+    pedacos.push(jpeg);
+    tamanho += jpeg.length;
+    escrever('\nendstream\nendobj\n');
+
+    var conteudo = 'q\n' + largura + ' 0 0 ' + altura + ' 0 0 cm\n/Im0 Do\nQ\n';
+    offsets[5] = tamanho;
+    escrever('5 0 obj\n<< /Length ' + conteudo.length + ' >>\nstream\n' + conteudo +
+      'endstream\nendobj\n');
+
+    var inicioXref = tamanho;
+    escrever('xref\n0 6\n0000000000 65535 f \n');
+    for (var i = 1; i <= 5; i++) {
+      escrever(String(offsets[i]).padStart(10, '0') + ' 00000 n \n');
+    }
+    escrever('trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n' + inicioXref + '\n%%EOF\n');
+
+    var resultado = new Uint8Array(tamanho);
+    var pos = 0;
+    for (var j = 0; j < pedacos.length; j++) {
+      resultado.set(pedacos[j], pos);
+      pos += pedacos[j].length;
+    }
+    return resultado;
   }
 
 };
