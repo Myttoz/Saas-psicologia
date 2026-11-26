@@ -83,7 +83,8 @@ function pacientesRender() {
       app.botaoAcao('Excluir', 'pacientesModulo.excluir(' + Number(p.id) + ')', 'excluir', true) +
       app.botaoAcao('Apagar dados', 'pacientesModulo.apagarDados(' + Number(p.id) + ')', 'excluir', true) +
       app.botaoAcao('Convidar portal', 'pacientesModulo.convidarPortal(' + Number(p.id) + ')', 'convidar') +
-      app.botaoAcao('Recados', 'pacientesModulo.abrirRecadosPortal(' + Number(p.id) + ')', 'convidar');
+      app.botaoAcao('Recados', 'pacientesModulo.abrirRecadosPortal(' + Number(p.id) + ')', 'convidar') +
+      app.botaoAcao('WhatsApp', 'whatsappModulo.abrirParaPaciente(' + Number(p.id) + ')', 'whatsapp');
 
     var tr = document.createElement('tr');
     tr.innerHTML =

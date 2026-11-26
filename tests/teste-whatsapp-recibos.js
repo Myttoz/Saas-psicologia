@@ -156,6 +156,78 @@ whatsappModulo.copiar(901);
 check('fallback de cópia funciona', copiado === 'fallback');
 
 // ===========================================================================
+// 2b. Modal com modelos prontos (copiar / enviar)
+// ===========================================================================
+// restaura a área de transferência para os próximos testes
+Object.defineProperty(global, 'navigator', {
+  value: { clipboard: { writeText: t => { copiado = t; } } }, configurable: true, writable: true
+});
+
+check('quatro modelos prontos', whatsappModulo.modelos.length === 4, whatsappModulo.modelos.length);
+
+whatsappModulo.abrir(901);
+check('modal de WhatsApp abre', els.modalWhatsApp.classList.contains('show-modal'));
+check('destino é o atendimento escolhido', els.waDestino.value === 'l:901', els.waDestino.value);
+check('modelo padrão é confirmação', els.waModelo.value === 'confirmacao');
+check('prévia do modal igual à mensagem clássica', els.waTexto.value === msg, els.waTexto.value);
+check('status mostra o modelo e o destino',
+  els.waStatus.textContent.includes('Confirmação de presença') &&
+  els.waStatus.textContent.includes('Ana Silva'), els.waStatus.textContent);
+
+els.waModelo.value = 'lembrete';
+whatsappModulo.trocar();
+check('modelo lembrete troca a prévia', els.waTexto.value !== msg &&
+  els.waTexto.value.includes('Lembrete') && els.waTexto.value.includes('09:00'), els.waTexto.value);
+
+els.waModelo.value = 'agradecimento';
+whatsappModulo.trocar();
+check('modelo agradecimento pós-sessão',
+  els.waTexto.value.includes('Obrigada pela nossa sessão de hoje'), els.waTexto.value);
+
+els.waModelo.value = 'confirmacao';
+els.waDestino.value = 'p:1'; // paciente sem data marcada
+whatsappModulo.trocar();
+check('paciente sem atendimento não cita data', els.waTexto.value.startsWith('Olá, Ana!') &&
+  !els.waTexto.value.includes(formatarData(hojeStr)), els.waTexto.value);
+
+// copiar e enviar pelo modal
+copiado = '';
+whatsappModulo.copiarModal();
+check('copiar do modal copia a prévia', copiado === els.waTexto.value && copiado.length > 0, copiado);
+
+abrirRetorna = { focus() {} };
+urlAberta = '';
+whatsappModulo.enviarModal();
+check('enviar do modal abre wa.me', urlAberta.startsWith('https://wa.me/?text=') &&
+  decodeURIComponent(urlAberta.split('?text=')[1]) === els.waTexto.value, urlAberta.slice(0, 40));
+
+abrirRetorna = null;
+urlAberta = '';
+copiado = '';
+whatsappModulo.enviarModal();
+check('enviar sem WhatsApp copia a mensagem', copiado === els.waTexto.value &&
+  els.toast.textContent.includes('copiada'));
+
+// mensagem livre preserva o texto digitado
+els.waModelo.value = 'livre';
+els.waTexto.value = 'Texto da profissional';
+whatsappModulo.trocar();
+check('modelo livre não apaga o texto', els.waTexto.value === 'Texto da profissional');
+
+// abrir sem atendimento definido escolhe o primeiro destino
+whatsappModulo.abrir();
+check('abrir sem atendimento escolhe destino', !!els.waDestino.value, els.waDestino.value);
+check('prévia regerada ao abrir', els.waTexto.value === msg, els.waTexto.value);
+
+// atalho pela ficha do paciente
+whatsappModulo.abrirParaPaciente(1);
+check('abrir por paciente usa o próximo atendimento dele', els.waDestino.value === 'l:901',
+  els.waDestino.value);
+
+app.fecharModal('modalWhatsApp');
+check('modal fecha', !els.modalWhatsApp.classList.contains('show-modal'));
+
+// ===========================================================================
 // 3. Dados do recibo e geração
 // ===========================================================================
 recibosModulo.abrirConfig();

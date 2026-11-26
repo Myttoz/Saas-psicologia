@@ -169,7 +169,8 @@ var app = {
       pago: '<polyline points="20 6 9 17 4 12"></polyline>',
       pendente: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>' +
                 '<polyline points="3 3 3 8 8 8"></polyline>',
-      convidar: '<path d="M4 4h16v16H4z"></path><polyline points="22,6 12,13 2,6"></polyline>'
+      convidar: '<path d="M4 4h16v16H4z"></path><polyline points="22,6 12,13 2,6"></polyline>',
+      whatsapp: '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>'
     };
     return '<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" ' +
            'stroke-linecap="round" stroke-linejoin="round" fill="none">' +

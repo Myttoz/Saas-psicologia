@@ -102,7 +102,10 @@
             <h1>Hoje</h1>
             <div class="page-subtitle" id="hojeData"></div>
           </div>
-          <button class="btn btn-primary" onclick="lancamentosModulo.abrirModal()">+ Novo atendimento</button>
+          <div class="header-actions">
+            <button class="btn btn-outline btn-whatsapp" onclick="whatsappModulo.abrir()">WhatsApp</button>
+            <button class="btn btn-primary" onclick="lancamentosModulo.abrirModal()">+ Novo atendimento</button>
+          </div>
         </div>
 
         <div class="stats quatro" id="hojeStats"></div>
@@ -966,6 +969,43 @@
     <button class="btn btn-outline" id="portalRevogarBtn" style="color:#C16A4A;border-color:#C16A4A;" onclick="pacientesModulo.revogarAcessoPortal()">Revogar acesso</button>
     <button class="btn btn-outline" onclick="app.fecharModal('modalPortalConvite')">Fechar</button>
     <button class="btn btn-primary" id="portalConviteBtn" onclick="pacientesModulo.enviarConvitePortal()">Enviar convite</button>
+  </div>
+</div>
+
+<!-- Modal: mensagem no WhatsApp (modelos prontos) -->
+<div class="modal" id="modalWhatsApp" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Mensagem no WhatsApp</div>
+    <button class="modal-close" onclick="app.fecharModal('modalWhatsApp')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-note" style="margin-bottom:1rem;">
+      Escolha o modelo e a mensagem fica pronta. Ao enviar, o WhatsApp abre para você
+      escolher o contato — sem custo de API. Você também pode editar o texto antes.
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="waDestino">Para quem</label>
+      <select id="waDestino" class="form-control" onchange="whatsappModulo.trocar()"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="waModelo">Modelo da mensagem</label>
+      <select id="waModelo" class="form-control" onchange="whatsappModulo.trocar()">
+        <option value="confirmacao">Confirmação de presença</option>
+        <option value="lembrete">Lembrete de sessão</option>
+        <option value="agradecimento">Agradecimento pós-sessão</option>
+        <option value="livre">Mensagem livre</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="waTexto">Mensagem (pode editar)</label>
+      <textarea id="waTexto" class="form-control" rows="5"></textarea>
+    </div>
+    <div class="form-note" id="waStatus"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" type="button" onclick="whatsappModulo.copiarModal()">Copiar</button>
+    <button class="btn btn-outline" onclick="app.fecharModal('modalWhatsApp')">Fechar</button>
+    <button class="btn btn-primary btn-whatsapp" type="button" onclick="whatsappModulo.enviarModal()">Abrir WhatsApp</button>
   </div>
 </div>
 
