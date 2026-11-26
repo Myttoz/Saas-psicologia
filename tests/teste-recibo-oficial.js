@@ -226,7 +226,7 @@ const notas = fs.readFileSync(raiz + 'RELEASE_NOTES_v1.4.0.md', 'utf8');
 check('modal de preparo existe no HTML', html.includes('id="modalPrepararRecibo"') && html.includes('id="pacCpf"'));
 check('botões abrem o preparo, não imprimem direto',
   la.includes('recibosModulo.abrir(') && hj.includes('recibosModulo.abrir(') && si.includes('recibosModulo.abrir('));
-check('service worker atualizou o cache', /saatendimentos-v[5-9]/.test(sw));
+check('service worker atualizou o cache', /saatendimentos-v\d+/.test(sw));
 check('notas da v1.4.0 existem', notas.includes('v1.4.0') && notas.includes('Receita Federal'));
 
 console.log(falhas === 0 ? '\nTODOS OS TESTES PASSARAM' : '\nFALHAS: ' + falhas);

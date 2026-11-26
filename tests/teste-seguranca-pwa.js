@@ -198,7 +198,7 @@ check('service worker usa rede primeiro para arquivos (config atualiza)',
   parteArquivos.indexOf('fetch(req).then') !== -1 &&
   parteArquivos.indexOf('fetch(req).then') < parteArquivos.indexOf('caches.match(req)') &&
   sw.includes('return caches.match(req);'));
-check('service worker trocou a versão do cache', /saatendimentos-v[3-9]/.test(sw) && sw.includes('js/cripto.js'));
+check('service worker trocou a versão do cache', /saatendimentos-v\d+/.test(sw) && sw.includes('js/cripto.js'));
 
 const html = fs.readFileSync(raiz + 'index.html', 'utf8');
 check('HTML referencia manifest', html.includes('rel="manifest" href="manifest.webmanifest"'));

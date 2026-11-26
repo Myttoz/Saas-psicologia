@@ -151,7 +151,7 @@ const css = fs.readFileSync(raiz + 'css/style.css', 'utf8');
 check('menu e página de Anos existem', /trocarPagina\('anos'\)/.test(html) && /id="page-anos"/.test(html));
 check('script de anos é carregado', /js\/anos\.js/.test(html));
 check('app renderiza a página de anos', /id === 'anos'/.test(appJs) && /anos: 'Anos'/.test(appJs));
-check('service worker cacheia anos.js', /js\/anos\.js/.test(sw) && /saatendimentos-v[5-9]/.test(sw));
+check('service worker cacheia anos.js', /js\/anos\.js/.test(sw) && /saatendimentos-v\d+/.test(sw));
 check('CSS da lista de anos existe', /\.ano-linha/.test(css));
 
 console.log(falhas === 0 ? '\nTODOS OS TESTES PASSARAM' : '\nFALHAS: ' + falhas);

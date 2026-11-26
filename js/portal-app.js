@@ -96,6 +96,7 @@ var PortalApp = {
     if (titulo) titulo.textContent = titulos[id] || 'Portal';
     var sb = document.getElementById('portalSidebar');
     if (sb && window.innerWidth <= 768) sb.classList.remove('mobile-open');
+    if (id === 'recibos' && this._pacientePortalId) this._carregarRecibos();
   },
 
   _resposta: function(r) {
@@ -299,6 +300,8 @@ var PortalApp = {
       return self._carregarPerfil();
     }).then(function() {
       return self._carregarRecados();
+    }).then(function() {
+      return self._carregarRecibos();
     });
   },
 
@@ -350,6 +353,93 @@ var PortalApp = {
         '</div>';
     }
     el.innerHTML = html;
+  },
+
+  // ---------- Recibos ----------
+
+  _carregarRecibos: function() {
+    var self = this;
+    if (!this._pacientePortalId) return Promise.resolve();
+    var url = this.base() + '/rest/v1/portal_recibos?select=id,nome,numero,codigo,criado_em&paciente_portal_id=eq.' +
+      encodeURIComponent(this._pacientePortalId) + '&order=criado_em.desc&limit=50';
+    return fetch(url, { headers: this.headers(true) })
+      .then(this._resposta)
+      .then(function(lista) { self._renderRecibos(lista || []); })
+      .catch(function(err) {
+        self._msgLogado(err.message || 'Não foi possível carregar os recibos.', 'erro');
+      });
+  },
+
+  _renderRecibos: function(lista) {
+    var el = document.getElementById('portalRecibosLista');
+    var tag = document.getElementById('portalRecibosTag');
+    if (tag) tag.textContent = String(lista.length);
+    if (!el) return;
+    if (!lista.length) {
+      el.className = 'portal-lista-vazia';
+      el.textContent = 'Nenhum recibo ainda.';
+      return;
+    }
+    el.className = '';
+    var html = '';
+    for (var i = 0; i < lista.length; i++) {
+      var r = lista[i];
+      var detalhes = [];
+      if (r.numero) detalhes.push(r.numero);
+      if (r.codigo) detalhes.push('Cód. ' + r.codigo);
+      detalhes.push(this._formatarDataHora(r.criado_em));
+      html += '<div class="portal-recibo-item">' +
+        '<div class="portal-recibo-icone">' +
+          '<svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+          'stroke-linejoin="round" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>' +
+          '<polyline points="14 2 14 8 20 8"></polyline></svg>' +
+        '</div>' +
+        '<div class="portal-recibo-info">' +
+          '<div class="portal-recibo-nome">' + this._esc(r.nome || 'recibo.pdf') + '</div>' +
+          '<div class="portal-recibo-meta">' + this._esc(detalhes.join(' · ')) + '</div>' +
+        '</div>' +
+        '<button class="btn btn-outline btn-sm" type="button" ' +
+          'onclick="PortalApp.abrirRecibo(\'' + this._esc(String(r.id)) + '\')">Baixar</button>' +
+        '</div>';
+    }
+    el.innerHTML = html;
+  },
+
+  abrirRecibo: function(id) {
+    var self = this;
+    if (!this._pacientePortalId) return;
+    var url = this.base() + '/rest/v1/portal_recibos?select=nome,conteudo_base64&id=eq.' +
+      encodeURIComponent(id) + '&paciente_portal_id=eq.' + encodeURIComponent(this._pacientePortalId) + '&limit=1';
+    fetch(url, { headers: this.headers(true) })
+      .then(this._resposta)
+      .then(function(linhas) {
+        var item = linhas && linhas[0];
+        if (!item) { self._msgLogado('Recibo não encontrado.', 'erro'); return; }
+        self._baixarBase64(item.nome || 'recibo.pdf', item.conteudo_base64 || '');
+      })
+      .catch(function(err) {
+        self._msgLogado(err.message || 'Não foi possível abrir o recibo.', 'erro');
+      });
+  },
+
+  _baixarBase64: function(nome, base64) {
+    var binario = '';
+    try { binario = atob(base64); } catch (e) {
+      this._msgLogado('Não foi possível ler o arquivo do recibo.', 'erro');
+      return;
+    }
+    var bytes = new Uint8Array(binario.length);
+    for (var i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i) & 0xFF;
+    var blob = new Blob([bytes], { type: 'application/pdf' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = String(nome || 'recibo.pdf');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this._msgLogado('Recibo baixado.', 'ok');
   },
 
   _formatarDataHora: function(iso) {

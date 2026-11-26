@@ -68,6 +68,21 @@
     .portal-recado .meta { font-size: .78rem; font-weight: 700; color: var(--text-muted, #7A8680); margin-bottom: 4px; }
     .portal-recado .texto { white-space: pre-wrap; line-height: 1.45; }
 
+    .portal-recibo-item {
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid var(--border, #DDE5DE); border-radius: 12px;
+      padding: 12px 14px; margin-bottom: 10px; background: var(--primary-light, #EAF3EC);
+    }
+    .portal-recibo-icone {
+      width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px;
+      display: grid; place-items: center; background: #fff; color: var(--primary, #7A9E8F);
+      border: 1px solid #CFE0D7;
+    }
+    .portal-recibo-icone svg { width: 20px; height: 20px; stroke: currentColor; }
+    .portal-recibo-info { flex: 1; min-width: 0; }
+    .portal-recibo-nome { font-weight: 800; font-size: .92rem; word-break: break-all; }
+    .portal-recibo-meta { font-size: .78rem; color: var(--text-muted, #7A8680); margin-top: 2px; }
+
     .portal-vazio { text-align: center; padding: 26px 12px; color: var(--text-muted, #7A8680); font-size: .92rem; }
     .portal-vazio .icone {
       width: 52px; height: 52px; margin: 0 auto 10px;
@@ -241,14 +256,10 @@
           <div class="portal-card">
             <div class="portal-topo">
               <h2>Recibos</h2>
-              <span class="portal-tag em-breve">em breve</span>
+              <span class="portal-tag" id="portalRecibosTag">0</span>
             </div>
-            <div class="portal-vazio">
-              <div class="icone">
-                <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-              </div>
-              Os recibos anexados pela psicóloga aparecerão aqui no próximo bloco de atualização.
-            </div>
+            <p class="portal-muted" style="margin-top:0;">Documentos que sua psicóloga deixou disponíveis para você.</p>
+            <div id="portalRecibosLista" class="portal-lista-vazia">Nenhum recibo ainda.</div>
           </div>
         </div>
       </div>

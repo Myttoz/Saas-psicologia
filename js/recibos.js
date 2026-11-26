@@ -436,28 +436,31 @@ var recibosModulo = {
 
   // ---------- PDF para download (sem bibliotecas) ----------
 
-  // Gera um arquivo PDF do comprovante já com a assinatura cadastrada,
-  // a marca da profissional e a identificação do sistema no rodapé.
-  baixarPdf: function(id) {
+  // Gera os bytes do PDF do comprovante (usado no download e no envio ao portal).
+  pdfDoComprovante: function(id) {
     var l = this.buscar(id === undefined ? this._idAtual() : id);
-    if (!l) return;
+    if (!l) return Promise.reject(new Error('Atendimento não encontrado.'));
 
     var self = this;
     var assinatura = this.assinaturaValida((dadosProfissional || {}).assinatura);
-
-    this._carregarImagem('assets/logo.jpeg').then(function(logo) {
+    return this._carregarImagem('assets/logo.jpeg').then(function(logo) {
       return self._carregarImagem(assinatura).then(function(imgAssinatura) {
-        return { logo: logo, assinatura: imgAssinatura };
+        var canvas = self._desenharComprovante(l, logo, imgAssinatura);
+        return { bytes: self._pdfDeCanvas(canvas), nome: self._nomePdf(l), lancamento: l };
       });
-    }).then(function(imagens) {
-      var canvas = self._desenharComprovante(l, imagens.logo, imagens.assinatura);
-      var pdf = self._pdfDeCanvas(canvas);
-      var blob = new Blob([pdf], { type: 'application/pdf' });
+    });
+  },
+
+  // Gera um arquivo PDF do comprovante já com a assinatura cadastrada,
+  // a marca da profissional e a identificação do sistema no rodapé.
+  baixarPdf: function(id) {
+    this.pdfDoComprovante(id).then(function(res) {
+      var blob = new Blob([res.bytes], { type: 'application/pdf' });
       var url = URL.createObjectURL(blob);
 
       var a = document.createElement('a');
       a.href = url;
-      a.download = self._nomePdf(l);
+      a.download = res.nome;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -465,6 +468,53 @@ var recibosModulo = {
       app.toast('PDF com assinatura baixado. Abra a conversa da paciente no WhatsApp e anexe o arquivo.');
     }).catch(function() {
       app.toast('Não foi possível gerar o PDF. Use "Comprovante simples".');
+    });
+  },
+
+  // Bytes do PDF em base64 para guardar na tabela portal_recibos.
+  _bytesParaBase64: function(bytes) {
+    var binario = '';
+    var pedacos = 8192;
+    for (var i = 0; i < bytes.length; i += pedacos) {
+      binario += String.fromCharCode.apply(null, bytes.subarray(i, i + pedacos));
+    }
+    if (typeof btoa === 'function') return btoa(binario);
+    if (typeof Buffer !== 'undefined') return Buffer.from(binario, 'binary').toString('base64');
+    return '';
+  },
+
+  // Guarda o comprovante gerado no portal da paciente (sem precisar anexar à mão).
+  enviarAoPortal: function(id) {
+    var self = this;
+    if (!Backend || !Backend.configurado || !Backend.configurado() || !Backend.conectado()) {
+      app.toast('Entre na sua conta para guardar o recibo no portal.');
+      return;
+    }
+    if (typeof pacientesModulo === 'undefined' || !pacientesModulo._buscarPortalId) return;
+
+    this.pdfDoComprovante(id).then(function(res) {
+      var pac = self.buscarPaciente(res.lancamento.paciente);
+      if (!pac) throw new Error('Paciente não encontrado na ficha.');
+      return pacientesModulo._buscarPortalId(pac).then(function(portalId) {
+        if (!portalId) throw new Error('Envie um convite ao paciente primeiro.');
+        var rec = (res.lancamento.recibo && typeof res.lancamento.recibo === 'object')
+          ? res.lancamento.recibo : {};
+        return fetch(Backend.base() + '/rest/v1/portal_recibos', {
+          method: 'POST',
+          headers: Backend.headers(true),
+          body: JSON.stringify({
+            paciente_portal_id: portalId,
+            nome: res.nome,
+            numero: 'Ref. ' + String(res.lancamento.id),
+            codigo: rec.codigo || '',
+            conteudo_base64: self._bytesParaBase64(res.bytes)
+          })
+        }).then(function(r) { return Backend._resposta(r); });
+      });
+    }).then(function() {
+      app.toast('Recibo guardado no portal da paciente.');
+    }).catch(function(err) {
+      app.toast(err.message || 'Não foi possível guardar o recibo no portal.');
     });
   },
 

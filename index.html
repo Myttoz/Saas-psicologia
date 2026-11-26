@@ -754,6 +754,7 @@
   </div>
   <div class="modal-footer">
     <button type="button" class="btn btn-outline" onclick="recibosModulo.baixarPdf()" title="Baixa um PDF com assinatura, marca e dados da profissional">📄 Baixar PDF</button>
+    <button type="button" class="btn btn-outline btn-whatsapp" onclick="recibosModulo.enviarAoPortal()" title="Guarda o comprovante no portal da paciente">📤 Guardar no portal</button>
     <button type="button" class="btn btn-outline" onclick="recibosModulo.imprimirSimples()" title="Comprovante caseiro, sem validade oficial">Comprovante simples</button>
     <button type="button" class="btn btn-outline" onclick="recibosModulo.salvarCodigo()">Salvar código</button>
     <button type="button" class="btn btn-primary" onclick="recibosModulo.marcarEnviado()">Marcar enviado</button>
@@ -974,6 +975,27 @@
     <button class="btn btn-outline" id="portalRevogarBtn" style="color:#C16A4A;border-color:#C16A4A;" onclick="pacientesModulo.revogarAcessoPortal()">Revogar acesso</button>
     <button class="btn btn-outline" onclick="app.fecharModal('modalPortalConvite')">Fechar</button>
     <button class="btn btn-primary" id="portalConviteBtn" onclick="pacientesModulo.enviarConvitePortal()">Enviar convite</button>
+  </div>
+</div>
+
+<!-- Modal: recibos do portal (lado da psicóloga) -->
+<div class="modal" id="modalPortalRecibos" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Recibos no portal</div>
+    <button class="modal-close" onclick="app.fecharModal('modalPortalRecibos')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-note" style="margin-bottom:.75rem;" id="portalRecibosPaciente"></div>
+    <div id="portalRecibosProfLista" style="max-height:280px; overflow:auto; margin-bottom:12px;"></div>
+    <div class="form-group">
+      <label class="form-label" for="portalReciboArquivo">Enviar PDF para o portal</label>
+      <input type="file" id="portalReciboArquivo" class="form-control" accept="application/pdf,.pdf" onchange="pacientesModulo.guardarReciboPortal(this)">
+      <div class="form-note">Pode ser o recibo oficial da Receita ou o comprovante simples. Limite: 2,5 MB. A paciente poderá baixar na aba Recibos do portal.</div>
+    </div>
+    <div class="form-note" id="portalRecibosProfStatus"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="app.fecharModal('modalPortalRecibos')">Fechar</button>
   </div>
 </div>
 

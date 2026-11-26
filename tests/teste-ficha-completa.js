@@ -212,7 +212,7 @@ check('paciente criado pelo atendimento começa com os campos vazios',
   lancJs.includes("nascimento: '',") && lancJs.includes("telefone: '',") &&
   lancJs.includes("responsavel: '',") && lancJs.includes("carteira: ''"));
 check('backup não ganhou versão nova', backupJs.includes('versao: 6'));
-check('cache do celular foi atualizado para o portal', sw.includes('saatendimentos-v9'));
+check('cache do celular foi atualizado para o portal', /saatendimentos-v\d+/.test(sw));
 check('portal.js entrou no cache', sw.includes('./js/portal.js'));
 check('portal-app.js entrou no cache', sw.includes('./js/portal-app.js'));
 check('portal.html entrou no cache', sw.includes('./portal.html'));

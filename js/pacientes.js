@@ -84,6 +84,7 @@ function pacientesRender() {
       app.botaoAcao('Apagar dados', 'pacientesModulo.apagarDados(' + Number(p.id) + ')', 'excluir', true) +
       app.botaoAcao('Convidar portal', 'pacientesModulo.convidarPortal(' + Number(p.id) + ')', 'convidar') +
       app.botaoAcao('Recados', 'pacientesModulo.abrirRecadosPortal(' + Number(p.id) + ')', 'convidar') +
+      app.botaoAcao('Recibos', 'pacientesModulo.abrirRecibosPortal(' + Number(p.id) + ')', 'convidar') +
       app.botaoAcao('WhatsApp', 'whatsappModulo.abrirParaPaciente(' + Number(p.id) + ')', 'whatsapp');
 
     var tr = document.createElement('tr');
@@ -822,6 +823,181 @@ var pacientesModulo = {
     }).catch(function(err) {
       if (status) { status.textContent = err.message || 'Não foi possível enviar.'; status.style.color = '#C16A4A'; }
     });
+  },
+
+  // ---------- Recibos do portal (lado da psicóloga) ----------
+  _portalRecibosPacienteId: null,
+  _portalRecibosPortalId: null,
+
+  abrirRecibosPortal: function(id) {
+    var p = this._pacientePorId(id);
+    if (!p) return;
+    if (!Backend || !Backend.configurado() || !Backend.conectado()) {
+      app.toast('Entre na sua conta para ver os recibos.');
+      return;
+    }
+    this._portalRecibosPacienteId = id;
+    this._portalRecibosPortalId = null;
+    var info = document.getElementById('portalRecibosPaciente');
+    if (info) info.textContent = 'Paciente: ' + (p.nome || '');
+    var lista = document.getElementById('portalRecibosProfLista');
+    if (lista) lista.innerHTML = '<div class="portal-muted">Carregando...</div>';
+    var status = document.getElementById('portalRecibosProfStatus');
+    if (status) status.textContent = '';
+    var input = document.getElementById('portalReciboArquivo');
+    if (input) input.value = '';
+    app.abrirModal('modalPortalRecibos');
+    this._carregarRecibosPortal(p);
+  },
+
+  _portalRecibosMsg: function(texto, erro) {
+    var el = document.getElementById('portalRecibosProfStatus');
+    if (!el) return;
+    el.textContent = texto || '';
+    el.style.color = erro ? '#C16A4A' : 'var(--text-muted)';
+  },
+
+  _carregarRecibosPortal: function(paciente) {
+    var self = this;
+    this._buscarPortalId(paciente).then(function(portalId) {
+      self._portalRecibosPortalId = portalId;
+      if (!portalId) {
+        var lista = document.getElementById('portalRecibosProfLista');
+        if (lista) lista.innerHTML = '<div class="portal-muted">Este paciente ainda não tem portal. Envie um convite primeiro.</div>';
+        return;
+      }
+      var url = Backend.base() + '/rest/v1/portal_recibos?select=id,nome,numero,codigo,criado_em&paciente_portal_id=eq.' +
+        encodeURIComponent(portalId) + '&order=criado_em.desc&limit=50';
+      return fetch(url, { headers: Backend.headers(true) })
+        .then(function(r) { return Backend._resposta(r); })
+        .then(function(itens) { self._renderRecibosProf(itens || []); });
+    }).catch(function(err) {
+      self._portalRecibosMsg(err.message || 'Não foi possível carregar os recibos.', true);
+    });
+  },
+
+  _renderRecibosProf: function(itens) {
+    var lista = document.getElementById('portalRecibosProfLista');
+    if (!lista) return;
+    if (!itens.length) {
+      lista.innerHTML = '<div class="portal-muted">Nenhum recibo no portal ainda. Envie um PDF abaixo ou use o botão no comprovante.</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < itens.length; i++) {
+      var r = itens[i];
+      var quando = '';
+      try { quando = new Date(r.criado_em).toLocaleDateString('pt-BR'); } catch (e) {}
+      html += '<div style="display:flex;align-items:center;gap:.6rem;border:1px solid var(--border);' +
+        'border-radius:10px;padding:10px;margin-bottom:8px;background:#F3F8F5;">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:800;word-break:break-all;">' + escapeHtml(r.nome || 'recibo.pdf') + '</div>' +
+          '<div class="cell-sub">' + escapeHtml(quando) +
+            (r.numero ? ' · ' + escapeHtml(r.numero) : '') +
+            (r.codigo ? ' · Cód. ' + escapeHtml(r.codigo) : '') + '</div>' +
+        '</div>' +
+        '<button type="button" class="btn btn-outline btn-sm" onclick="pacientesModulo.baixarReciboPortal(\'' +
+          escapeHtml(String(r.id)) + '\')">Baixar</button>' +
+        '<button type="button" class="btn btn-outline btn-sm perigo" onclick="pacientesModulo.excluirReciboPortal(\'' +
+          escapeHtml(String(r.id)) + '\')">Excluir</button>' +
+        '</div>';
+    }
+    lista.innerHTML = html;
+  },
+
+  // Envia um PDF qualquer (por exemplo o recibo oficial da Receita) para o portal.
+  guardarReciboPortal: function(input) {
+    var arquivo = input && input.files && input.files[0];
+    if (!arquivo) { this._portalRecibosMsg('Escolha um arquivo PDF antes de guardar.', true); return; }
+    var nomeArquivo = String(arquivo.name || '');
+    if (!/\.pdf$/i.test(nomeArquivo) && !/pdf/.test(String(arquivo.type || ''))) {
+      this._portalRecibosMsg('Escolha um arquivo PDF.', true);
+      return;
+    }
+    if (Number(arquivo.size || 0) > 2.5 * 1024 * 1024) {
+      this._portalRecibosMsg('PDF muito grande. O limite é 2,5 MB.', true);
+      return;
+    }
+    if (!this._portalRecibosPortalId) {
+      this._portalRecibosMsg('Envie um convite ao paciente primeiro.', true);
+      return;
+    }
+
+    var self = this;
+    var portalId = this._portalRecibosPortalId;
+    this._portalRecibosMsg('Guardando recibo...');
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var bruto = String((ev.target && ev.target.result) || '');
+      var virgula = bruto.indexOf(',');
+      var base64 = virgula >= 0 ? bruto.slice(virgula + 1) : bruto;
+      fetch(Backend.base() + '/rest/v1/portal_recibos', {
+        method: 'POST',
+        headers: Backend.headers(true),
+        body: JSON.stringify({
+          paciente_portal_id: portalId,
+          nome: nomeArquivo.slice(0, 120),
+          numero: '',
+          codigo: '',
+          conteudo_base64: base64
+        })
+      }).then(function(r) { return Backend._resposta(r); }).then(function() {
+        self._portalRecibosMsg('Recibo guardado no portal da paciente.');
+        if (input) input.value = '';
+        var p = self._pacientePorId(self._portalRecibosPacienteId);
+        if (p) self._carregarRecibosPortal(p);
+      }).catch(function(err) {
+        self._portalRecibosMsg(err.message || 'Não foi possível guardar o recibo.', true);
+      });
+    };
+    reader.onerror = function() { self._portalRecibosMsg('Não foi possível ler o arquivo.', true); };
+    reader.readAsDataURL(arquivo);
+  },
+
+  baixarReciboPortal: function(id) {
+    var self = this;
+    if (!this._portalRecibosPortalId) return;
+    var url = Backend.base() + '/rest/v1/portal_recibos?select=nome,conteudo_base64&id=eq.' +
+      encodeURIComponent(id) + '&paciente_portal_id=eq.' +
+      encodeURIComponent(this._portalRecibosPortalId) + '&limit=1';
+    fetch(url, { headers: Backend.headers(true) })
+      .then(function(r) { return Backend._resposta(r); })
+      .then(function(linhas) {
+        var item = linhas && linhas[0];
+        if (!item) { app.toast('Recibo não encontrado.'); return; }
+        self._baixarBase64(item.nome || 'recibo.pdf', item.conteudo_base64 || '');
+      }).catch(function(err) { app.toast(err.message || 'Não foi possível baixar.'); });
+  },
+
+  excluirReciboPortal: function(id) {
+    if (!this._portalRecibosPortalId) return;
+    if (typeof confirm === 'function' && !confirm('Excluir este recibo do portal da paciente?')) return;
+    var self = this;
+    var url = Backend.base() + '/rest/v1/portal_recibos?id=eq.' + encodeURIComponent(id) +
+      '&paciente_portal_id=eq.' + encodeURIComponent(this._portalRecibosPortalId);
+    fetch(url, { method: 'DELETE', headers: Backend.headers(true) })
+      .then(function(r) { return Backend._resposta(r); })
+      .then(function() {
+        app.toast('Recibo removido do portal.');
+        var p = self._pacientePorId(self._portalRecibosPacienteId);
+        if (p) self._carregarRecibosPortal(p);
+      }).catch(function(err) { app.toast(err.message || 'Não foi possível excluir.'); });
+  },
+
+  _baixarBase64: function(nome, base64) {
+    var binario = '';
+    try { binario = atob(base64); } catch (e) { app.toast('Arquivo corrompido.'); return; }
+    var bytes = new Uint8Array(binario.length);
+    for (var i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i) & 0xFF;
+    var blob = new Blob([bytes], { type: 'application/pdf' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = String(nome || 'recibo.pdf');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
 };
