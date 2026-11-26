@@ -75,6 +75,10 @@ check('senha sugerida é forte', Portal.forcaSenha(Portal.sugerirSenha()).ok ===
 check('link mágico é lido do #', Portal.lerTokenDaUrl('#access_token=abc&refresh_token=def&type=magiclink').token === 'abc');
 check('erro do link é aproveitado',
   Portal.lerTokenDaUrl('#error=access_denied&error_description=expirado').erro === 'expirado');
+check('erro do link vira mensagem amigável',
+  Portal.mensagemErroLink('Email link is invalid or has expired').indexOf('expirou') > -1);
+check('mensagem amigável orienta a usar e-mail e senha',
+  Portal.mensagemErroLink('Email link is invalid or has expired').indexOf('senha') > -1);
 check('retorno aponta para portal.html',
   Portal.urlDeRetorno('https://myttoz.github.io/Saas-psicologia/') ===
   'https://myttoz.github.io/Saas-psicologia/portal.html');

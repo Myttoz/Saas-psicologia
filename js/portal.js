@@ -99,6 +99,17 @@ var Portal = {
     return s.replace(/\/+$/, '') + '/portal.html';
   },
 
+  // Traduz o erro técnico do link mágico para uma mensagem que o paciente entende.
+  mensagemErroLink: function(desc) {
+    var s = String(desc === undefined || desc === null ? '' : desc).toLowerCase();
+    if (/expired|invalid|otp_expired|access_denied|has already been used/.test(s)) {
+      return 'Este link expirou ou já foi usado (ele vale uma única vez). ' +
+        'Não tem problema: entre com o seu e-mail e a senha que você criou. ' +
+        'Se não lembrar da senha, peça à sua psicóloga para reenviar o acesso.';
+    }
+    return String(desc || '');
+  },
+
   validarEmail: function(email) {
     var s = String(email === null || email === undefined ? '' : email).trim();
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);

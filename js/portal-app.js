@@ -29,6 +29,9 @@ var PortalApp = {
       sessionStorage.setItem(this.CHAVE_TOKEN, sessao.token || '');
       if (sessao.refresh_token) sessionStorage.setItem(this.CHAVE_REFRESH, sessao.refresh_token);
       sessionStorage.setItem(this.CHAVE_USUARIO, JSON.stringify(sessao.usuario || {}));
+      // Guarda o e-mail no próprio aparelho para preencher no próximo acesso.
+      var em = sessao.usuario && sessao.usuario.email;
+      if (em) localStorage.setItem('portal_email', em);
     } catch (e) {}
     this._usuario = sessao.usuario || null;
   },
@@ -82,9 +85,16 @@ var PortalApp = {
     this._mostrar('portalViewSenha', false);
     this._mostrar('portalViewLogin', true);
 
+    // Preenche o e-mail salvo neste aparelho (paciente não precisa decorar).
+    try {
+      var emSalvo = localStorage.getItem('portal_email');
+      var campoEmail = document.getElementById('portalEmail');
+      if (emSalvo && campoEmail && !campoEmail.value) campoEmail.value = emSalvo;
+    } catch (e) {}
+
     var tokenUrl = Portal.lerTokenDaUrl(window.location.hash);
     if (tokenUrl.erro) {
-      this._msg(tokenUrl.erro, 'erro');
+      this._msg(Portal.mensagemErroLink(tokenUrl.erro), 'erro');
       this._limparHash();
     }
 
@@ -126,7 +136,10 @@ var PortalApp = {
       .then(this._resposta)
       .then(function(u) {
         self._usuario = u;
-        try { sessionStorage.setItem(self.CHAVE_USUARIO, JSON.stringify(u || {})); } catch (e) {}
+        try {
+          sessionStorage.setItem(self.CHAVE_USUARIO, JSON.stringify(u || {}));
+          if (u && u.email) localStorage.setItem('portal_email', u.email);
+        } catch (e) {}
         return u;
       });
   },
