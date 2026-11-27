@@ -977,6 +977,14 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   margin-bottom: .8rem;
 }
 
+/* Aviso de guarda dos registros: informativo, nunca bloqueia uma ação. */
+.retencao-aviso {
+  background: var(--primary-light);
+  border-color: rgba(122,158,143,.35);
+  color: var(--primary-dark);
+  line-height: 1.55;
+}
+
 .resumo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
