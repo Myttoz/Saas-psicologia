@@ -1100,6 +1100,24 @@ var pacientesModulo = {
   // ---------- Consentimento / anamnese do portal ----------
   _portalConsentimentoId: null,
   _portalConsentimentoPortalId: null,
+  TEXTO_CONSENTIMENTO: 'Eu autorizo a realização do atendimento psicológico e o registro das ' +
+    'informações necessárias ao acompanhamento. Declaro ter lido e compreendido este termo.',
+  TEXTO_ANAMNESE: '1. Qual o motivo que trouxe você ao atendimento?\n' +
+    '2. Como estão sua rotina de sono e alimentação?\n' +
+    '3. Há algum sintoma ou situação que gostaria de destacar?\n' +
+    '4. Já realizou acompanhamento psicológico antes?',
+
+  // Troca o modelo de texto apenas se a profissional ainda não editou o campo.
+  trocarModeloConsentimento: function() {
+    var sel = document.getElementById('consentPortalTitulo');
+    var area = document.getElementById('consentPortalTexto');
+    if (!sel || !area) return;
+    var anamnese = String(sel.value || '').toLowerCase().indexOf('anamnese') >= 0;
+    var atual = String(area.value || '').trim();
+    var outro = anamnese ? this.TEXTO_CONSENTIMENTO : this.TEXTO_ANAMNESE;
+    var novo = anamnese ? this.TEXTO_ANAMNESE : this.TEXTO_CONSENTIMENTO;
+    if (!atual || atual === outro) area.value = novo;
+  },
 
   abrirConsentimentoPortal: function(id) {
     var p = this._pacientePorId(id);
@@ -1115,10 +1133,7 @@ var pacientesModulo = {
     var status = document.getElementById('consentPortalStatus');
     if (status) status.textContent = '';
     var texto = document.getElementById('consentPortalTexto');
-    if (texto && !texto.value.trim()) {
-      texto.value = 'Eu autorizo a realização do atendimento psicológico e o registro das ' +
-        'informações necessárias ao acompanhamento. Declaro ter lido e compreendido este termo.';
-    }
+    if (texto && !texto.value.trim()) texto.value = this.TEXTO_CONSENTIMENTO;
     var lista = document.getElementById('consentPortalLista');
     if (lista) lista.innerHTML = '<div class="portal-muted">Carregando...</div>';
     app.abrirModal('modalConsentimentoPortal');
@@ -1179,6 +1194,10 @@ var pacientesModulo = {
               ? 'Assinado em ' + escapeHtml(assinado) + ' por ' + escapeHtml(item.assinante_nome || '')
               : 'Aguardando assinatura') + '</div>' +
         '</div>' +
+        (item.assinado_em
+          ? '<button type="button" class="btn btn-outline btn-sm" onclick="pacientesModulo.imprimirConsentimento(\'' +
+            escapeHtml(String(item.id)) + '\')">Comprovante</button>'
+          : '') +
         '<button type="button" class="btn btn-outline btn-sm" onclick="pacientesModulo.excluirConsentimentoPortal(\'' +
           escapeHtml(String(item.id)) + '\')">Excluir</button>' +
         '</div>';
@@ -1213,6 +1232,39 @@ var pacientesModulo = {
     }).catch(function(err) {
       self._consentMsg(err.message || 'Não foi possível enviar.', true);
     });
+  },
+
+  // Comprovante imprimível do termo já assinado (Salvar como PDF na impressão).
+  imprimirConsentimento: function(id) {
+    if (!this._portalConsentimentoPortalId) return;
+    var url = Backend.base() + '/rest/v1/portal_consentimentos?select=id,titulo,texto,assinado_em,assinante_nome&id=eq.' +
+      encodeURIComponent(id) + '&paciente_portal_id=eq.' +
+      encodeURIComponent(this._portalConsentimentoPortalId) + '&limit=1';
+    fetch(url, { headers: Backend.headers(true) })
+      .then(function(r) { return Backend._resposta(r); })
+      .then(function(linhas) {
+        var item = linhas && linhas[0];
+        if (!item || !item.assinado_em) { app.toast('Este documento ainda não foi assinado.'); return; }
+        var quando = '';
+        try { quando = new Date(item.assinado_em).toLocaleString('pt-BR'); } catch (e) { quando = item.assinado_em; }
+        var area = document.getElementById('areaImpressao');
+        if (!area) { app.toast('Não foi possível preparar o comprovante.'); return; }
+        area.innerHTML =
+          '<div class="recibo">' +
+            '<div class="recibo-topo">' +
+              '<div class="recibo-titulo">' + escapeHtml(item.titulo || 'Documento') + '</div>' +
+              '<div class="recibo-numero">Assinado digitalmente</div>' +
+            '</div>' +
+            '<div class="recibo-texto" style="white-space:pre-wrap;">' + escapeHtml(item.texto || '') + '</div>' +
+            '<div class="recibo-linha"><span>Assinado por</span><strong>' +
+              escapeHtml(item.assinante_nome || '') + '</strong></div>' +
+            '<div class="recibo-linha"><span>Data e hora</span><strong>' + escapeHtml(quando) + '</strong></div>' +
+            '<div class="recibo-assinatura"><strong>Registro gerado pelo portal do paciente</strong><br>' +
+              'SaaS by Myttoz</div>' +
+          '</div>';
+        try { window.print(); } catch (e) {}
+        app.toast('Na janela de impressão, escolha "Salvar como PDF".');
+      }).catch(function(err) { app.toast(err.message || 'Não foi possível gerar o comprovante.'); });
   },
 
   excluirConsentimentoPortal: function(id) {

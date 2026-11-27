@@ -331,7 +331,7 @@
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Paciente</th><th>Convênio</th><th>Tipo de valor</th><th>Valor do atendimento</th><th>Ação</th></tr>
+                <tr><th>Paciente</th><th>Convênio</th><th>Tipo de valor</th><th>$ Atendimento</th><th>Ação</th></tr>
               </thead>
               <tbody id="tbodyPacientes"></tbody>
             </table>
@@ -1115,7 +1115,7 @@
     <div id="consentPortalLista" style="max-height:260px; overflow:auto; margin-bottom:12px;"></div>
     <div class="form-group">
       <label class="form-label" for="consentPortalTitulo">Tipo de documento</label>
-      <select id="consentPortalTitulo" class="form-control">
+      <select id="consentPortalTitulo" class="form-control" onchange="pacientesModulo.trocarModeloConsentimento()">
         <option value="Termo de consentimento">Termo de consentimento</option>
         <option value="Anamnese">Anamnese</option>
       </select>

@@ -181,12 +181,36 @@ pacientes = [{ id: 1, nome: 'Ana Silva' }];
     !els.portalConsentimentosLista.innerHTML.includes('<script>') &&
     els.portalConsentimentosLista.innerHTML.includes('&lt;script&gt;'));
 
-  console.log('\n[4] Estrutura');
+  console.log('\n[4] Texto por tipo e comprovante');
+  els.consentPortalTexto.value = pacientesModulo.TEXTO_CONSENTIMENTO;
+  document.getElementById('consentPortalTitulo').value = 'Anamnese';
+  pacientesModulo.trocarModeloConsentimento();
+  check('anamnese troca o texto modelo', els.consentPortalTexto.value.includes('Qual o motivo'));
+  els.consentPortalTexto.value = 'Texto escrito pela profissional';
+  document.getElementById('consentPortalTitulo').value = 'Termo de consentimento';
+  pacientesModulo.trocarModeloConsentimento();
+  check('texto editado não é sobrescrito', els.consentPortalTexto.value === 'Texto escrito pela profissional');
+
+  let impressoes = 0;
+  global.print = function() { impressoes++; };
+  pacientesModulo.imprimirConsentimento('c1');
+  await esperar();
+  check('comprovante do termo assinado', impressoes === 1 &&
+    els.areaImpressao.innerHTML.includes('Ana Silva') &&
+    els.areaImpressao.innerHTML.includes('Assinado digitalmente') &&
+    els.areaImpressao.innerHTML.includes('SaaS by Myttoz'));
+  pacientesModulo._carregarConsentimentoPortal(pacientes[0]);
+  await esperar();
+  check('lista mostra botão Comprovante quando assinado',
+    els.consentPortalLista.innerHTML.includes('pacientesModulo.imprimirConsentimento('));
+
+  console.log('\n[5] Estrutura');
   check('aba no portal', htmlPortal.includes('id="page-consentimento"') &&
     htmlPortal.includes("PortalApp.trocarAba('consentimento')"));
   check('modal e botão na ficha', htmlApp.includes('id="modalConsentimentoPortal"') &&
     fs.readFileSync(raiz + 'js/pacientes.js', 'utf8').includes('pacientesModulo.abrirConsentimentoPortal('));
   check('cache atualizado', /saatendimentos-v\d+/.test(sw));
+  check('cabeçalho da tabela é curto', htmlApp.includes('<th>$ Atendimento</th>'));
 
   console.log('\n' + (falhas === 0 ? 'TODOS OS TESTES PASSARAM' : falhas + ' TESTE(S) FALHARAM'));
   process.exit(falhas === 0 ? 0 : 1);
