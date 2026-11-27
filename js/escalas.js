@@ -150,7 +150,7 @@ var escalasModulo = {
 
   // ---------- tela ----------
 
-  preencherPacientes: function() {
+  preencherPacientes: function(idEscolhido) {
     var sel = document.getElementById('escalaPaciente');
     if (!sel) return;
     sel.innerHTML = '';
@@ -159,6 +159,9 @@ var escalasModulo = {
       op.value = String(pacientes[i].id);
       op.textContent = String(pacientes[i].nome || '');
       sel.appendChild(op);
+    }
+    if (idEscolhido !== undefined && idEscolhido !== null) {
+      sel.value = String(idEscolhido);
     }
   },
 
@@ -276,9 +279,9 @@ var escalasModulo = {
 
   // ---------- histórico ----------
 
-  preencher: function() {
+  preencher: function(idEscolhido) {
     var self = this;
-    this.preencherPacientes();
+    this.preencherPacientes(idEscolhido);
     var area = document.getElementById('escalaHistorico');
     if (!area) return;
     if (typeof segurancaModulo === 'undefined' || !segurancaModulo.estaDesbloqueado()) {
@@ -346,6 +349,13 @@ var escalasModulo = {
     this.calcular();
     var salvar = document.getElementById('escalaSalvarBtn');
     if (salvar) salvar.style.display = 'none';
+  },
+
+  // Atalho da ficha do paciente: abre Escalas já com a paciente escolhida.
+  abrirParaPaciente: function(id) {
+    if (typeof app !== 'undefined' && app.trocarPagina) app.trocarPagina('escalas');
+    this.preencher(id);
+    this.preparar();
   },
 
   render: function() {

@@ -85,6 +85,7 @@ function pacientesRender() {
       app.botaoAcao('Convidar portal', 'pacientesModulo.convidarPortal(' + Number(p.id) + ')', 'convidar') +
       app.botaoAcao('Recados', 'pacientesModulo.abrirRecadosPortal(' + Number(p.id) + ')', 'convidar') +
       app.botaoAcao('Recibos', 'pacientesModulo.abrirRecibosPortal(' + Number(p.id) + ')', 'convidar') +
+      app.botaoAcao('Escalas', 'escalasModulo.abrirParaPaciente(' + Number(p.id) + ')', 'convidar') +
       app.botaoAcao('WhatsApp', 'whatsappModulo.abrirParaPaciente(' + Number(p.id) + ')', 'whatsapp');
 
     var tr = document.createElement('tr');

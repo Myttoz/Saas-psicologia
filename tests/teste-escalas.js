@@ -37,7 +37,8 @@ global.evolucoes = [];
 global.hojeStr = '2026-11-27';
 const avisos = [];
 const trilha = [];
-global.app = { toast(m) { avisos.push(m); } };
+const paginas = [];
+global.app = { toast(m) { avisos.push(m); }, trocarPagina(id) { paginas.push(id); } };
 global.Store = { salvar() {} };
 global.Cripto = {
   cifrar(chave, objeto) { return Promise.resolve({ cifrado: true, iv: 'iv', dados: objeto }); }
@@ -160,6 +161,13 @@ const e = escalasModulo;
   check('reabertura restaura as respostas', e._respostas.length === 9 &&
     e._resultado.total === 9);
   check('reabertura esconde o botão salvar', els.escalaSalvarBtn.style.display === 'none');
+
+  e.abrirParaPaciente(2);
+  check('atalho da ficha abre Escalas com a paciente escolhida',
+    paginas.includes('escalas') && els.escalaPaciente.value === '2',
+    els.escalaPaciente.value);
+  check('ficha do paciente tem botão Escalas',
+    fs.readFileSync(raiz + 'js/pacientes.js', 'utf8').includes('escalasModulo.abrirParaPaciente('));
 
   console.log('\n[6] Estrutura do site');
   check('página de escalas existe', html.includes('id="page-escalas"'));
