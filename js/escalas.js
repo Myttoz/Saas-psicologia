@@ -280,8 +280,14 @@ var escalasModulo = {
   // ---------- histórico ----------
 
   preencher: function(idEscolhido) {
-    var self = this;
     this.preencherPacientes(idEscolhido);
+    this.mostrarHistorico();
+  },
+
+  // Atualiza só a lista de escalas: NÃO recria o seletor de paciente,
+  // senão ele voltaria para o primeiro da lista a cada troca.
+  mostrarHistorico: function() {
+    var self = this;
     var area = document.getElementById('escalaHistorico');
     if (!area) return;
     if (typeof segurancaModulo === 'undefined' || !segurancaModulo.estaDesbloqueado()) {

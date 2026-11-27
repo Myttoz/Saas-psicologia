@@ -169,10 +169,19 @@ const e = escalasModulo;
   check('ficha do paciente tem botão Escalas',
     fs.readFileSync(raiz + 'js/pacientes.js', 'utf8').includes('escalasModulo.abrirParaPaciente('));
 
+  // trocar o paciente no seletor não pode voltar ao primeiro da lista
+  els.escalaPaciente.value = '1';
+  e.mostrarHistorico();
+  check('trocar paciente mantém a escolha', els.escalaPaciente.value === '1',
+    els.escalaPaciente.value);
+
   console.log('\n[6] Estrutura do site');
   check('página de escalas existe', html.includes('id="page-escalas"'));
   check('menu lateral existe', html.includes("app.trocarPagina('escalas')"));
   check('script carregado', html.includes('js/escalas.js'));
+  check('seletor de paciente não é recriado ao trocar',
+    html.includes('onchange="escalasModulo.mostrarHistorico()"') &&
+    !html.includes('onchange="escalasModulo.preencher()"'));
   check('service worker cacheia o módulo', sw.includes('./js/escalas.js'));
   check('cache atualizado', /saatendimentos-v\d+/.test(sw));
 
