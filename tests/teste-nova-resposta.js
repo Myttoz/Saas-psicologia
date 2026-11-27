@@ -33,6 +33,7 @@ const pedidos = [];
 const avisos = [];
 const modais = [];
 const lidos = {};
+let falharPatch = false;
 const mensagens = [
   { id: 'm1', autor: 'profissional', texto: 'Olá, Ana!', criado_em: '2026-11-25T10:00:00Z',
     lido_em: '2026-11-25T11:00:00Z' },
@@ -91,6 +92,9 @@ global.fetch = function(url, opcoes) {
     return Promise.resolve({ ok: true, json: function() { return Promise.resolve(dados); } });
   }
   if (opcoes && opcoes.method === 'PATCH') {
+    if (falharPatch) {
+      return Promise.resolve({ ok: false, json: function() { return Promise.resolve({ message: 'negado' }); } });
+    }
     const id = String(url).split('id=eq.')[1] || '';
     lidos[id] = true;
     return resposta([{ id: id }]);
@@ -178,6 +182,16 @@ pacientes = [{ id: 1, nome: 'Ana Silva' }];
 
   html = els.portalRecadosProfLista.innerHTML;
   check('selo some da conversa após ler', !html.includes('Nova resposta'), html.slice(-120));
+  check('status confirma a leitura',
+    els.portalRecadosProfStatus.textContent.includes('marcada como lida'),
+    els.portalRecadosProfStatus.textContent);
+
+  console.log('\n[5] Quando o banco não permite marcar');
+  falharPatch = true;
+  avisos.length = 0;
+  await pacientesModulo._marcarRecadosLidos(['m9']);
+  check('aviso claro se não deu para marcar',
+    avisos.some(m => m.includes('não deu para marcar como lida')), avisos.join(' | '));
 
   console.log('\n' + (falhas === 0 ? 'TODOS OS TESTES PASSARAM' : falhas + ' TESTE(S) FALHARAM'));
   process.exit(falhas === 0 ? 0 : 1);

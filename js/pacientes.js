@@ -795,7 +795,11 @@ var pacientesModulo = {
     return Promise.all(promessas).then(function() {
       // o selo da lista some assim que a conversa é aberta
       self.atualizarSelosNaoLidos();
-    }).catch(function() {});
+      var status = document.getElementById('portalRecadosProfStatus');
+      if (status) status.textContent = 'Resposta marcada como lida.';
+    }).catch(function() {
+      app.toast('A resposta foi aberta, mas não deu para marcar como lida.');
+    });
   },
 
   // ---------- Recados do portal (lado da psicóloga) ----------
@@ -844,7 +848,7 @@ var pacientesModulo = {
       }
       var url = Backend.base() + '/rest/v1/portal_recados?select=id,autor,texto,criado_em,lido_em&paciente_portal_id=eq.' +
         encodeURIComponent(portalId) + '&order=criado_em.asc&limit=200';
-      return fetch(url, { headers: Backend.headers(true) })
+      return fetch(url, { headers: Backend.headers(true), cache: 'no-store' })
         .then(function(r) { return Backend._resposta(r); })
         .then(function(recados) {
           self._renderRecadosProf(recados || []);
