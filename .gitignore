@@ -34,6 +34,12 @@ Livia/
 # Backups exportados pelo sistema
 backup-*.json
 
+# Dumps do banco (dados de pacientes: NUNCA publicar no GitHub)
+Backup/*.sql
+Backup/*.dump
+Backup/*.json
+Backup/*.zip
+
 # Arquivos temporários do Python
 __pycache__/
 *.pyc
