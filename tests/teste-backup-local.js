@@ -33,6 +33,7 @@ check('usa o schema public e valida o arquivo', script.includes('--schema=public
   script.includes('[ ! -s "$ARQUIVO" ]'));
 check('script não usa service_role', !/service_role/.test(script));
 
+check('workflow usa checkout v5', workflow.includes('actions/checkout@v5'));
 check('workflow roda domingo 07:00 Brasília', workflow.includes("cron: '0 10 * * 0'"));
 check('workflow pode ser disparado à mão', workflow.includes('workflow_dispatch:'));
 check('workflow tem permissão para commitar', workflow.includes('contents: write'));
