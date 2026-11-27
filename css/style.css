@@ -53,10 +53,21 @@ body::before {
   background-repeat: repeat;
   background-size: 280px auto;
   background-position: center;
-  opacity: .035;
-  mix-blend-mode: multiply;
+  opacity: .028;
   pointer-events: none;
   z-index: 0;
+}
+
+/* Rolagem suave e contida em todas as áreas que rolam do sistema. */
+html { scroll-behavior: smooth; }
+
+.main, .nav, .modal, .overlay,
+.confirmar-lista, .quem-deve-lista, .evolucoes-lista, .trilha-lista,
+.proximos-lista, .agenda-scroll, .sidebar {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 a { text-decoration: none; color: inherit; }
@@ -839,7 +850,8 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   position: fixed;
   inset: 0;
   background: rgba(46,58,51,.45);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: 100;
   display: none;
   align-items: center;
