@@ -267,7 +267,7 @@ var escalasModulo = {
         }
         self._resultado = null;
         self.preencher();
-        app.toast('Escala salva no prontuário.');
+        app.toast('Escala salva. Veja em "Histórico da paciente" nesta página.');
       }).catch(function() {
         app.toast('Não foi possível cifrar a escala. Tente novamente.');
       });
