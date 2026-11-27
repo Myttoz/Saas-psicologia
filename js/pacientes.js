@@ -86,6 +86,7 @@ function pacientesRender() {
       app.botaoAcao('Recados', 'pacientesModulo.abrirRecadosPortal(' + Number(p.id) + ')', 'convidar') +
       app.botaoAcao('Recibos', 'pacientesModulo.abrirRecibosPortal(' + Number(p.id) + ')', 'convidar') +
       app.botaoAcao('Escalas', 'escalasModulo.abrirParaPaciente(' + Number(p.id) + ')', 'convidar') +
+      app.botaoAcao('Consentimento', 'pacientesModulo.abrirConsentimentoPortal(' + Number(p.id) + ')', 'convidar') +
       app.botaoAcao('WhatsApp', 'whatsappModulo.abrirParaPaciente(' + Number(p.id) + ')', 'whatsapp');
 
     var tr = document.createElement('tr');
@@ -1094,6 +1095,139 @@ var pacientesModulo = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+
+  // ---------- Consentimento / anamnese do portal ----------
+  _portalConsentimentoId: null,
+  _portalConsentimentoPortalId: null,
+
+  abrirConsentimentoPortal: function(id) {
+    var p = this._pacientePorId(id);
+    if (!p) return;
+    if (!Backend || !Backend.configurado() || !Backend.conectado()) {
+      app.toast('Entre na sua conta para enviar um termo.');
+      return;
+    }
+    this._portalConsentimentoId = id;
+    this._portalConsentimentoPortalId = null;
+    var info = document.getElementById('consentPortalPaciente');
+    if (info) info.textContent = 'Paciente: ' + (p.nome || '');
+    var status = document.getElementById('consentPortalStatus');
+    if (status) status.textContent = '';
+    var texto = document.getElementById('consentPortalTexto');
+    if (texto && !texto.value.trim()) {
+      texto.value = 'Eu autorizo a realização do atendimento psicológico e o registro das ' +
+        'informações necessárias ao acompanhamento. Declaro ter lido e compreendido este termo.';
+    }
+    var lista = document.getElementById('consentPortalLista');
+    if (lista) lista.innerHTML = '<div class="portal-muted">Carregando...</div>';
+    app.abrirModal('modalConsentimentoPortal');
+    this._carregarConsentimentoPortal(p);
+  },
+
+  _consentMsg: function(texto, erro) {
+    var el = document.getElementById('consentPortalStatus');
+    if (!el) return;
+    el.textContent = texto || '';
+    el.style.color = erro ? '#C16A4A' : 'var(--text-muted)';
+  },
+
+  _carregarConsentimentoPortal: function(paciente) {
+    var self = this;
+    this._buscarPortalId(paciente).then(function(portalId) {
+      self._portalConsentimentoPortalId = portalId;
+      var lista = document.getElementById('consentPortalLista');
+      if (!portalId) {
+        if (lista) lista.innerHTML = '<div class="portal-muted">Este paciente ainda não tem portal. Envie um convite primeiro.</div>';
+        return;
+      }
+      var url = Backend.base() + '/rest/v1/portal_consentimentos' +
+        '?select=id,titulo,texto,assinado_em,assinante_nome,criado_em' +
+        '&paciente_portal_id=eq.' + encodeURIComponent(portalId) +
+        '&order=criado_em.desc&limit=20';
+      return fetch(url, { headers: Backend.headers(true), cache: 'no-store' })
+        .then(function(r) { return Backend._resposta(r); })
+        .then(function(itens) { self._renderConsentimentosProf(itens || []); });
+    }).catch(function(err) {
+      self._consentMsg(err.message || 'Não foi possível carregar os termos.', true);
+    });
+  },
+
+  _renderConsentimentosProf: function(itens) {
+    var lista = document.getElementById('consentPortalLista');
+    if (!lista) return;
+    if (!itens.length) {
+      lista.innerHTML = '<div class="portal-muted">Nenhum termo enviado ainda.</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < itens.length; i++) {
+      var item = itens[i];
+      var quando = '';
+      var assinado = '';
+      try { quando = new Date(item.criado_em).toLocaleDateString('pt-BR'); } catch (e) {}
+      if (item.assinado_em) {
+        try { assinado = new Date(item.assinado_em).toLocaleDateString('pt-BR'); } catch (e) {}
+      }
+      html += '<div style="display:flex;align-items:center;gap:.6rem;border:1px solid var(--border);' +
+        'border-radius:10px;padding:10px;margin-bottom:8px;background:' +
+        (item.assinado_em ? 'var(--primary-light)' : '#F6E9E3') + ';">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:800;">' + escapeHtml(item.titulo || '') + '</div>' +
+          '<div class="cell-sub">' + escapeHtml(quando) + ' · ' +
+            (item.assinado_em
+              ? 'Assinado em ' + escapeHtml(assinado) + ' por ' + escapeHtml(item.assinante_nome || '')
+              : 'Aguardando assinatura') + '</div>' +
+        '</div>' +
+        '<button type="button" class="btn btn-outline btn-sm" onclick="pacientesModulo.excluirConsentimentoPortal(\'' +
+          escapeHtml(String(item.id)) + '\')">Excluir</button>' +
+        '</div>';
+    }
+    lista.innerHTML = html;
+  },
+
+  enviarConsentimentoPortal: function() {
+    var self = this;
+    var tituloEl = document.getElementById('consentPortalTitulo');
+    var textoEl = document.getElementById('consentPortalTexto');
+    var titulo = tituloEl ? String(tituloEl.value || '').trim() : '';
+    var texto = textoEl ? String(textoEl.value || '').trim() : '';
+    if (!titulo || !texto) { this._consentMsg('Preencha o tipo e o texto do documento.', true); return; }
+    if (!this._portalConsentimentoPortalId) {
+      this._consentMsg('Envie um convite ao paciente primeiro.', true);
+      return;
+    }
+    this._consentMsg('Enviando ao portal...');
+    fetch(Backend.base() + '/rest/v1/portal_consentimentos', {
+      method: 'POST',
+      headers: Backend.headers(true),
+      body: JSON.stringify({
+        paciente_portal_id: this._portalConsentimentoPortalId,
+        titulo: titulo.slice(0, 120),
+        texto: texto.slice(0, 6000)
+      })
+    }).then(function(r) { return Backend._resposta(r); }).then(function() {
+      self._consentMsg('Enviado. A paciente pode assinar no portal.');
+      var p = self._pacientePorId(self._portalConsentimentoId);
+      if (p) self._carregarConsentimentoPortal(p);
+    }).catch(function(err) {
+      self._consentMsg(err.message || 'Não foi possível enviar.', true);
+    });
+  },
+
+  excluirConsentimentoPortal: function(id) {
+    var self = this;
+    if (!this._portalConsentimentoPortalId) return;
+    if (typeof confirm === 'function' && !confirm('Excluir este documento do portal?')) return;
+    var url = Backend.base() + '/rest/v1/portal_consentimentos?id=eq.' + encodeURIComponent(id) +
+      '&paciente_portal_id=eq.' + encodeURIComponent(this._portalConsentimentoPortalId);
+    fetch(url, { method: 'DELETE', headers: Backend.headers(true) })
+      .then(function(r) { return Backend._resposta(r); })
+      .then(function() {
+        app.toast('Documento removido do portal.');
+        var p = self._pacientePorId(self._portalConsentimentoId);
+        if (p) self._carregarConsentimentoPortal(p);
+      }).catch(function(err) { app.toast(err.message || 'Não foi possível excluir.'); });
   }
 
 };

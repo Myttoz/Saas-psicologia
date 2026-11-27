@@ -1104,6 +1104,34 @@
   </div>
 </div>
 
+<!-- Modal: consentimento/anamnese do portal -->
+<div class="modal" id="modalConsentimentoPortal" onclick="event.stopPropagation()">
+  <div class="modal-header">
+    <div class="modal-title">Consentimento / anamnese</div>
+    <button class="modal-close" onclick="app.fecharModal('modalConsentimentoPortal')">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-note" id="consentPortalPaciente" style="margin-bottom:.75rem;"></div>
+    <div id="consentPortalLista" style="max-height:260px; overflow:auto; margin-bottom:12px;"></div>
+    <div class="form-group">
+      <label class="form-label" for="consentPortalTitulo">Tipo de documento</label>
+      <select id="consentPortalTitulo" class="form-control">
+        <option value="Termo de consentimento">Termo de consentimento</option>
+        <option value="Anamnese">Anamnese</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="consentPortalTexto">Texto enviado à paciente</label>
+      <textarea id="consentPortalTexto" class="form-control" rows="6" placeholder="Escreva o termo ou as perguntas da anamnese..."></textarea>
+    </div>
+    <div class="form-note" id="consentPortalStatus"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline" onclick="app.fecharModal('modalConsentimentoPortal')">Fechar</button>
+    <button class="btn btn-primary" onclick="pacientesModulo.enviarConsentimentoPortal()">Enviar ao portal</button>
+  </div>
+</div>
+
 <!-- Modal: mensagem no WhatsApp (modelos prontos) -->
 <div class="modal" id="modalWhatsApp" onclick="event.stopPropagation()">
   <div class="modal-header">

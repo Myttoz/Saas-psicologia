@@ -84,8 +84,11 @@ var PortalApp = {
 
   // Abas da esquerda: Recados, Próximas sessões, Recibos.
   trocarAba: function(id) {
-    var abas = ['recados', 'sessoes', 'recibos'];
-    var titulos = { recados: 'Recados', sessoes: 'Próximas sessões', recibos: 'Recibos' };
+    var abas = ['recados', 'sessoes', 'recibos', 'consentimento'];
+    var titulos = {
+      recados: 'Recados', sessoes: 'Próximas sessões', recibos: 'Recibos',
+      consentimento: 'Consentimento'
+    };
     for (var i = 0; i < abas.length; i++) {
       var pagina = document.getElementById('page-' + abas[i]);
       if (pagina) pagina.classList.toggle('active', abas[i] === id);
@@ -97,6 +100,7 @@ var PortalApp = {
     var sb = document.getElementById('portalSidebar');
     if (sb && window.innerWidth <= 768) sb.classList.remove('mobile-open');
     if (id === 'recibos' && this._pacientePortalId) this._carregarRecibos();
+    if (id === 'consentimento' && this._pacientePortalId) this._carregarConsentimentos();
   },
 
   _resposta: function(r) {
@@ -302,6 +306,8 @@ var PortalApp = {
       return self._carregarRecados();
     }).then(function() {
       return self._carregarRecibos();
+    }).then(function() {
+      return self._carregarConsentimentos();
     });
   },
 
@@ -440,6 +446,87 @@ var PortalApp = {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     this._msgLogado('Recibo baixado.', 'ok');
+  },
+
+  // ---------- Consentimento / anamnese ----------
+
+  _carregarConsentimentos: function() {
+    var self = this;
+    if (!this._pacientePortalId) return Promise.resolve();
+    var url = this.base() + '/rest/v1/portal_consentimentos?select=id,titulo,texto,assinado_em,assinante_nome,criado_em&paciente_portal_id=eq.' +
+      encodeURIComponent(this._pacientePortalId) + '&order=criado_em.desc&limit=20';
+    return fetch(url, { headers: this.headers(true), cache: 'no-store' })
+      .then(this._resposta)
+      .then(function(lista) { self._renderConsentimentos(lista || []); })
+      .catch(function(err) {
+        self._msgLogado(err.message || 'Não foi possível carregar os documentos.', 'erro');
+      });
+  },
+
+  _renderConsentimentos: function(lista) {
+    var el = document.getElementById('portalConsentimentosLista');
+    var tag = document.getElementById('portalConsentimentosTag');
+    if (tag) tag.textContent = String(lista.length);
+    if (!el) return;
+    if (!lista.length) {
+      el.className = 'portal-lista-vazia';
+      el.textContent = 'Nenhum documento ainda.';
+      return;
+    }
+    el.className = '';
+    var html = '';
+    for (var i = 0; i < lista.length; i++) {
+      var c = lista[i];
+      var assinado = !!c.assinado_em;
+      html += '<div class="portal-consentimento' + (assinado ? ' assinado' : '') + '">' +
+        '<div class="portal-consentimento-topo"><strong>' + this._esc(c.titulo || '') + '</strong>' +
+          '<span class="portal-tag' + (assinado ? '' : ' em-breve') + '">' +
+          (assinado ? 'Assinado' : 'Aguardando') + '</span></div>' +
+        '<div class="portal-consentimento-texto">' +
+          this._esc(c.texto || '').replace(/\n/g, '<br>') + '</div>';
+      if (assinado) {
+        html += '<div class="portal-recibo-meta">Assinado em ' +
+          this._esc(this._formatarDataHora(c.assinado_em)) + ' por ' +
+          this._esc(c.assinante_nome || '') + '</div>';
+      } else {
+        html += '<div class="form-group">' +
+          '<label class="form-label" for="consentNome-' + this._esc(String(c.id)) + '">Seu nome completo</label>' +
+          '<input id="consentNome-' + this._esc(String(c.id)) +
+            '" class="form-control" type="text" placeholder="Digite seu nome completo">' +
+          '<div class="portal-actions">' +
+            '<button class="btn btn-primary" type="button" onclick="PortalApp.assinarConsentimento(\'' +
+              this._esc(String(c.id)) + '\')">Assinar documento</button>' +
+          '</div></div>';
+      }
+      html += '</div>';
+    }
+    el.innerHTML = html;
+  },
+
+  assinarConsentimento: function(id) {
+    var self = this;
+    if (!this._pacientePortalId) return;
+    var campo = document.getElementById('consentNome-' + id);
+    var nome = campo ? String(campo.value || '').trim() : '';
+    if (nome.length < 2) {
+      this._msgLogado('Digite seu nome completo para assinar.', 'erro');
+      return;
+    }
+    var url = this.base() + '/rest/v1/portal_consentimentos?id=eq.' + encodeURIComponent(id) +
+      '&paciente_portal_id=eq.' + encodeURIComponent(this._pacientePortalId);
+    fetch(url, {
+      method: 'PATCH',
+      headers: this.headers(true),
+      body: JSON.stringify({
+        assinado_em: new Date().toISOString(),
+        assinante_nome: nome.slice(0, 180)
+      })
+    }).then(this._resposta).then(function() {
+      self._msgLogado('Documento assinado. Obrigada!', 'ok');
+      return self._carregarConsentimentos();
+    }).catch(function(err) {
+      self._msgLogado(err.message || 'Não foi possível assinar.', 'erro');
+    });
   },
 
   _formatarDataHora: function(iso) {

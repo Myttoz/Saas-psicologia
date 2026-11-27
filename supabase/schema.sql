@@ -689,6 +689,93 @@ comment on function public.portal_aceitar_convite() is
 revoke all on function public.portal_aceitar_convite() from public, anon;
 grant execute on function public.portal_aceitar_convite() to authenticated;
 
+-- ---------- 4.6 Consentimento e anamnese assinados ----------
+
+create table if not exists public.portal_consentimentos (
+  id uuid primary key default gen_random_uuid(),
+  paciente_portal_id uuid not null references public.portal_pacientes(id) on delete cascade,
+  titulo text not null default 'Termo de consentimento'
+    check (char_length(titulo) between 1 and 120),
+  texto text not null check (char_length(texto) between 1 and 6000),
+  assinado_em timestamptz,
+  assinante_nome text not null default '' check (char_length(assinante_nome) <= 180),
+  criado_em timestamptz not null default now()
+);
+
+comment on table public.portal_consentimentos is
+  'Termos e anamnese enviados pela psicóloga. A paciente assina no portal com nome e data.';
+
+create index if not exists portal_consentimentos_paciente_idx
+  on public.portal_consentimentos (paciente_portal_id, criado_em desc);
+
+alter table public.portal_consentimentos enable row level security;
+
+drop policy if exists "Profissional lê consentimentos" on public.portal_consentimentos;
+drop policy if exists "Profissional cria consentimento" on public.portal_consentimentos;
+drop policy if exists "Profissional remove consentimento" on public.portal_consentimentos;
+drop policy if exists "Paciente lê seus consentimentos" on public.portal_consentimentos;
+drop policy if exists "Paciente assina consentimento" on public.portal_consentimentos;
+drop policy if exists "Exige segundo fator quando ativado" on public.portal_consentimentos;
+
+create policy "Profissional lê consentimentos"
+  on public.portal_consentimentos for select to authenticated
+  using (public.portal_eh_profissional(paciente_portal_id));
+
+create policy "Profissional cria consentimento"
+  on public.portal_consentimentos for insert to authenticated
+  with check (
+    public.portal_eh_profissional(paciente_portal_id) and assinado_em is null
+  );
+
+create policy "Profissional remove consentimento"
+  on public.portal_consentimentos for delete to authenticated
+  using (public.portal_eh_profissional(paciente_portal_id));
+
+create policy "Paciente lê seus consentimentos"
+  on public.portal_consentimentos for select to authenticated
+  using (
+    exists (
+      select 1 from public.portal_acessos a
+      where a.user_id = auth.uid()
+        and a.paciente_portal_id = portal_consentimentos.paciente_portal_id
+    )
+  );
+
+-- A paciente só pode preencher nome/data de uma assinatura ainda não feita.
+create policy "Paciente assina consentimento"
+  on public.portal_consentimentos for update to authenticated
+  using (
+    assinado_em is null
+    and exists (
+      select 1 from public.portal_acessos a
+      where a.user_id = auth.uid()
+        and a.paciente_portal_id = portal_consentimentos.paciente_portal_id
+    )
+  )
+  with check (
+    assinado_em is not null and char_length(assinante_nome) between 2 and 180
+    and exists (
+      select 1 from public.portal_acessos a
+      where a.user_id = auth.uid()
+        and a.paciente_portal_id = portal_consentimentos.paciente_portal_id
+    )
+  );
+
+create policy "Exige segundo fator quando ativado"
+  on public.portal_consentimentos as restrictive to authenticated
+  using (
+    not public.usuario_tem_mfa(auth.uid())
+    or coalesce(auth.jwt()->>'aal', 'aal1') = 'aal2'
+  )
+  with check (
+    not public.usuario_tem_mfa(auth.uid())
+    or coalesce(auth.jwt()->>'aal', 'aal1') = 'aal2'
+  );
+
+grant select, insert, delete on public.portal_consentimentos to authenticated;
+grant update (assinado_em, assinante_nome) on public.portal_consentimentos to authenticated;
+revoke all on public.portal_consentimentos from anon, public;
+
 -- Fim. Para criar a conta da psicóloga:
 -- Authentication -> Users -> Add user -> informe e-mail e senha.
 -- Para o portal, a própria psicóloga envia o convite pelo botão no site.
