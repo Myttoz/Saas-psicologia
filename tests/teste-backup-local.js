@@ -42,7 +42,14 @@ check('workflow usa pg_dump 17', workflow.includes('postgresql-client-17') &&
 check('workflow usa o formato .dump', workflow.includes('--format=custom') &&
   workflow.includes('.dump'));
 check('workflow confere tamanho maior que zero', workflow.includes('test -s "$ARQUIVO"'));
-check('workflow falha se faltar o secret', workflow.includes('Secret SUPABASE_DB_URL'));
+check('workflow falha se faltar o secret', workflow.includes('Secret SUPABASE_DB_PASSWORD'));
+check('senha vai por PGPASSWORD (aceita espaço e símbolos)',
+  workflow.includes('PGPASSWORD="$SUPABASE_DB_PASSWORD"') &&
+  workflow.includes('secrets.SUPABASE_DB_PASSWORD'));
+check('host e usuário não dependem da URL com senha',
+  workflow.includes('--host=aws-0-sa-east-1.pooler.supabase.com') &&
+  workflow.includes('--username=postgres.wrdkbafdzjsqonyidrwv') &&
+  !workflow.includes('secrets.SUPABASE_DB_URL'));
 check('workflow não usa service_role', !/service_role/.test(workflow));
 
 check('instruções pedem repositório privado', passo.includes('privado') &&

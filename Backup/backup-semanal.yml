@@ -1,6 +1,9 @@
 # Modelo de workflow — copie para .github/workflows/backup.yml
-# de um repositório PRIVADO (ex.: psicologia-backup).
+# de um repositório PRIVADO (ex.: saas-psicologia-backup).
 # Nunca coloque este workflow com secrets no repositório público do site.
+#
+# A senha vai no secret SUPABASE_DB_PASSWORD (em texto cru, sem codificar).
+# Host e project ref não são segredos e já estão fixados abaixo.
 name: Backup Supabase - semanal (Psicologia)
 
 on:
@@ -29,15 +32,19 @@ jobs:
 
       - name: Gerar dump do banco
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::Secret SUPABASE_DB_URL nao configurado"
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::error::Secret SUPABASE_DB_PASSWORD nao configurado"
             exit 1
           fi
           mkdir -p backups
           ARQUIVO="backups/backup-$(date +'%Y-%m-%d').dump"
-          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" \
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" /usr/lib/postgresql/17/bin/pg_dump \
+            --host=aws-0-sa-east-1.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.wrdkbafdzjsqonyidrwv \
+            --dbname=postgres \
             --format=custom \
             --schema=public \
             --no-owner --no-privileges \

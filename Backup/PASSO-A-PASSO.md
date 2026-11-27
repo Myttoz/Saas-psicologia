@@ -12,7 +12,7 @@ Duas formas, complementares:
   `controle-pessoal-backup` (são dados de projetos diferentes).
 - **Não use `service_role`.** Este projeto não guarda anexos no Storage: os PDFs dos
   recibos ficam **dentro do banco**, na tabela `portal_recibos`. Portanto só precisamos
-  da URL de conexão — nenhuma chave administrativa.
+  da senha do banco — nenhuma chave administrativa.
 - Nunca coloque secrets no repositório público do site.
 
 ## Backup manual (sem GitHub)
@@ -33,59 +33,52 @@ para a pasta privada do Drive. O `pg_dump` do sistema precisa ser da versão 17.
 
 Você criou `saas-psicologia-backup`. Confira se está **Private** (cadeado).
 
-### Passo 2 — connection string do Supabase ✅ já feito
+### Passo 2 — senha do banco ✅ já conhecida
 
-Supabase → **Connect** → aba **Session pooler** → copiar a URI. Ela deve estar assim
-(com a senha real no lugar de `[YOUR-PASSWORD]`):
+É a senha criada com o projeto Supabase. Se não souber:
+Supabase → **Project Settings → Database → Reset database password**.
 
-```
-postgresql://postgres.wrdkbafdzjsqonyidrwv:SENHA@aws-0-sa-east-1.pooler.supabase.com:5432/postgres
-```
+> ⚠️ Se você resetar a senha, o backup automático para até atualizar o secret do
+> GitHub (Passo 3). A chave anon do site **não** muda.
 
-Se a senha tiver caracteres especiais, codifique na URL (`@` → `%40`, `#` → `%23`).
-Não use a opção "Transaction pooler".
-
-### Passo 3 — secret `SUPABASE_DB_URL` ✅ já feito
+### Passo 3 — secret `SUPABASE_DB_PASSWORD` (novo)
 
 No repo `saas-psicologia-backup`: **Settings → Secrets and variables → Actions →
-New repository secret**. Nome exato: `SUPABASE_DB_URL`. Valor: a URI do passo 2.
+New repository secret**.
 
-> O GitHub **nunca mostra o valor de um secret depois de salvo**. Se você deixou
-> `[YOUR-PASSWORD]` na URL, crie o secret de novo com o mesmo nome e a URL corrigida
-> (ele substitui o anterior).
+- Name exato: `SUPABASE_DB_PASSWORD`
+- Value: a senha do banco **como ela é**, com espaço e caracteres especiais, sem
+  codificar e sem colchetes. Exemplo: `MinhaSenha 123!@#`
 
-### Passo 4 — criar o arquivo do workflow (o que faltava)
+> Por que mudou? O secret antigo `SUPABASE_DB_URL` exigia que a senha fosse codificada
+> dentro da URL (`%20` para espaço, `%40` para `@` etc.). Com senhas que têm espaço,
+> isso dava `exit 1`. Agora o workflow recebe a senha separadamente por `PGPASSWORD`
+> e não tem esse problema. O secret antigo pode ficar — ele simplesmente não é usado.
+>
+> O GitHub nunca mostra o valor de um secret depois de salvo. Se errar, crie de novo
+> com o mesmo nome para substituir.
 
-Não existe arquivo ainda — você vai **criar** ele pelo site do GitHub:
+### Passo 4 — atualizar o arquivo do workflow
 
-1. Abra o repositório `saas-psicologia-backup` no GitHub.
-2. No meio da página, clique em **Add file** → **Create new file**.
-3. No campo **Name your file...**, digite exatamente:
+No repo `saas-psicologia-backup`:
 
-   ```
-   .github/workflows/backup.yml
-   ```
+1. Abra `.github/workflows/backup.yml` (o arquivo que você criou antes).
+2. Clique no lápis (**Edit**).
+3. Apague **todo** o conteúdo e cole o YAML que está no fim deste arquivo.
+4. Clique em **Commit changes** (direto na `main`).
 
-   Não precisa criar as pastas antes: ao digitar as barras, o próprio GitHub cria
-   `.github/` e `workflows/`. Se aparecer um aviso de que Pastas foram detectadas,
-   está certo.
-4. No campo grande de texto, apague tudo que tiver e cole o conteúdo de
-   `Backup/backup-semanal.yml` deste projeto (está no fim deste tutorial).
-5. Role a página até o fim. Em **Commit new file**, deixe marcado
-   **Commit directly to the `main` branch** e clique em **Commit new file**.
-
-Depois disso, a pasta `.github/workflows/` e o arquivo `backup.yml` aparecem na lista
-de arquivos do repositório.
+> Isso também elimina o aviso "Node.js 20 is deprecated": o novo modelo usa
+> `actions/checkout@v5`.
 
 ### Passo 5 — testar
 
-1. Aba **Actions** → à esquerda, clique em **Backup Supabase - semanal (Psicologia)**.
-2. Botão **Run workflow** → **Run workflow**.
-3. Após cerca de 1 minuto, o run deve ficar verde. Abra o run e confira:
-   - o passo "Gerar dump do banco" sem erro;
-   - o passo "Salvar no repositorio";
-   - no repo, a pasta `backups/` com `backup-AAAA-MM-DD.dump` (tamanho > 0).
-4. Se der erro "Secret SUPABASE_DB_URL nao configurado", volte ao Passo 3.
+1. Aba **Actions** → **Backup Supabase - semanal (Psicologia)**.
+2. **Run workflow** → **Run workflow**.
+3. Após cerca de 1 minuto, o run deve ficar verde. Confira:
+   - passo "Gerar dump do banco" sem erro;
+   - passo "Salvar no repositorio";
+   - no repo, `backups/backup-AAAA-MM-DD.dump` com tamanho > 0.
+4. Se aparecer "Secret SUPABASE_DB_PASSWORD nao configurado", volte ao Passo 3.
 
 ### Passo 6 — rotina
 
@@ -110,7 +103,7 @@ pg_restore --clean --if-exists --no-owner --no-acl \
   antigos (o histórico mantém uma cópia).
 - Dumps contêm dados de pacientes: repositório privado e pasta do Drive privada, sempre.
 
-## Conteúdo de `Backup/backup-semanal.yml` (copie no Passo 4)
+## Conteúdo de `Backup/backup-semanal.yml` (cole no Passo 4)
 
 ```yaml
 name: Backup Supabase - semanal (Psicologia)
@@ -141,15 +134,19 @@ jobs:
 
       - name: Gerar dump do banco
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::Secret SUPABASE_DB_URL nao configurado"
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::error::Secret SUPABASE_DB_PASSWORD nao configurado"
             exit 1
           fi
           mkdir -p backups
           ARQUIVO="backups/backup-$(date +'%Y-%m-%d').dump"
-          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" \
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" /usr/lib/postgresql/17/bin/pg_dump \
+            --host=aws-0-sa-east-1.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.wrdkbafdzjsqonyidrwv \
+            --dbname=postgres \
             --format=custom \
             --schema=public \
             --no-owner --no-privileges \
