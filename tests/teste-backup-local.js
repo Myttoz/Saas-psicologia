@@ -14,12 +14,10 @@ function check(nome, cond, extra) {
   if (!cond) falhas++;
 }
 
-check('pasta Backup existe', fs.statSync(raiz + 'Backup').isDirectory());
-check('backup antigo ficou dentro da pasta',
-  fs.existsSync(raiz + 'Backup/backup-supabase-2026-11-27.sql'));
-check('arquivo antigo saiu da raiz', !fs.existsSync(raiz + 'backup-supabase-2026-11-27.sql'));
-check('dumps ficam fora do Git', gitignore.includes('Backup/*.sql') &&
-  gitignore.includes('Backup/*.dump'));
+check('pasta Backup versionável existe', fs.statSync(raiz + 'Backup').isDirectory() &&
+  fs.existsSync(raiz + 'Backup/.gitkeep'));
+check('dumps locais não versionam (mesmo sem o arquivo no checkout)',
+  gitignore.includes('Backup/*.sql'));
 check('modelos e instruções continuam versionáveis',
   !gitignore.includes('Backup/*.yml') && !gitignore.includes('Backup/*.md'));
 

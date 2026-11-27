@@ -17,14 +17,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Baixar o código (com todas as tags)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Preparar o Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
+          package-manager-cache: false
 
       - name: Conferir sintaxe dos arquivos do site
         run: |
