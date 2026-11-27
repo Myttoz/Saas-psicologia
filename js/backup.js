@@ -24,6 +24,7 @@ var backupModulo = {
       pacientes: pacientes,
       lancamentos: lancamentos,
       evolucoes: evolucoes,
+      modelosEscalas: modelosEscalas,
       dadosProfissional: dadosProfissional,
       anos: anos,
       anoAtivo: anoAtivo,
@@ -40,6 +41,7 @@ var backupModulo = {
       pacientes = [];
       lancamentos = [];
       evolucoes = [];
+      modelosEscalas = [];
       dadosProfissional = { nome: '', crp: CRP_PADRAO, cpf: '', assinatura: '' };
       anos = [];
       anoAtivo = new Date().getFullYear();
@@ -215,6 +217,19 @@ var backupModulo = {
       pacientes: lista(dados.pacientes, 'pacientes'),
       lancamentos: lista(dados.lancamentos, 'lançamentos'),
       evolucoes: Array.isArray(dados.evolucoes) ? lista(dados.evolucoes, 'evoluções') : [],
+      modelosEscalas: Array.isArray(dados.modelosEscalas)
+        ? dados.modelosEscalas.filter(function(m) {
+            return m && typeof m.nome === 'string' && Array.isArray(m.perguntas);
+          }).slice(0, 100).map(function(m) {
+            return {
+              id: Number(m.id) || Date.now(),
+              nome: this._texto(m.nome, this.LIMITE_CURTO),
+              perguntas: m.perguntas.slice(0, 100).map(function(p) {
+                return this._texto(p, 500);
+              }, this)
+            };
+          }, this)
+        : [],
       dadosProfissional: {
         nome: this._texto(dp.nome, this.LIMITE_CURTO),
         crp: this._texto(dp.crp, this.LIMITE_CURTO) || CRP_PADRAO,
@@ -326,6 +341,7 @@ var backupModulo = {
       pacientes = limpos.pacientes;
       lancamentos = limpos.lancamentos;
       evolucoes = limpos.evolucoes;
+      modelosEscalas = limpos.modelosEscalas || [];
       dadosProfissional = limpos.dadosProfissional;
       anos = limpos.anos;
       anoAtivo = limpos.anoAtivo;

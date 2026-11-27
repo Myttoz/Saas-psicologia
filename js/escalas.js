@@ -93,10 +93,50 @@ var escalasModulo = {
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   },
 
+  // Escolas prontas ou modelo criado pela profissional (custom:<id>).
+  definicao: function(id) {
+    var s = String(id || '');
+    if (s.indexOf('custom:') !== 0) return this.ESCALAS[s];
+    var modelos = (typeof modelosEscalas !== 'undefined') ? modelosEscalas : [];
+    for (var i = 0; i < modelos.length; i++) {
+      if (String(modelos[i].id) !== s.slice(7)) continue;
+      var m = modelos[i];
+      var limite = m.perguntas.length * 3;
+      return {
+        nome: 'Modelo: ' + m.nome,
+        tempo: 'Responda cada afirmação de 0 (nunca) a 3 (sempre):',
+        opcoes: ['Nunca', 'Às vezes', 'Regularmente', 'Sempre'],
+        perguntas: m.perguntas,
+        faixas: [
+          [Math.round(limite * 0.25), 'Mínima'],
+          [Math.round(limite * 0.5), 'Leve'],
+          [Math.round(limite * 0.75), 'Moderada'],
+          [limite, 'Grave']
+        ],
+        max: limite
+      };
+    }
+    return null;
+  },
+
   // Cálculo puro: usado pela tela e pelos testes.
   pontuar: function(id, respostas) {
-    var def = this.ESCALAS[id];
-    if (!def) return { ok: false, erro: 'Escala desconhecida.' };
+    var def = this.definicao(id);
+    if (!def && String(id).indexOf('custom:') === 0) {
+      // modelo excluído depois do salvamento: ainda conseguimos ler o registro
+      var n = (respostas && respostas.length) || 1;
+      var limite = n * 3;
+      def = {
+        nome: 'Escala salva', tempo: '',
+        opcoes: ['Nunca', 'Às vezes', 'Regularmente', 'Sempre'],
+        perguntas: new Array(n).fill(''),
+        faixas: [
+          [Math.round(limite * 0.25), 'Mínima'], [Math.round(limite * 0.5), 'Leve'],
+          [Math.round(limite * 0.75), 'Moderada'], [limite, 'Grave']
+        ]
+      };
+    }
+    if (!def) return { ok: false, erro: 'Escala ou modelo não encontrado.' };
     var valores = [];
     for (var i = 0; i < def.perguntas.length; i++) {
       var v = Number(respostas && respostas[i]);
@@ -170,13 +210,17 @@ var escalasModulo = {
     this._atual = sel ? String(sel.value || 'phq9') : 'phq9';
     this._respostas = [];
     this._resultado = null;
-    var def = this.ESCALAS[this._atual];
+    var def = this.definicao(this._atual);
     var area = document.getElementById('escalaQuestoes');
     var resultado = document.getElementById('escalaResultado');
     var salvar = document.getElementById('escalaSalvarBtn');
     if (resultado) resultado.innerHTML = '<div class="portal-muted">Preencha as respostas e clique em Calcular.</div>';
     if (salvar) salvar.style.display = 'none';
-    if (!area || !def) return;
+    if (!def) {
+      if (area) area.innerHTML = '<div class="escala-erro">Modelo excluído. Escolha outra escala.</div>';
+      return;
+    }
+    if (!area) return;
 
     var html = '<div class="escala-tempo">' + this.esc(def.tempo) + '</div>';
     for (var i = 0; i < def.perguntas.length; i++) {
@@ -277,11 +321,98 @@ var escalasModulo = {
     });
   },
 
+  // ---------- modelos próprios ----------
+
+  alternarQuestoes: function() {
+    var area = document.getElementById('escalaQuestoes');
+    var btn = document.getElementById('escalaToggleBtn');
+    if (!area || !btn) return;
+    var oculto = area.classList.toggle('oculto');
+    btn.textContent = oculto ? 'Mostrar questões' : 'Ocultar questões';
+  },
+
+  salvarModelo: function() {
+    var nomeEl = document.getElementById('modeloNome');
+    var pergEl = document.getElementById('modeloPerguntas');
+    var nome = nomeEl ? String(nomeEl.value || '').trim() : '';
+    var perguntas = [];
+    if (pergEl) {
+      var linhas = String(pergEl.value || '').split(/\r?\n/);
+      for (var i = 0; i < linhas.length; i++) {
+        var linha = String(linhas[i] || '').trim();
+        if (linha) perguntas.push(linha.slice(0, 300));
+      }
+    }
+    if (!nome || !perguntas.length) {
+      app.toast('Dê um nome e escreva pelo menos uma pergunta.');
+      return;
+    }
+    if (typeof modelosEscalas === 'undefined') modelosEscalas = [];
+    modelosEscalas.push({ id: Date.now(), nome: nome.slice(0, 120), perguntas: perguntas.slice(0, 100) });
+    if (nomeEl) nomeEl.value = '';
+    if (pergEl) pergEl.value = '';
+    if (typeof Store !== 'undefined') Store.salvar();
+    this.listarModelos();
+    app.toast('Modelo salvo. Clique em Usar para aplicar.');
+  },
+
+  listarModelos: function() {
+    var area = document.getElementById('modeloLista');
+    if (!area) return;
+    var modelos = (typeof modelosEscalas !== 'undefined') ? modelosEscalas : [];
+    if (!modelos.length) {
+      area.innerHTML = '<div class="portal-muted">Nenhum modelo ainda.</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < modelos.length; i++) {
+      var m = modelos[i];
+      html += '<div class="escala-modelo"><div><strong>' + this.esc(m.nome) + '</strong>' +
+        '<div class="cell-sub">' + m.perguntas.length + ' pergunta(s)</div></div>' +
+        '<button class="btn btn-outline btn-sm" onclick="escalasModulo.usarModelo(\'' +
+          Number(m.id) + '\')">Usar</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="escalasModulo.excluirModelo(' +
+          Number(m.id) + ')">Excluir</button></div>';
+    }
+    area.innerHTML = html;
+  },
+
+  usarModelo: function(id) {
+    var self = this;
+    var def = this.definicao('custom:' + id);
+    if (!def) { app.toast('Modelo não encontrado.'); return; }
+    var sel = document.getElementById('escalaTipo');
+    if (sel) {
+      var existe = false;
+      for (var i = 0; i < sel.children.length; i++) {
+        if (String(sel.children[i].value) === 'custom:' + id) existe = true;
+      }
+      if (!existe) {
+        var op = document.createElement('option');
+        op.value = 'custom:' + id;
+        op.textContent = def.nome;
+        sel.appendChild(op);
+      }
+      sel.value = 'custom:' + id;
+    }
+    self.preparar();
+    app.toast('Modelo carregado. Responda e calcule.');
+  },
+
+  excluirModelo: function(id) {
+    if (typeof confirm === 'function' && !confirm('Excluir este modelo de perguntas?')) return;
+    modelosEscalas = modelosEscalas.filter(function(m) { return Number(m.id) !== Number(id); });
+    if (typeof Store !== 'undefined') Store.salvar();
+    this.listarModelos();
+    app.toast('Modelo excluído.');
+  },
+
   // ---------- histórico ----------
 
   preencher: function(idEscolhido) {
     this.preencherPacientes(idEscolhido);
     this.mostrarHistorico();
+    this.listarModelos();
   },
 
   // Atualiza só a lista de escalas: NÃO recria o seletor de paciente,
@@ -340,9 +471,18 @@ var escalasModulo = {
     this._atual = registro.escala;
     this._respostas = registro.respostas || [];
     this._resultado = this.pontuar(this._atual, this._respostas);
-    var def = this.ESCALAS[this._atual];
+    var def = this.definicao(this._atual);
+    if (!def) {
+      var respostas = this._respostas || [];
+      def = {
+        nome: registro.nomeEscala || 'Escala salva',
+        tempo: '',
+        opcoes: ['Nunca', 'Às vezes', 'Regularmente', 'Sempre'],
+        perguntas: respostas.map(function(_, i) { return 'Questão ' + (i + 1); })
+      };
+    }
     var area = document.getElementById('escalaQuestoes');
-    if (area && def) {
+    if (area) {
       var html = '';
       for (var q = 0; q < def.perguntas.length; q++) {
         var valor = Number(this._respostas[q]);

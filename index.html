@@ -419,7 +419,7 @@
               </select>
             </div>
           </div>
-          <div class="header-actions">
+          <div class="header-actions escala-controles">
             <button class="btn btn-outline" onclick="escalasModulo.preparar()">Preparar escala</button>
             <button class="btn btn-primary" onclick="escalasModulo.calcular()">Calcular pontuação</button>
           </div>
@@ -428,11 +428,37 @@
         <div class="card">
           <div class="card-header-inline">
             <h2>Questões</h2>
-            <span class="card-subtitle" id="escalaQuestoesResumo"></span>
+            <div class="header-actions">
+              <button class="btn btn-outline btn-sm" id="escalaToggleBtn" onclick="escalasModulo.alternarQuestoes()">Ocultar questões</button>
+              <span class="card-subtitle" id="escalaQuestoesResumo"></span>
+            </div>
           </div>
           <div id="escalaQuestoes" class="escala-questoes">
             <div class="portal-muted">Escolha a paciente e a escala, depois clique em Preparar escala.</div>
           </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header-inline">
+            <h2>Meus modelos de questões</h2>
+            <span class="card-subtitle">Seus questionários por faixa ou público</span>
+          </div>
+          <p class="portal-muted" style="margin-top:0;">
+            Crie um modelo para cada situação (ex.: "Questões 5-8 anos"). Uma pergunta por linha.
+            As respostas seguem a escala de 0 (nunca) a 3 (sempre).
+          </p>
+          <div class="form-group">
+            <label class="form-label" for="modeloNome">Nome do modelo</label>
+            <input type="text" id="modeloNome" class="form-control" placeholder="Ex.: Questões 5-8 anos">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="modeloPerguntas">Perguntas (uma por linha)</label>
+            <textarea id="modeloPerguntas" class="form-control" rows="5" placeholder="Como a criança se sentiu esta semana?&#10;Apresentou dificuldade para dormir?"></textarea>
+          </div>
+          <div class="header-actions escala-controles">
+            <button class="btn btn-outline" onclick="escalasModulo.salvarModelo()">Salvar modelo</button>
+          </div>
+          <div id="modeloLista" class="escala-modelos"></div>
         </div>
 
         <div class="card">

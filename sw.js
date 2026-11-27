@@ -4,7 +4,7 @@
 // Abrindo o index.html direto do computador (file://), o navegador ignora este arquivo.
 // ============================================================================
 
-var CACHE = 'saatendimentos-v15';
+var CACHE = 'saatendimentos-v16';
 var PREFIXO = 'saatendimentos-';
 
 var ARQUIVOS = [

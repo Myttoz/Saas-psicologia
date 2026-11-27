@@ -986,6 +986,15 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 }
 
 /* Escalas de rastreio */
+.escala-controles { margin-top: .85rem; }
+.escala-questoes.oculto { display: none; }
+.escala-modelos { display: flex; flex-direction: column; gap: .5rem; margin-top: 1rem; }
+.escala-modelo {
+  display: flex; align-items: center; gap: .6rem;
+  border: 1px solid var(--border); border-radius: 10px; padding: .6rem .75rem;
+  background: var(--primary-light);
+}
+.escala-modelo > div:first-child { flex: 1; min-width: 0; }
 .escala-questoes { display: flex; flex-direction: column; gap: .75rem; }
 .escala-tempo {
   font-size: .88rem; font-weight: 700; color: var(--primary-dark);

@@ -12,6 +12,7 @@ var fontes = [
 var pacientes = []; // zerado
 var lancamentos = []; // zerado
 var evolucoes = []; // prontuário: evoluções por sessão (dado sensível)
+var modelosEscalas = []; // modelos de perguntas criados pela profissional
 var CRP_PADRAO = '04/74163'; // CRP informado pela profissional — aparece no recibo
 var dadosProfissional = { nome: '', crp: CRP_PADRAO, cpf: '', assinatura: '' }; // usado no recibo
 
@@ -190,6 +191,7 @@ var Store = {
       localStorage.setItem('saas_pacientes', JSON.stringify(pacientes));
       localStorage.setItem('saas_lancamentos', JSON.stringify(lancamentos));
       localStorage.setItem('saas_evolucoes', JSON.stringify(evolucoes));
+      localStorage.setItem('saas_modelos_escalas', JSON.stringify(modelosEscalas));
       localStorage.setItem('saas_dados_profissional', JSON.stringify(dadosProfissional));
       localStorage.setItem('saas_anos', JSON.stringify(anos));
       localStorage.setItem('saas_ano_ativo', String(anoAtivo));
@@ -218,6 +220,8 @@ var Store = {
       if (l) lancamentos = JSON.parse(l);
       var e = localStorage.getItem('saas_evolucoes');
       if (e) evolucoes = JSON.parse(e);
+      var me = localStorage.getItem('saas_modelos_escalas');
+      if (me) modelosEscalas = JSON.parse(me);
       var dp = localStorage.getItem('saas_dados_profissional');
       if (dp) {
         var carregado = JSON.parse(dp);

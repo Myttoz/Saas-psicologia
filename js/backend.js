@@ -771,6 +771,7 @@ var Backend = {
       pacientes: pacientes,
       lancamentos: lancamentos,
       evolucoes: evolucoes,
+      modelosEscalas: modelosEscalas,
       dadosProfissional: dadosProfissional,
       anos: anos,
       anoAtivo: anoAtivo,

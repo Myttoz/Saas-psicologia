@@ -4,6 +4,7 @@ const vm = require('vm');
 const path = require('path');
 const raiz = path.resolve(__dirname, '..') + '/';
 const html = fs.readFileSync(raiz + 'index.html', 'utf8');
+const css = fs.readFileSync(raiz + 'css/style.css', 'utf8');
 const sw = fs.readFileSync(raiz + 'sw.js', 'utf8');
 
 function el(id) {
@@ -11,7 +12,12 @@ function el(id) {
   const e = {
     id: id || '', value: '', textContent: '', _html: '', style: {}, className: '',
     children: filhos,
-    classList: { add() {}, remove() {}, contains() { return false; }, toggle() {} },
+    classList: {
+      _s: new Set(),
+      add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); },
+      contains(c) { return this._s.has(c); },
+      toggle(c) { if (this._s.has(c)) { this._s.delete(c); return false; } this._s.add(c); return true; }
+    },
     addEventListener() {}, appendChild(c) { filhos.push(c); }, removeChild() {},
     click() {}
   };
@@ -34,6 +40,7 @@ global.window = global;
 global.addEventListener = () => {};
 global.pacientes = [{ id: 1, nome: 'Ana Silva' }, { id: 2, nome: 'Bruno Costa' }];
 global.evolucoes = [];
+global.modelosEscalas = [];
 global.hojeStr = '2026-11-27';
 const avisos = [];
 const trilha = [];
@@ -182,11 +189,42 @@ const e = escalasModulo;
   check('seletor de paciente não é recriado ao trocar',
     html.includes('onchange="escalasModulo.mostrarHistorico()"') &&
     !html.includes('onchange="escalasModulo.preencher()"'));
+  check('botão de minimizar questões existe', html.includes('escalasModulo.alternarQuestoes()') &&
+    css.includes('.escala-questoes.oculto'));
+  check('espaço entre os botões e o seletor', css.includes('.escala-controles'));
+  check('cartão de modelos próprios existe', html.includes('id="modeloLista"') &&
+    html.includes('escalasModulo.salvarModelo()'));
+  check('modelos entram no backup e na nuvem',
+    fs.readFileSync(raiz + 'js/backup.js', 'utf8').includes('modelosEscalas') &&
+    fs.readFileSync(raiz + 'js/backend.js', 'utf8').includes('modelosEscalas'));
   check('service worker cacheia o módulo', sw.includes('./js/escalas.js'));
   check('cache atualizado', /saatendimentos-v\d+/.test(sw));
 
   check('escalas não aparecem como evoluções em branco',
     fs.readFileSync(raiz + 'js/prontuario.js', 'utf8').includes("ev.tipo === 'escala'"));
+
+  console.log('\n[7] Modelos próprios e painel minimizável');
+  document.getElementById('modeloNome').value = 'Questões 5-8 anos';
+  document.getElementById('modeloPerguntas').value = 'Como se sentiu?\nDormiu bem?\nBrincou com os amigos?';
+  e.salvarModelo();
+  check('modelo salvo com suas perguntas', modelosEscalas.length === 1 &&
+    modelosEscalas[0].perguntas.length === 3);
+  check('modelo aparece na lista', els.modeloLista.innerHTML.includes('Questões 5-8 anos') &&
+    els.modeloLista.innerHTML.includes('escalasModulo.usarModelo('));
+  const mid = modelosEscalas[0].id;
+  e.usarModelo(mid);
+  check('modelo carregado no questionário', els.escalaTipo.value === 'custom:' + mid &&
+    els.escalaQuestoes.innerHTML.includes('Como se sentiu?'));
+  for (let i = 0; i < 3; i++) e.responder(i, 3);
+  const rModelo = e.calcular();
+  check('modelo pontua de 0 a 3 por pergunta', rModelo.ok && rModelo.total === 9 &&
+    rModelo.classificacao === 'Grave');
+  e.alternarQuestoes();
+  check('questões podem ser ocultadas', els.escalaToggleBtn.textContent === 'Mostrar questões' &&
+    els.escalaQuestoes.classList.contains('oculto'));
+  e.alternarQuestoes();
+  check('questões voltam a aparecer', els.escalaToggleBtn.textContent === 'Ocultar questões' &&
+    !els.escalaQuestoes.classList.contains('oculto'));
 
   console.log('\n' + (falhas === 0 ? 'TODOS OS TESTES PASSARAM' : falhas + ' TESTE(S) FALHARAM'));
   process.exit(falhas === 0 ? 0 : 1);
