@@ -69,6 +69,7 @@ var app = {
         fontes: 'Convênios',
         pacientes: 'Pacientes',
         prontuario: 'Prontuário',
+        escalas: 'Escalas',
         situacao: 'Situação Paciente'
       };
       tituloEl.textContent = titulos[id] || id;
@@ -149,6 +150,9 @@ var app = {
     }
     if (id === 'prontuario' && typeof prontuarioModulo !== 'undefined') {
       prontuarioModulo.render();
+    }
+    if (id === 'escalas' && typeof escalasModulo !== 'undefined') {
+      escalasModulo.render();
     }
     if (id === 'resumos' && typeof resumosModulo !== 'undefined') {
       resumosModulo.render();

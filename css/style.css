@@ -985,6 +985,49 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   line-height: 1.55;
 }
 
+/* Escalas de rastreio */
+.escala-questoes { display: flex; flex-direction: column; gap: .75rem; }
+.escala-tempo {
+  font-size: .88rem; font-weight: 700; color: var(--primary-dark);
+  background: var(--primary-light); border-radius: 10px; padding: .7rem .8rem;
+}
+.escala-pergunta {
+  border: 1px solid var(--border); border-radius: 10px; padding: .75rem .85rem;
+}
+.escala-enunciado { font-weight: 700; font-size: .92rem; margin-bottom: .5rem; }
+.escala-opcoes { display: flex; flex-wrap: wrap; gap: .5rem; }
+.escala-opcao {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .8rem; color: var(--text-muted); cursor: pointer;
+  border: 1px solid var(--border); border-radius: 999px; padding: .3rem .6rem;
+}
+.escala-opcao:has(input:checked) {
+  border-color: var(--primary); background: var(--primary-light);
+  color: var(--primary-dark); font-weight: 700;
+}
+.escala-resultado { font-size: .92rem; line-height: 1.6; }
+.escala-nota {
+  border-left: 4px solid var(--primary); background: var(--primary-light);
+  padding: .7rem .8rem; border-radius: 8px; margin-bottom: .5rem;
+}
+.escala-sub { margin: .2rem 0; }
+.escala-alerta {
+  margin-top: .6rem; border-left: 4px solid var(--accent);
+  background: var(--accent-light); color: #8E4E34;
+  padding: .7rem .8rem; border-radius: 8px; font-weight: 700;
+}
+.escala-erro { color: var(--danger); font-weight: 700; }
+.escala-aviso { margin-top: .6rem; font-size: .8rem; color: var(--text-muted); }
+.escala-resposta-salva {
+  font-size: .85rem; color: var(--primary-dark); font-weight: 700;
+}
+.escala-historico { display: flex; flex-direction: column; gap: .5rem; }
+.escala-item {
+  display: flex; align-items: center; justify-content: space-between; gap: .8rem;
+  border: 1px solid var(--border); border-radius: 10px; padding: .6rem .75rem;
+  background: var(--primary-light);
+}
+
 .resumo-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

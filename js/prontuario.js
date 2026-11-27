@@ -214,9 +214,11 @@ var prontuarioModulo = {
 
     var termo = normalizarTexto(this.termo);
     var filtrados = [];
+    var totalEvolucoes = 0;
     for (var i = 0; i < evolucoes.length; i++) {
       var ev = this.plain(evolucoes[i]);
-      if (!ev) continue;
+      if (!ev || ev.tipo === 'escala') continue; // escalas têm página própria
+      totalEvolucoes++;
       var texto = normalizarTexto([ev.paciente, ev.queixa, ev.intervencao, ev.evolucao, ev.plano].join(' '));
       if (termo === '' || texto.indexOf(termo) !== -1) filtrados.push(ev);
     }
@@ -232,7 +234,7 @@ var prontuarioModulo = {
         (termo ? ' encontrada(s)' : ' registrada(s)');
     }
     if (resumo) {
-      resumo.textContent = evolucoes.length + ' no total';
+      resumo.textContent = totalEvolucoes + ' no total';
     }
 
     lista.innerHTML = '';

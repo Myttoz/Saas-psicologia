@@ -77,6 +77,10 @@
           <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><line x1="8" y1="7" x2="16" y2="7"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
           Prontuário
         </div>
+        <div class="nav-item" onclick="app.trocarPagina('escalas')">
+          <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          Escalas
+        </div>
         <div class="nav-item" onclick="app.trocarPagina('situacao')">
           <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
           Situação Paciente
@@ -382,6 +386,72 @@
             <span class="card-subtitle">Últimos registros</span>
           </div>
           <div class="trilha-lista" id="trilhaLista"></div>
+        </div>
+      </div>
+
+      <!-- Página: Escalas -->
+      <div class="page" id="page-escalas">
+        <div class="page-header">
+          <div>
+            <h1>Escalas</h1>
+            <div class="page-subtitle">PHQ-9, GAD-7 e DASS-21 — rastreio e acompanhamento</div>
+          </div>
+        </div>
+
+        <div class="alert-note">
+          <strong>Rastreio, não diagnóstico.</strong> As pontuações apoiam o acompanhamento;
+          a interpretação clínica é sua. Os resultados ficam cifrados no prontuário,
+          exigem o desbloqueio e entram no backup e na nuvem.
+        </div>
+
+        <div class="card">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="escalaPaciente">Paciente</label>
+              <select id="escalaPaciente" class="form-control" onchange="escalasModulo.preencher()"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="escalaTipo">Escala</label>
+              <select id="escalaTipo" class="form-control" onchange="escalasModulo.preparar()">
+                <option value="phq9">PHQ-9 — depressão (9 questões)</option>
+                <option value="gad7">GAD-7 — ansiedade (7 questões)</option>
+                <option value="dass21">DASS-21 — depressão, ansiedade e estresse (21 questões)</option>
+              </select>
+            </div>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline" onclick="escalasModulo.preparar()">Preparar escala</button>
+            <button class="btn btn-primary" onclick="escalasModulo.calcular()">Calcular pontuação</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header-inline">
+            <h2>Questões</h2>
+            <span class="card-subtitle" id="escalaQuestoesResumo"></span>
+          </div>
+          <div id="escalaQuestoes" class="escala-questoes">
+            <div class="portal-muted">Escolha a paciente e a escala, depois clique em Preparar escala.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header-inline">
+            <h2>Resultado</h2>
+          </div>
+          <div id="escalaResultado" class="escala-resultado">
+            <div class="portal-muted">Preencha as respostas e clique em Calcular.</div>
+          </div>
+          <div class="header-actions" style="margin-top:1rem;">
+            <button id="escalaSalvarBtn" class="btn btn-primary" style="display:none;" onclick="escalasModulo.salvar()">Salvar no prontuário</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header-inline">
+            <h2>Histórico da paciente</h2>
+          </div>
+          <div id="escalaHistorico" class="escala-historico"></div>
         </div>
       </div>
 
@@ -1074,6 +1144,7 @@
 <script src="js/backup.js"></script>
 <script src="js/agenda.js"></script>
 <script src="js/prontuario.js"></script>
+<script src="js/escalas.js"></script>
 <script src="js/whatsapp.js"></script>
 <script src="js/recibos.js"></script>
 </body>
